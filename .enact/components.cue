@@ -15,6 +15,10 @@ package replay
 		}
 	}
 	shards: "auto"
+	testDepends: [...string] | *[]
+	sparseCheckout: [
+		for d in testDepends { "addons/\(d)" },
+	]
 	lint:   string | *"[ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true"
 	scoping: {
 		barrels: []
@@ -59,9 +63,6 @@ pipeline: {
 		"addons/web_tour",
 		"addons/iap",
 	]
-	sparseCheckoutHooks: [
-		"python setup/ci/resolve_sparse_checkout.py --component {component_root} --dirs-only",
-	]
 	jobs: {}
 	triggers: {
 		pull_request: {
@@ -94,10 +95,11 @@ pipeline: {
 				title:               string | *"Odoo Addon \(name)"
 				root:                meta.dir
 				dependsOnComponents: meta.depends
+				testDepends:         meta.test_depends
 				watch_paths: [...string] | *["\(meta.dir)/**"]
 				scoping: domainRoots: [...string] | *[meta.dir]
 				if meta.has_tests {
-					test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} -i \(name) -u \(name) --test-enable --stop-after-init --no-http $([ -n '{selected_targets}' ] && echo --test-tags $(echo '{selected_targets}' | sed 's|addons/||g; s|^|/|; s| |,/|g'))"
+					test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) -i \(name) -u \(name) --test-enable --stop-after-init --test-tags $([ -n '{selected_targets}' ] && echo '{selected_targets}' | sed 's|addons/||g; s|^|/|; s| |,/|g' || echo '/\(name)')"
 				}
 			}
 		}
@@ -123,7 +125,8 @@ pipeline: {
 				"odoo/addons/base/**",
 				"odoo/**",
 			]
-			lint: "python $(git rev-parse --show-toplevel)/setup/ci/resolve_sparse_checkout.py --check && ([ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true)"
+			lint: "([ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true)"
+			test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) -i base -u base --test-enable --stop-after-init --test-tags /base"
 		}
 		"web": {
 			description: "Odoo web client, owl components, and UI assets"

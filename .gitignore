@@ -54,3 +54,10 @@ package.json
 /man/
 /share/
 /src/
+
+# enact runtime artifacts
+.enact/cache/
+.enact/runs/
+.enact/*.json
+.enact/*.html
+cue.mod/

@@ -26,7 +26,6 @@ devEnv: {
     },
     "name": "odoo-replay",
     "ports": [],
-    "runtimes": {},
     "services": {
         "db": {
             "command": "postgres -D /tmp/odoo_enve_postgres -k /tmp -h 127.0.0.1 -p 5432 -c fsync=off -c synchronous_commit=off -c full_page_writes=off -N 250",
