@@ -77,7 +77,6 @@ jobs:
         if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
           ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
         fi
-        cd "${GITHUB_WORKSPACE:-$PWD}"
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
           [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
@@ -105,11 +104,12 @@ jobs:
           NO_CACHE_ARG="--no-cache"
         fi
         BASE_ARG=""
-        if [ -n "${{ github.base_ref }}" ]; then
-          if git rev-parse --verify "origin/${{ github.base_ref }}" >/dev/null 2>&1; then
-            BASE_ARG="--base origin/${{ github.base_ref }}"
-          elif git rev-parse --verify "${{ github.base_ref }}" >/dev/null 2>&1; then
-            BASE_ARG="--base ${{ github.base_ref }}"
+        BASE_REF="${{ github.base_ref || github.event.pull_request.base.ref }}"
+        if [ -n "$BASE_REF" ]; then
+          if git rev-parse --verify "origin/$BASE_REF" >/dev/null 2>&1; then
+            BASE_ARG="--base origin/$BASE_REF"
+          elif git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+            BASE_ARG="--base $BASE_REF"
           fi
         fi
         MATRIX=$(enact affected --pipeline .enact $BASE_ARG $UPDATED_ARG $NO_CACHE_ARG --format json)
@@ -272,10 +272,6 @@ jobs:
     - name: Generate Consolidated Telemetry Summary
       continue-on-error: true
       run: enact report --dir .enact/telemetry
-    - name: Generate Showcase Comparison Report
-      if: always()
-      continue-on-error: true
-      run: python setup/ci/generate-pr-showcase.py
     - name: Upload Master Workflow Dashboard
       if: always()
       continue-on-error: true
@@ -309,7 +305,6 @@ jobs:
       uses: actions/checkout@v7
       with:
         fetch-depth: '1'
-        filter: blob:none
     - name: Restore enact CLI binary cache
       continue-on-error: true
       uses: actions/cache@v6
