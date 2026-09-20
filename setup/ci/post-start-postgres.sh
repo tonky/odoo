@@ -34,7 +34,8 @@ query_sql() {
   fi
 }
 
-# 2. Create databases
+# 2. Create roles and databases
+exec_sql "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'postgres') THEN CREATE ROLE postgres SUPERUSER LOGIN; END IF; END \$\$;"
 exec_sql "CREATE DATABASE test_odoo;"
 exec_sql "CREATE DATABASE test_odoo_template;"
 

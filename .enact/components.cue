@@ -8,10 +8,12 @@ package replay
 	}
 	services: {
 		db: {
-			name:     "db"
-			port:     5432
-			database: "test_odoo"
-			template: "test_odoo_template"
+			name:          "db"
+			port:          5432
+			user:          "odoo"
+			database:      "test_odoo"
+			template:      "test_odoo_template"
+			template_init: "bash $(git rev-parse --show-toplevel)/setup/ci/post-start-postgres.sh"
 		}
 	}
 	shards: "auto"
