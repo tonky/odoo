@@ -29,12 +29,12 @@ on:
         required: false
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
+  ENVE_SERVICE_GID: '1000'
+  ENVE_SERVICE_UID: '1000'
   GOCACHE: /tmp/go-build
   GOPATH: /tmp/go
   UV_CACHE_DIR: /tmp/.cache/uv
   XDG_CACHE_HOME: /tmp/.cache
-  ENVE_SERVICE_UID: '1000'
-  ENVE_SERVICE_GID: '1000'
 jobs:
   detect:
     name: Detect Affected Components
@@ -42,7 +42,7 @@ jobs:
     outputs:
       matrix: ${{ steps.diff.outputs.matrix }}
     steps:
-    - name: Checkout Repository (sparse)
+    - name: Checkout Repository
       uses: actions/checkout@v7
       with:
         fetch-depth: '1'
@@ -50,14 +50,6 @@ jobs:
         filter: blob:none
         lfs: 'false'
         show-progress: 'false'
-        sparse-checkout: |-
-          .enact
-          .github
-          setup
-          bin
-          enve.cue
-          enve.lock
-        sparse-checkout-cone-mode: 'false'
         submodules: 'false'
     - name: Restore enact CLI binary cache
       continue-on-error: true
@@ -86,9 +78,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -178,9 +169,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -283,9 +273,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -361,9 +350,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -452,8 +440,8 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
         CI_COMPONENT: ${{ matrix.component }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
-        PLAYWRIGHT_BROWSERS_PATH: /tmp/.cache/ms-playwright
         ODOO_BROWSER_BIN: ${{ env.ODOO_BROWSER_BIN }}
+        PLAYWRIGHT_BROWSERS_PATH: /tmp/.cache/ms-playwright
     - name: Push Updated Dependencies to Cloudflare R2
       if: success()
       continue-on-error: true
