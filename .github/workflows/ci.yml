@@ -48,6 +48,7 @@ jobs:
           .enact
           .github
           setup
+          bin
           enve.cue
           enve.lock
         sparse-checkout-cone-mode: 'false'
@@ -76,6 +77,7 @@ jobs:
         if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
           ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
         fi
+        cd "${GITHUB_WORKSPACE:-$PWD}"
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
           [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
@@ -133,6 +135,7 @@ jobs:
           .enact
           .github
           setup
+          bin
           enve.cue
           enve.lock
         sparse-checkout-cone-mode: 'false'
@@ -229,6 +232,7 @@ jobs:
           .enact
           .github
           setup
+          bin
           enve.cue
           enve.lock
         sparse-checkout-cone-mode: 'false'
