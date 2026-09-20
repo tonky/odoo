@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
-PG_USER="${PGUSER:-odoo}"
-PG_HOST="${PGHOST:-127.0.0.1}"
-PG_PORT="${PGPORT:-5432}"
+export PGUSER="${PGUSER:-odoo}"
+export PGHOST="${PGHOST:-127.0.0.1}"
+export PGPORT="${PGPORT:-5432}"
+
+PG_USER="$PGUSER"
+PG_HOST="$PGHOST"
+PG_PORT="$PGPORT"
 
 # 1. Wait for PostgreSQL server readiness
 for i in $(seq 1 30); do
@@ -36,8 +40,14 @@ query_sql() {
 
 # 2. Create roles and databases
 exec_sql "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'postgres') THEN CREATE ROLE postgres SUPERUSER LOGIN; END IF; END \$\$;"
-exec_sql "CREATE DATABASE test_odoo;"
-exec_sql "CREATE DATABASE test_odoo_template;"
+
+if [ -z "$(query_sql "SELECT 1 FROM pg_database WHERE datname = 'test_odoo';" postgres)" ]; then
+  exec_sql "CREATE DATABASE test_odoo;"
+fi
+
+if [ -z "$(query_sql "SELECT 1 FROM pg_database WHERE datname = 'test_odoo_template';" postgres)" ]; then
+  exec_sql "CREATE DATABASE test_odoo_template;"
+fi
 
 # 3. Pre-populate template database with base schema if empty
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -46,9 +56,9 @@ if [ -f "$REPO_ROOT/odoo-bin" ]; then
   if [ -z "$TABLE_COUNT" ] || [ "$TABLE_COUNT" -eq 0 ] 2>/dev/null; then
     echo "⚡ Initializing test_odoo_template with base module..."
     if command -v uv >/dev/null 2>&1; then
-      uv run python "$REPO_ROOT/odoo-bin" -d test_odoo_template -i base --stop-after-init --no-http 2>/dev/null || true
+      uv run python "$REPO_ROOT/odoo-bin" -d test_odoo_template --db_host="$PGHOST" --db_port="$PGPORT" --db_user="$PGUSER" -i base --stop-after-init --no-http
     elif command -v enve >/dev/null 2>&1; then
-      enve run -- uv run python "$REPO_ROOT/odoo-bin" -d test_odoo_template -i base --stop-after-init --no-http 2>/dev/null || true
+      enve run -- uv run python "$REPO_ROOT/odoo-bin" -d test_odoo_template --db_host="$PGHOST" --db_port="$PGPORT" --db_user="$PGUSER" -i base --stop-after-init --no-http
     fi
   fi
 fi
