@@ -396,8 +396,25 @@ jobs:
           ~/.cache/pip
           ~/.npm
           /tmp/.cache/ms-playwright
+          ~/.cache/enact/snapshots
           .venv
         restore-keys: ${{ runner.os }}-${{ matrix.technology }}-
+    - name: Pre-warm Database Template Snapshot from Cloudflare R2
+      if: ${{ contains(matrix.component, 'odoo') || matrix.technology == 'python' }}
+      continue-on-error: true
+      run: |-
+        if [ -n "$ENACT_R2_BUCKET" ]; then
+          mkdir -p "$HOME/.cache/enact/snapshots"
+          if [ ! -s "$HOME/.cache/enact/snapshots/odoo_base_template.dump.zst" ] && [ ! -s "$HOME/.cache/enact/snapshots/odoo_base_template.dump" ]; then
+            echo "🌐 Pre-warming base template snapshot from Cloudflare R2..."
+            curl -fsSL --user "${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}" --aws-sigv4 "aws:amz:auto:s3" "${ENACT_R2_BUCKET%/}/snapshots/odoo_base_template.dump.zst" -o "$HOME/.cache/enact/snapshots/odoo_base_template.dump.zst" 2>/dev/null || true
+          fi
+        fi
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
     - name: Pre-warm Playwright Browsers from Cloudflare R2
       if: ${{ contains(matrix.component, 'e2e') || contains(matrix.component, 'playwright') || contains(matrix.component, 'project') || contains(matrix.component, 'tour') || matrix.technology == 'playwright' }}
       continue-on-error: true
