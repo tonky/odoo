@@ -1,0 +1,406 @@
+name: odoo-platform
+on:
+  push:
+    branches:
+    - master
+    - '19.0'
+    - saas-19.4
+    - perf/ci-modernization
+    paths:
+    - '**/*'
+  pull_request:
+    branches:
+    - master
+    - '19.0'
+    - saas-19.4
+    - perf/ci-modernization
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Force execution of all components regardless of git changes
+        required: false
+        default: 'false'
+      no_cache:
+        description: Disable task cache, forcing full execution
+        required: false
+        default: 'false'
+      updated:
+        description: Component(s) to emulate as updated
+        required: false
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
+  GOCACHE: /tmp/go-build
+  GOPATH: /tmp/go
+  XDG_CACHE_HOME: /tmp/.cache
+jobs:
+  detect:
+    name: Detect Affected Components
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.diff.outputs.matrix }}
+    steps:
+    - name: Checkout Repository (Full History)
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: '0'
+    - name: Restore enact CLI binary cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-enact-cli-${{ hashFiles('Cargo.lock', 'crates/**') }}
+        path: ~/.cargo/bin/enact
+        restore-keys: ${{ runner.os }}-enact-cli-
+    - name: Restore enact Task CAS Cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-enact-tasks-${{ github.sha }}
+        path: .enact/cache
+        restore-keys: ${{ runner.os }}-enact-tasks-
+    - name: Ensure enve & enact CLI on PATH
+      run: |-
+        git config --global --add safe.directory "*" 2>/dev/null || true
+        mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
+        if [ ! -d "/nix" ] && command -v sudo >/dev/null 2>&1; then
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
+        fi
+        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+        fi
+        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
+        if [ -d "$BIN_DIR" ]; then
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
+        fi
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+    - name: Compute Affected Component Matrix
+      id: diff
+      run: |-
+        git config --global --add safe.directory "*" 2>/dev/null || true
+        if [ -n "${GITHUB_WORKSPACE}" ] && [ -d "${GITHUB_WORKSPACE}" ]; then
+          cd "${GITHUB_WORKSPACE}"
+        fi
+        UPDATED_ARG=""
+        if [ "${{ inputs.all }}" = "true" ]; then
+          UPDATED_ARG="--all"
+        elif [ -n "${{ inputs.updated }}" ]; then
+          UPDATED_ARG="--updated ${{ inputs.updated }}"
+        fi
+        NO_CACHE_ARG=""
+        if [ "${{ inputs.no_cache }}" = "true" ]; then
+          NO_CACHE_ARG="--no-cache"
+        fi
+        BASE_ARG=""
+        if [ -n "${{ github.base_ref }}" ]; then
+          if git rev-parse --verify "origin/${{ github.base_ref }}" >/dev/null 2>&1; then
+            BASE_ARG="--base origin/${{ github.base_ref }}"
+          elif git rev-parse --verify "${{ github.base_ref }}" >/dev/null 2>&1; then
+            BASE_ARG="--base ${{ github.base_ref }}"
+          fi
+        fi
+        MATRIX=$(enact affected --pipeline .enact $BASE_ARG $UPDATED_ARG $NO_CACHE_ARG --format json)
+        echo "$MATRIX"
+        echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET }}
+  preflight:
+    name: 'Stage: preflight'
+    needs:
+    - detect
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: '1'
+    - name: Restore enact CLI binary cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-enact-cli-${{ hashFiles('Cargo.lock', 'crates/**') }}
+        path: ~/.cargo/bin/enact
+        restore-keys: ${{ runner.os }}-enact-cli-
+    - name: Restore enact Task CAS Cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-enact-tasks-${{ github.sha }}
+        path: .enact/cache
+        restore-keys: ${{ runner.os }}-enact-tasks-
+    - name: Ensure enve & enact CLI on PATH
+      run: |-
+        git config --global --add safe.directory "*" 2>/dev/null || true
+        mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
+        if [ ! -d "/nix" ] && command -v sudo >/dev/null 2>&1; then
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
+        fi
+        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+        fi
+        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
+        if [ -d "$BIN_DIR" ]; then
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
+        fi
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+    - name: Pull Dependencies via enve
+      run: |-
+        if [ -f "enve.lock" ]; then
+          if [ -n "$ENACT_R2_BUCKET" ]; then
+            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure
+          fi
+          enve run $([ -f enve.lock ] && echo --locked) -- true
+        fi
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+    - name: Execute Stage [preflight]
+      run: |-
+        UPDATED_ARG=""
+        if [ "${{ inputs.all }}" = "true" ]; then
+          UPDATED_ARG="--all"
+        elif [ -n "${{ inputs.updated }}" ]; then
+          UPDATED_ARG="--updated ${{ inputs.updated }}"
+        fi
+        NO_CACHE_ARG=""
+        if [ "${{ inputs.no_cache }}" = "true" ]; then
+          NO_CACHE_ARG="--no-cache"
+        fi
+        enact run --pipeline .enact $UPDATED_ARG $NO_CACHE_ARG preflight
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+    - name: Upload Telemetry for [preflight]
+      if: always()
+      continue-on-error: true
+      uses: actions/upload-artifact@v7
+      with:
+        if-no-files-found: ignore
+        name: telemetry-stage-preflight
+        path: |-
+          .enact/telemetry.json
+          .enact/summary.html
+  summary:
+    name: Telemetry & Summary
+    needs:
+    - detect
+    - preflight
+    - test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: '1'
+    - name: Restore enact CLI binary cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-enact-cli-${{ hashFiles('Cargo.lock', 'crates/**') }}
+        path: ~/.cargo/bin/enact
+        restore-keys: ${{ runner.os }}-enact-cli-
+    - name: Ensure enve & enact CLI on PATH
+      run: |-
+        git config --global --add safe.directory "*" 2>/dev/null || true
+        mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
+        if [ ! -d "/nix" ] && command -v sudo >/dev/null 2>&1; then
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
+        fi
+        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+        fi
+        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
+        if [ -d "$BIN_DIR" ]; then
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
+        fi
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+    - name: Download All Component Telemetry
+      continue-on-error: true
+      uses: actions/download-artifact@v8
+      with:
+        path: .enact/telemetry
+        pattern: telemetry-*
+    - name: Generate Consolidated Telemetry Summary
+      continue-on-error: true
+      run: enact report --dir .enact/telemetry
+    - name: Generate Showcase Comparison Report
+      if: always()
+      continue-on-error: true
+      run: python setup/ci/generate-pr-showcase.py
+    - name: Upload Master Workflow Dashboard
+      if: always()
+      continue-on-error: true
+      uses: actions/upload-artifact@v7
+      with:
+        if-no-files-found: ignore
+        name: enact-workflow-summary
+        path: .enact/summary.html
+  test:
+    name: Run Tests (${{ matrix.component }})
+    needs:
+    - detect
+    - preflight
+    if: ${{ needs.detect.outputs.matrix != '{"include":[]}' && needs.detect.outputs.matrix != '[]' && needs.detect.outputs.matrix != '' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+    - name: Checkout Repository (sparse)
+      if: ${{ matrix.sparse_checkout != '' }}
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: '1'
+        sparse-checkout: ${{ matrix.sparse_checkout }}
+        sparse-checkout-cone-mode: 'true'
+    - name: Checkout Repository (full)
+      if: ${{ matrix.sparse_checkout == '' }}
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: '1'
+    - name: Restore enact CLI binary cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-enact-cli-${{ hashFiles('Cargo.lock', 'crates/**') }}
+        path: ~/.cargo/bin/enact
+        restore-keys: ${{ runner.os }}-enact-cli-
+    - name: Ensure enve & enact CLI on PATH
+      run: |-
+        git config --global --add safe.directory "*" 2>/dev/null || true
+        mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
+        if [ ! -d "/nix" ] && command -v sudo >/dev/null 2>&1; then
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
+        fi
+        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+        fi
+        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
+        if [ -d "$BIN_DIR" ]; then
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
+        fi
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+    - name: Restore enact Task CAS Cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-enact-tasks-${{ github.sha }}
+        path: .enact/cache
+        restore-keys: ${{ runner.os }}-enact-tasks-
+    - name: Restore ${{ matrix.technology }} build & compiler cache
+      continue-on-error: true
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-${{ matrix.technology }}-${{ hashFiles('**/go.sum', '**/Cargo.lock', '**/uv.lock', '**/package-lock.json', '**/pnpm-lock.yaml') }}
+        path: |-
+          /tmp/go-build
+          /tmp/go/pkg/mod
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target/
+          /tmp/.cache/uv
+          ~/.cache/pip
+          ~/.npm
+          /tmp/.cache/ms-playwright
+        restore-keys: ${{ runner.os }}-${{ matrix.technology }}-
+    - name: Pre-warm Playwright Browsers from Cloudflare R2
+      if: ${{ contains(matrix.component, 'e2e') || contains(matrix.component, 'playwright') || matrix.technology == 'playwright' }}
+      continue-on-error: true
+      run: |-
+        if [ -n "$ENACT_R2_BUCKET" ]; then
+          echo "🌐 Pre-warming Playwright browsers from Cloudflare R2..."
+          mkdir -p "$HOME/.cache/ms-playwright" "/tmp/.cache/ms-playwright"
+          curl -fsSL --user "${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}" --aws-sigv4 "aws:amz:auto:s3" "${ENACT_R2_BUCKET%/}/tools/playwright-browsers-linux-amd64.tar.zst" 2>/dev/null | tar -x --zstd -C "$HOME/.cache/ms-playwright" 2>/dev/null || true
+          cp -r "$HOME/.cache/ms-playwright/." "/tmp/.cache/ms-playwright/" 2>/dev/null || true
+          echo "PLAYWRIGHT_BROWSERS_PATH=/tmp/.cache/ms-playwright" >> "$GITHUB_ENV"
+        fi
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+    - name: Pull Dependencies via enve
+      run: |-
+        if [ -f "enve.lock" ]; then
+          if [ -n "$ENACT_R2_BUCKET" ]; then
+            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure
+          fi
+          enve run $([ -f enve.lock ] && echo --locked) -- true
+        fi
+        if [ -n "${{ matrix.component_dir }}" ] && [ "${{ matrix.component_dir }}" != "." ] && [ -f "${{ matrix.component_dir }}/enve.lock" ]; then
+          if [ -n "$ENACT_R2_BUCKET" ]; then
+            enve cache pull "${{ matrix.component_dir }}/enve.lock" --cache "$ENACT_R2_BUCKET" --insecure
+          fi
+          (cd "${{ matrix.component_dir }}" && enve run $([ -f enve.lock ] && echo --locked) -- true)
+        fi
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+    - name: Execute Component Task
+      run: ${{ matrix.command }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        CI_COMPONENT: ${{ matrix.component }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+        PLAYWRIGHT_BROWSERS_PATH: /tmp/.cache/ms-playwright
+    - name: Push Updated Dependencies to Cloudflare R2
+      if: success()
+      continue-on-error: true
+      run: |-
+        if [ -n "$ENACT_R2_BUCKET" ]; then
+          if [ -f "enve.lock" ]; then
+            echo "🛰️ Pushing missing/updated closures to Cloudflare R2 from repository root..."
+            enve cache push enve.lock --cache "$ENACT_R2_BUCKET" || true
+          fi
+          if [ -n "${{ matrix.component_dir }}" ] && [ "${{ matrix.component_dir }}" != "." ] && [ -f "${{ matrix.component_dir }}/enve.lock" ]; then
+            echo "🛰️ Pushing missing/updated closures to Cloudflare R2 from ${{ matrix.component_dir }}..."
+            (cd "${{ matrix.component_dir }}" && enve cache push enve.lock --cache "$ENACT_R2_BUCKET") || true
+          fi
+        fi
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+    - name: Upload Execution Telemetry & Workflow Dashboard
+      if: always()
+      continue-on-error: true
+      uses: actions/upload-artifact@v7
+      with:
+        if-no-files-found: ignore
+        name: telemetry-${{ matrix.task_id }}
+        path: |-
+          .enact/telemetry.json
+          .enact/summary.html

@@ -1,0 +1,36 @@
+[entities]
+track_models = true
+track_fields = true
+qualify_fields = true
+
+[inheritance]
+enabled = true
+globs = ["addons/**/*.py", "odoo/addons/**/*.py"]
+model_attribute = "_name"
+inherit_attribute = "_inherit"
+max_depth = 4
+
+[[data.xml]]
+globs = ["**/*.xml"]
+extract = [
+    "record@model",
+    "field@name",
+    "template@id",
+]
+
+[[data.csv]]
+globs = ["**/security/*.csv", "**/*access*.csv"]
+columns = ["model_id:id"]
+strip_prefix = "model_"
+
+[references]
+globs = ["**/*.py", "**/*.xml"]
+
+[tests]
+conventions = [
+    "{module}/tests/test_{stem}.py",
+    "{module}/tests/test_{stem}_*.py",
+    "{module}/tests/test_*.py",
+    "{module}/tests/test_tour.py",
+    "{module}/tests/test_ui*.py",
+]

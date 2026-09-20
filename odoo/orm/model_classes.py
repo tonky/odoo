@@ -28,6 +28,8 @@ if typing.TYPE_CHECKING:
     from odoo.modules.registry import Registry
 
 _logger = logging.getLogger('odoo.registry')
+_field_definitions_cache: dict[tuple, dict[str, tuple]] = {}
+
 
 # THE MODEL DEFINITIONS, MODEL CLASSES, AND MODEL INSTANCES
 #
@@ -344,6 +346,8 @@ def _prepare_setup(model_cls: type[BaseModel]):
     model_cls._constraint_methods = models.BaseModel._constraint_methods
     model_cls._ondelete_methods = models.BaseModel._ondelete_methods
     model_cls._onchange_methods = models.BaseModel._onchange_methods
+    if hasattr(model_cls, '_mro_resolve_cache'):
+        model_cls._mro_resolve_cache.clear()
 
 
 def _setup(model_cls: type[BaseModel], env: Environment):
@@ -367,12 +371,18 @@ def _setup(model_cls: type[BaseModel], env: Environment):
     model_cls._fields__.clear()
 
     # collect the definitions of each field (base definition + overrides)
-    definitions = defaultdict(list)
-    for cls in reversed(model_cls._model_classes__):
-        # this condition is an optimization of is_model_definition(cls)
-        if isinstance(cls, models.MetaModel):
-            for field in cls._field_definitions:
-                definitions[field.name].append(field)
+    defs_cache = _field_definitions_cache.get(model_cls._model_classes__)
+    if defs_cache is None:
+        raw_defs = defaultdict(list)
+        for cls in reversed(model_cls._model_classes__):
+            # this condition is an optimization of is_model_definition(cls)
+            if isinstance(cls, models.MetaModel):
+                for field in cls._field_definitions:
+                    raw_defs[field.name].append(field)
+        defs_cache = {name: tuple(fields_) for name, fields_ in raw_defs.items()}
+        _field_definitions_cache[model_cls._model_classes__] = defs_cache
+
+    definitions = {name: list(fields_) for name, fields_ in defs_cache.items()}
 
     for name, fields_ in definitions.items():
         if f'{model_cls._name}.{name}' in model_cls.pool._database_translated_fields:

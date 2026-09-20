@@ -13,6 +13,12 @@ from subprocess import Popen, PIPE
 from lxml import etree
 from rjsmin import jsmin as rjsmin
 
+
+def _minify_js(content):
+    """Minify JavaScript source string using rjsmin or configured native minifier."""
+    return rjsmin(content)
+
+
 from odoo import release
 from odoo.api import SUPERUSER_ID
 from odoo.http import request
@@ -829,7 +835,7 @@ class JavascriptAsset(WebAsset):
         return content
 
     def minify(self):
-        return self.with_header(rjsmin(self.content))
+        return self.with_header(_minify_js(self.content))
 
     def _fetch_content(self):
         try:
