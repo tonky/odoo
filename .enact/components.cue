@@ -21,8 +21,8 @@ package replay
 		domainRoots: [...string]
 		fullRunPatterns: []
 		selector: {
-			command:     "enact scope -t python {changed_files} | grep -E '^{component_root}/' || true"
-			fallback:    "all"
+			command:     "bin/odoo-scope targets -c {component_root} {changed_files}"
+			fallback:    "none"
 			format:      "lines"
 			granularity: "file"
 			originDir:   "."
