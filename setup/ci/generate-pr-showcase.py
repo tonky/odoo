@@ -64,7 +64,7 @@ def main():
         md = f"""# 🚀 Upstream Telemetry Showcase: PR #280664
 
 **PR Context**: [odoo/odoo#280664](https://github.com/odoo/odoo/pull/280664) (`[FIX] hr_holidays_attendance: correct expected hours in time off ledger`)  
-**Diff**: **1 file, +32 lines, -8 lines** (`addons/hr_holidays_attendance/report/hr_leave_attendance_report.py`)
+**Diff**: **2 files, +123 lines, -8 lines** (`addons/hr_holidays_attendance/report/hr_leave_attendance_report.py`, `addons/hr_holidays_attendance/tests/test_leave_attendance_report.py`)
 
 ---
 
