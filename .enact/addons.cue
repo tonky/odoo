@@ -5000,6 +5000,7 @@ _addons: {
 		depends: [
 			"project",
 		]
+		auto_install: true
 		test_depends: [
 			"base",
 			"html_editor",
