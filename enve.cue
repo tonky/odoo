@@ -64,9 +64,7 @@ devEnv: {
                 "preStart": [
                     "bash setup/ci/init-postgres.sh"
                 ],
-                "postStart": [
-                    "bash setup/ci/post-start-postgres.sh"
-                ]
+                "postStart": []
             },
             "name": "db",
             "port": 5432,
