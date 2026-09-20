@@ -62,5 +62,6 @@ package.json
 .enact/runs/
 .enact/targets/
 .enact/*.json
+!.enact/odoo-index.json
 .enact/*.html
 cue.mod/

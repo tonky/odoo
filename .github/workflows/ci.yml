@@ -42,7 +42,7 @@ jobs:
     outputs:
       matrix: ${{ steps.diff.outputs.matrix }}
     steps:
-    - name: Checkout Repository
+    - name: Checkout Repository (sparse)
       uses: actions/checkout@v7
       with:
         fetch-depth: '1'
@@ -50,6 +50,14 @@ jobs:
         filter: blob:none
         lfs: 'false'
         show-progress: 'false'
+        sparse-checkout: |-
+          .enact
+          .github
+          setup
+          bin
+          enve.cue
+          enve.lock
+        sparse-checkout-cone-mode: 'false'
         submodules: 'false'
     - name: Restore enact CLI binary cache
       continue-on-error: true
