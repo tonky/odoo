@@ -167,9 +167,8 @@ registry.category("web_tour.tours").add('project_tour', {
     run: "click",
 },
 {
-    isActive: ["desktop", "auto"],
-    trigger: "a.dropdown-item[id*='user_ids'] span",
-    content: _t("Select an assignee from the menu"),
+    isActive: ["auto", "desktop"],
+    trigger: ".o_field_widget[name='user_ids'] .o-autocomplete--dropdown-menu li:contains(Mitchell Admin)",
     run: "click",
 },
 {

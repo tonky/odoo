@@ -59,6 +59,7 @@ package.json
 # enact runtime artifacts
 .enact/cache/
 .enact/runs/
+.enact/targets/
 .enact/*.json
 .enact/*.html
 cue.mod/

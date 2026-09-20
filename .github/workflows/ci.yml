@@ -84,8 +84,9 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -175,8 +176,9 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -279,8 +281,9 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -356,8 +359,9 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
+          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -388,7 +392,7 @@ jobs:
           .venv
         restore-keys: ${{ runner.os }}-${{ matrix.technology }}-
     - name: Pre-warm Playwright Browsers from Cloudflare R2
-      if: ${{ contains(matrix.component, 'e2e') || contains(matrix.component, 'playwright') || matrix.technology == 'playwright' }}
+      if: ${{ contains(matrix.component, 'e2e') || contains(matrix.component, 'playwright') || contains(matrix.component, 'project') || contains(matrix.component, 'tour') || matrix.technology == 'playwright' }}
       continue-on-error: true
       run: |-
         if [ -n "$ENACT_R2_BUCKET" ]; then
@@ -397,6 +401,11 @@ jobs:
           curl -fsSL --user "${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}" --aws-sigv4 "aws:amz:auto:s3" "${ENACT_R2_BUCKET%/}/tools/playwright-browsers-linux-amd64.tar.zst" 2>/dev/null | tar -x --zstd -C "$HOME/.cache/ms-playwright" 2>/dev/null || true
           cp -r "$HOME/.cache/ms-playwright/." "/tmp/.cache/ms-playwright/" 2>/dev/null || true
           echo "PLAYWRIGHT_BROWSERS_PATH=/tmp/.cache/ms-playwright" >> "$GITHUB_ENV"
+          BROWSER_BIN=$(find /tmp/.cache/ms-playwright "$HOME/.cache/ms-playwright" -name "chrome-headless-shell" -type f -perm -111 2>/dev/null | head -n 1)
+          if [ -n "$BROWSER_BIN" ]; then
+            echo "ODOO_BROWSER_BIN=$BROWSER_BIN" >> "$GITHUB_ENV"
+            echo "🌐 Configured Odoo browser binary: $BROWSER_BIN"
+          fi
         fi
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
@@ -442,6 +451,7 @@ jobs:
         CI_COMPONENT: ${{ matrix.component }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
         PLAYWRIGHT_BROWSERS_PATH: /tmp/.cache/ms-playwright
+        ODOO_BROWSER_BIN: ${{ env.ODOO_BROWSER_BIN }}
     - name: Push Updated Dependencies to Cloudflare R2
       if: success()
       continue-on-error: true
