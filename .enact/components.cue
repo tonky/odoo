@@ -22,7 +22,7 @@ package replay
 		fullRunPatterns: []
 		selector: {
 			command:     "enact scope -t python {changed_files} | grep -E '^{component_root}/' || true"
-			fallback:    "none"
+			fallback:    "all"
 			format:      "lines"
 			granularity: "file"
 			originDir:   "."
