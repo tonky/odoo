@@ -80,27 +80,13 @@ class HrLeaveAttendanceReport(models.Model):
         """)
 
     def _cte_cal_workday(self):
-        """Aggregate scheduled hours per calendar/weekday, summing split shifts on the same day.
-        Two-weeks calendars keep both weeks apart (`week_type`) so the join in `_from`/
-        `_cte_leave_day` can pick the one that actually applies to a given real date,
-        instead of blending both weeks together.
-        """
+        """Reduce split shifts to the only property the report needs: a working weekday."""
         return SQL("""
-            SELECT calendar_id,
-                   dayofweek::integer AS dayofweek,
-                   week_type,
-                   SUM(duration_hours) AS hours_per_day
+            SELECT DISTINCT
+                   calendar_id,
+                   dayofweek::integer AS dayofweek
               FROM resource_calendar_attendance
-          GROUP BY calendar_id, dayofweek, week_type
         """)
-
-    def _sql_week_type(self, day_column):
-        """Global week parity of `day_column` (an SQL expression for a date/timestamp
-        column), mirroring resource.calendar.attendance.get_week_type(): the parity of
-        the number of weeks since 0001-01-01 -- the same for every two-weeks calendar,
-        with no per-calendar reference date needed.
-        """
-        return SQL("MOD((%s::date - DATE '0001-01-01') / 7, 2)", day_column)
 
     def _cte_emp_day(self):
         """Resolve the effective version once for every employee/day."""
@@ -245,7 +231,6 @@ class HrLeaveAttendanceReport(models.Model):
                       JOIN cal_workday AS cw
                         ON cw.calendar_id = ec.calendar_id
                        AND cw.dayofweek = EXTRACT(ISODOW FROM d.day)::integer - 1
-                       AND (cw.week_type IS NULL OR cw.week_type::integer = %s)
                  LEFT JOIN holiday AS h
                         ON NOT lv.include_public_holidays_in_duration
                        AND h.company_id = ec.company_id
@@ -255,7 +240,7 @@ class HrLeaveAttendanceReport(models.Model):
                      WHERE h.day IS NULL
                    ) AS charge
           GROUP BY charge.employee_id, charge.calendar_id, charge.tz, charge.day
-        """, self._sql_week_type(SQL("d.day")))
+        """)
 
     def _select(self):
         return SQL("""
@@ -264,11 +249,11 @@ class HrLeaveAttendanceReport(models.Model):
                    ed.employee_id,
                    rc.id AS schedule_id,
                    ROUND(COALESCE(att.worked_hours, 0.0)::numeric, 2) AS worked_hours,
-                   ROUND(COALESCE(cw.hours_per_day, 0.0)::numeric, 2) AS expected_hours,
+                   ROUND(COALESCE(rc.hours_per_day, 0.0)::numeric, 2) AS expected_hours,
                    ROUND(COALESCE(ld.leave_hours, 0.0)::numeric, 2) AS leave_hours,
                    (
                        ROUND(COALESCE(att.worked_hours, 0.0)::numeric, 2)
-                       - ROUND(COALESCE(cw.hours_per_day, 0.0)::numeric, 2)
+                       - ROUND(COALESCE(rc.hours_per_day, 0.0)::numeric, 2)
                        + ROUND(COALESCE(ld.leave_hours, 0.0)::numeric, 2)
                    ) AS difference_hours
         """)
@@ -281,7 +266,6 @@ class HrLeaveAttendanceReport(models.Model):
               JOIN cal_workday AS cw
                 ON cw.calendar_id = ed.resource_calendar_id
                AND cw.dayofweek = EXTRACT(ISODOW FROM ed.day)::integer - 1
-               AND (cw.week_type IS NULL OR cw.week_type::integer = %s)
          LEFT JOIN attendance AS att
                 ON att.employee_id = ed.employee_id
                AND att.check_date = ed.day
@@ -290,7 +274,7 @@ class HrLeaveAttendanceReport(models.Model):
                AND ld.calendar_id = ed.resource_calendar_id
                AND ld.tz = ed.tz
                AND ld.day = ed.day
-        """, self._sql_week_type(SQL("ed.day")))
+        """)
 
     def _where(self):
         return SQL("""
