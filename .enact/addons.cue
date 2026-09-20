@@ -12,6 +12,15 @@ _addons: {
 			"portal",
 			"product",
 		]
+		test_depends: [
+			"base",
+			"mail",
+			"payment",
+			"test_mail",
+			"test_mimetypes",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"account_add_gln": {
@@ -19,6 +28,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"account_check_printing": {
@@ -26,6 +36,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"account_debit_note": {
@@ -33,12 +44,16 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"account_edi": {
 		dir: "addons/account_edi"
 		depends: [
 			"account",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -48,12 +63,16 @@ _addons: {
 			"account",
 			"certificate",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"account_edi_ubl_cii": {
 		dir: "addons/account_edi_ubl_cii"
 		depends: [
 			"account",
+		]
+		test_depends: [
+			"test_mimetypes",
 		]
 		has_tests: true
 	}
@@ -63,6 +82,7 @@ _addons: {
 			"account",
 			"fleet",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"account_payment": {
@@ -71,12 +91,20 @@ _addons: {
 			"account",
 			"payment",
 		]
+		test_depends: [
+			"base",
+			"portal",
+			"web",
+		]
 		has_tests: true
 	}
 	"account_payment_interco": {
 		dir: "addons/account_payment_interco"
 		depends: [
 			"account_payment",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -86,6 +114,11 @@ _addons: {
 			"account_edi_proxy_client",
 			"account_edi_ubl_cii",
 		]
+		test_depends: [
+			"account",
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"account_peppol_advanced_fields": {
@@ -94,6 +127,7 @@ _addons: {
 			"account",
 			"account_edi_ubl_cii",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"account_peppol_response": {
@@ -101,6 +135,7 @@ _addons: {
 		depends: [
 			"account_peppol",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"account_qr_code_emv": {
@@ -108,6 +143,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"account_qr_code_sepa": {
@@ -116,12 +152,16 @@ _addons: {
 			"account",
 			"base_iban",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"account_tax_python": {
 		dir: "addons/account_tax_python"
 		depends: [
 			"account",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -130,6 +170,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"account_update_tax_tags": {
@@ -137,6 +178,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"analytic": {
@@ -146,12 +188,18 @@ _addons: {
 			"mail",
 			"uom",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"api_doc": {
 		dir: "addons/api_doc"
 		depends: [
 			"web",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -160,6 +208,7 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"auth_ldap": {
@@ -168,6 +217,7 @@ _addons: {
 			"base",
 			"base_setup",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"auth_oauth": {
@@ -178,6 +228,7 @@ _addons: {
 			"base_setup",
 			"web",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"auth_passkey": {
@@ -185,6 +236,9 @@ _addons: {
 		depends: [
 			"base_setup",
 			"web",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -194,6 +248,9 @@ _addons: {
 			"auth_passkey",
 			"portal",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"auth_password_policy": {
@@ -202,6 +259,7 @@ _addons: {
 			"base_setup",
 			"web",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"auth_password_policy_portal": {
@@ -210,6 +268,7 @@ _addons: {
 			"auth_password_policy",
 			"portal",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"auth_password_policy_signup": {
@@ -217,6 +276,9 @@ _addons: {
 		depends: [
 			"auth_password_policy",
 			"auth_signup",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -226,6 +288,9 @@ _addons: {
 			"base_setup",
 			"mail",
 			"web",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -237,12 +302,19 @@ _addons: {
 			"auth_totp_mail",
 			"bus",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"auth_totp": {
 		dir: "addons/auth_totp"
 		depends: [
 			"web",
+		]
+		test_depends: [
+			"bus",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -252,6 +324,11 @@ _addons: {
 			"auth_totp",
 			"mail",
 		]
+		test_depends: [
+			"base",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"auth_totp_portal": {
@@ -260,6 +337,10 @@ _addons: {
 			"auth_totp",
 			"portal",
 		]
+		test_depends: [
+			"base",
+			"web",
+		]
 		has_tests: true
 	}
 	"barcodes": {
@@ -267,6 +348,7 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"barcodes_gs1_nomenclature": {
@@ -275,11 +357,18 @@ _addons: {
 			"barcodes",
 			"uom",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"base": {
 		dir: "odoo/addons/base"
 		depends: []
+		test_depends: [
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"base_address_extended": {
@@ -288,6 +377,7 @@ _addons: {
 			"base",
 			"contacts",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"base_automation": {
@@ -299,6 +389,9 @@ _addons: {
 			"resource",
 			"sms",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"base_geolocalize": {
@@ -306,6 +399,7 @@ _addons: {
 		depends: [
 			"base_setup",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"base_iban": {
@@ -314,6 +408,9 @@ _addons: {
 			"account",
 			"web",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: false
 	}
 	"base_import": {
@@ -321,12 +418,16 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"base_import_module": {
 		dir: "addons/base_import_module"
 		depends: [
 			"web",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -335,6 +436,7 @@ _addons: {
 		depends: [
 			"mail",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"base_setup": {
@@ -343,6 +445,7 @@ _addons: {
 			"base",
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"base_sparse_field": {
@@ -350,6 +453,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"base_vat": {
@@ -357,12 +461,17 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"board": {
 		dir: "addons/board"
 		depends: [
 			"spreadsheet_dashboard",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: false
 	}
@@ -372,6 +481,7 @@ _addons: {
 			"base",
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"calendar": {
@@ -379,6 +489,11 @@ _addons: {
 		depends: [
 			"base",
 			"mail",
+		]
+		test_depends: [
+			"html_editor",
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -388,6 +503,7 @@ _addons: {
 			"calendar",
 			"sms",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"certificate": {
@@ -395,6 +511,7 @@ _addons: {
 		depends: [
 			"base_setup",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"cloud_storage": {
@@ -403,12 +520,19 @@ _addons: {
 			"base_setup",
 			"mail",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"cloud_storage_azure": {
 		dir: "addons/cloud_storage_azure"
 		depends: [
 			"cloud_storage",
+		]
+		test_depends: [
+			"base",
+			"mail",
 		]
 		has_tests: true
 	}
@@ -417,6 +541,9 @@ _addons: {
 		depends: [
 			"cloud_storage",
 		]
+		test_depends: [
+			"base",
+		]
 		has_tests: true
 	}
 	"cloud_storage_migration": {
@@ -424,6 +551,7 @@ _addons: {
 		depends: [
 			"cloud_storage",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"contacts": {
@@ -431,6 +559,10 @@ _addons: {
 		depends: [
 			"base",
 			"mail",
+		]
+		test_depends: [
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -448,6 +580,11 @@ _addons: {
 			"utm",
 			"web_tour",
 		]
+		test_depends: [
+			"base",
+			"iap",
+			"web",
+		]
 		has_tests: true
 	}
 	"crm_iap_enrich": {
@@ -455,6 +592,10 @@ _addons: {
 		depends: [
 			"iap_crm",
 			"iap_mail",
+		]
+		test_depends: [
+			"crm",
+			"iap",
 		]
 		has_tests: true
 	}
@@ -464,6 +605,11 @@ _addons: {
 			"iap_crm",
 			"iap_mail",
 		]
+		test_depends: [
+			"crm",
+			"iap",
+			"web",
+		]
 		has_tests: true
 	}
 	"crm_livechat": {
@@ -471,6 +617,10 @@ _addons: {
 		depends: [
 			"crm",
 			"im_livechat",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -480,6 +630,7 @@ _addons: {
 			"crm",
 			"mail_plugin",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"crm_sms": {
@@ -488,12 +639,16 @@ _addons: {
 			"crm",
 			"sms",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"data_recycle": {
 		dir: "addons/data_recycle"
 		depends: [
 			"mail",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -503,12 +658,19 @@ _addons: {
 			"payment_custom",
 			"sale",
 		]
+		test_depends: [
+			"payment",
+			"web",
+		]
 		has_tests: true
 	}
 	"delivery_mondialrelay": {
 		dir: "addons/delivery_mondialrelay"
 		depends: [
 			"stock_delivery",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -518,6 +680,7 @@ _addons: {
 			"stock_delivery",
 			"stock_picking_batch",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"digest": {
@@ -526,6 +689,9 @@ _addons: {
 			"mail",
 			"portal",
 			"resource",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -539,6 +705,11 @@ _addons: {
 			"portal",
 			"utm",
 		]
+		test_depends: [
+			"base",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"event_booth": {
@@ -546,6 +717,7 @@ _addons: {
 		depends: [
 			"event",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"event_booth_sale": {
@@ -553,6 +725,12 @@ _addons: {
 		depends: [
 			"event_booth",
 			"event_sale",
+		]
+		test_depends: [
+			"account",
+			"sale",
+			"sales_team",
+			"web",
 		]
 		has_tests: true
 	}
@@ -562,6 +740,11 @@ _addons: {
 			"crm",
 			"event",
 		]
+		test_depends: [
+			"base",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"event_crm_sale": {
@@ -570,6 +753,7 @@ _addons: {
 			"event_crm",
 			"event_sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"event_product": {
@@ -579,6 +763,7 @@ _addons: {
 			"event",
 			"product",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"event_sale": {
@@ -586,6 +771,13 @@ _addons: {
 		depends: [
 			"event_product",
 			"sale_management",
+		]
+		test_depends: [
+			"mail",
+			"sale",
+			"sales_team",
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -595,6 +787,9 @@ _addons: {
 			"event",
 			"sms",
 		]
+		test_depends: [
+			"phone_validation",
+		]
 		has_tests: true
 	}
 	"fleet": {
@@ -603,12 +798,18 @@ _addons: {
 			"base",
 			"mail",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"gamification": {
 		dir: "addons/gamification"
 		depends: [
 			"mail",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -618,6 +819,7 @@ _addons: {
 			"gamification",
 			"sale_crm",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"google_account": {
@@ -625,12 +827,16 @@ _addons: {
 		depends: [
 			"base_setup",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"google_address_autocomplete": {
 		dir: "addons/google_address_autocomplete"
 		depends: [
 			"web",
+		]
+		test_depends: [
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -640,6 +846,10 @@ _addons: {
 			"calendar",
 			"google_account",
 		]
+		test_depends: [
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"google_gmail": {
@@ -647,12 +857,16 @@ _addons: {
 		depends: [
 			"mail",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"google_recaptcha": {
 		dir: "addons/google_recaptcha"
 		depends: [
 			"base_setup",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -665,6 +879,11 @@ _addons: {
 			"resource_mail",
 			"web",
 		]
+		test_depends: [
+			"mail",
+			"resource",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"hr_attendance": {
@@ -674,6 +893,10 @@ _addons: {
 			"base_geolocalize",
 			"hr",
 		]
+		test_depends: [
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"hr_calendar": {
@@ -681,6 +904,10 @@ _addons: {
 		depends: [
 			"calendar",
 			"hr",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -691,6 +918,10 @@ _addons: {
 			"hr",
 			"web_tour",
 		]
+		test_depends: [
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"hr_fleet": {
@@ -699,6 +930,9 @@ _addons: {
 			"fleet",
 			"hr",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"hr_gamification": {
@@ -706,6 +940,10 @@ _addons: {
 		depends: [
 			"gamification",
 			"hr",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -716,6 +954,14 @@ _addons: {
 			"hr",
 			"resource",
 		]
+		test_depends: [
+			"base",
+			"hr_calendar",
+			"mail",
+			"resource_mail",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"hr_holidays_attendance": {
@@ -723,6 +969,9 @@ _addons: {
 		depends: [
 			"hr_attendance",
 			"hr_holidays",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -732,12 +981,21 @@ _addons: {
 			"hr_holidays",
 			"hr_homeworking",
 		]
+		test_depends: [
+			"hr",
+			"mail",
+			"web",
+		]
 		has_tests: false
 	}
 	"hr_homeworking": {
 		dir: "addons/hr_homeworking"
 		depends: [
 			"hr",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -747,6 +1005,10 @@ _addons: {
 			"calendar",
 			"hr_homeworking",
 		]
+		test_depends: [
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"hr_hourly_cost": {
@@ -754,6 +1016,7 @@ _addons: {
 		depends: [
 			"hr",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"hr_livechat": {
@@ -762,6 +1025,7 @@ _addons: {
 			"hr",
 			"im_livechat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"hr_maintenance": {
@@ -770,6 +1034,7 @@ _addons: {
 			"hr",
 			"maintenance",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"hr_org_chart": {
@@ -777,6 +1042,10 @@ _addons: {
 		depends: [
 			"hr",
 			"web_hierarchy",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -786,6 +1055,9 @@ _addons: {
 			"hr",
 			"hr_holidays",
 			"sms",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -799,6 +1071,10 @@ _addons: {
 			"utm",
 			"web_tour",
 		]
+		test_depends: [
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"hr_recruitment_skills": {
@@ -806,6 +1082,10 @@ _addons: {
 		depends: [
 			"hr_recruitment",
 			"hr_skills",
+		]
+		test_depends: [
+			"html_editor",
+			"web",
 		]
 		has_tests: true
 	}
@@ -815,6 +1095,7 @@ _addons: {
 			"hr_recruitment",
 			"sms",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"hr_recruitment_survey": {
@@ -823,12 +1104,21 @@ _addons: {
 			"hr_recruitment",
 			"survey",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: true
 	}
 	"hr_skills": {
 		dir: "addons/hr_skills"
 		depends: [
 			"hr",
+		]
+		test_depends: [
+			"mail",
+			"resource_mail",
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -838,6 +1128,9 @@ _addons: {
 			"event",
 			"hr_skills",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"hr_skills_slides": {
@@ -845,6 +1138,9 @@ _addons: {
 		depends: [
 			"hr_skills",
 			"website_slides",
+		]
+		test_depends: [
+			"mail",
 		]
 		has_tests: true
 	}
@@ -854,6 +1150,7 @@ _addons: {
 			"hr_skills",
 			"survey",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"hr_timesheet": {
@@ -865,6 +1162,10 @@ _addons: {
 			"project",
 			"uom",
 		]
+		test_depends: [
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"hr_timesheet_attendance": {
@@ -873,12 +1174,17 @@ _addons: {
 			"hr_attendance",
 			"hr_timesheet",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"hr_work_entry": {
 		dir: "addons/hr_work_entry"
 		depends: [
 			"hr",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -887,6 +1193,9 @@ _addons: {
 		depends: [
 			"hr_holidays",
 			"hr_work_entry",
+		]
+		test_depends: [
+			"mail",
 		]
 		has_tests: true
 	}
@@ -897,6 +1206,9 @@ _addons: {
 			"html_editor",
 			"mail",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"html_editor": {
@@ -906,6 +1218,9 @@ _addons: {
 			"bus",
 			"web",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: true
 	}
 	"http_routing": {
@@ -913,6 +1228,7 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"iap": {
@@ -920,6 +1236,9 @@ _addons: {
 		depends: [
 			"base_setup",
 			"web",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -929,6 +1248,7 @@ _addons: {
 			"crm",
 			"iap_mail",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"iap_mail": {
@@ -936,6 +1256,9 @@ _addons: {
 		depends: [
 			"iap",
 			"mail",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -947,6 +1270,12 @@ _addons: {
 			"rating",
 			"utm",
 		]
+		test_depends: [
+			"base",
+			"bus",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"iot_base": {
@@ -954,16 +1283,19 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"iot_box_image": {
 		dir: "addons/iot_box_image"
 		depends: []
+		test_depends: []
 		has_tests: false
 	}
 	"iot_drivers": {
 		dir: "addons/iot_drivers"
 		depends: []
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_account_edi_ubl_cii_tests": {
@@ -976,12 +1308,19 @@ _addons: {
 			"l10n_fr_account",
 			"l10n_nl",
 		]
+		test_depends: [
+			"account",
+		]
 		has_tests: true
 	}
 	"l10n_account_withholding_tax": {
 		dir: "addons/l10n_account_withholding_tax"
 		depends: [
 			"account",
+		]
+		test_depends: [
+			"analytic",
+			"web",
 		]
 		has_tests: true
 	}
@@ -991,6 +1330,7 @@ _addons: {
 			"l10n_account_withholding_tax",
 			"point_of_sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ae": {
@@ -999,6 +1339,7 @@ _addons: {
 			"account",
 			"l10n_gcc_invoice",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ae_pos": {
@@ -1007,12 +1348,19 @@ _addons: {
 			"l10n_ae",
 			"l10n_gcc_pos",
 		]
+		test_depends: [
+			"point_of_sale",
+			"web",
+		]
 		has_tests: false
 	}
 	"l10n_anz_ubl_pint": {
 		dir: "addons/l10n_anz_ubl_pint"
 		depends: [
 			"account_edi_ubl_cii",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -1023,6 +1371,7 @@ _addons: {
 			"l10n_latam_base",
 			"l10n_latam_invoice_document",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_ar_pos": {
@@ -1030,6 +1379,10 @@ _addons: {
 		depends: [
 			"l10n_ar",
 			"point_of_sale",
+		]
+		test_depends: [
+			"account",
+			"web",
 		]
 		has_tests: true
 	}
@@ -1039,6 +1392,9 @@ _addons: {
 			"l10n_ar",
 			"stock_account",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: true
 	}
 	"l10n_ar_website_sale": {
@@ -1046,6 +1402,9 @@ _addons: {
 		depends: [
 			"l10n_ar",
 			"website_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -1055,6 +1414,7 @@ _addons: {
 			"l10n_ar",
 			"l10n_latam_check",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_at": {
@@ -1066,6 +1426,7 @@ _addons: {
 			"base_vat",
 			"l10n_din5008",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_au": {
@@ -1073,6 +1434,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_bd": {
@@ -1080,6 +1442,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_be": {
@@ -1090,6 +1453,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_be_pos_restaurant": {
@@ -1098,6 +1462,7 @@ _addons: {
 			"l10n_be",
 			"pos_restaurant",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_be_pos_sale": {
@@ -1105,6 +1470,10 @@ _addons: {
 		depends: [
 			"l10n_be",
 			"pos_sale",
+		]
+		test_depends: [
+			"point_of_sale",
+			"web",
 		]
 		has_tests: true
 	}
@@ -1114,6 +1483,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_bg": {
@@ -1122,6 +1492,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_bg_ledger": {
@@ -1129,6 +1500,7 @@ _addons: {
 		depends: [
 			"l10n_bg",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_bh": {
@@ -1137,6 +1509,7 @@ _addons: {
 			"account",
 			"l10n_gcc_invoice",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_bj": {
@@ -1145,6 +1518,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_bo": {
@@ -1152,6 +1526,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_br": {
@@ -1163,6 +1538,10 @@ _addons: {
 			"l10n_latam_base",
 			"l10n_latam_invoice_document",
 		]
+		test_depends: [
+			"portal",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_br_sales": {
@@ -1171,6 +1550,7 @@ _addons: {
 			"l10n_br",
 			"sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_br_website_sale": {
@@ -1179,6 +1559,7 @@ _addons: {
 			"l10n_br",
 			"website_sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ca": {
@@ -1187,6 +1568,7 @@ _addons: {
 			"account",
 			"base_iban",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cd": {
@@ -1195,6 +1577,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cf": {
@@ -1203,6 +1586,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cg": {
@@ -1211,6 +1595,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ch": {
@@ -1221,6 +1606,7 @@ _addons: {
 			"base_iban",
 			"l10n_din5008",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_ch_pos": {
@@ -1228,6 +1614,9 @@ _addons: {
 		depends: [
 			"l10n_ch",
 			"point_of_sale",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -1237,6 +1626,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cl": {
@@ -1249,6 +1639,7 @@ _addons: {
 			"l10n_latam_invoice_document",
 			"uom",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_cm": {
@@ -1257,6 +1648,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cn": {
@@ -1265,6 +1657,7 @@ _addons: {
 			"account",
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cn_city": {
@@ -1273,6 +1666,7 @@ _addons: {
 			"base_address_extended",
 			"l10n_cn",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_co": {
@@ -1282,6 +1676,7 @@ _addons: {
 			"account_debit_note",
 			"l10n_latam_base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_co_pos": {
@@ -1290,6 +1685,9 @@ _addons: {
 			"l10n_co",
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"l10n_cr": {
@@ -1297,6 +1695,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cy": {
@@ -1306,6 +1705,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_cz": {
@@ -1316,6 +1716,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_de": {
@@ -1327,6 +1728,7 @@ _addons: {
 			"base_vat",
 			"l10n_din5008",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_din5008": {
@@ -1334,6 +1736,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_din5008_expense": {
@@ -1342,6 +1745,7 @@ _addons: {
 			"hr_expense",
 			"l10n_din5008",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_din5008_purchase": {
@@ -1350,6 +1754,7 @@ _addons: {
 			"l10n_din5008",
 			"purchase",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_din5008_repair": {
@@ -1358,6 +1763,7 @@ _addons: {
 			"l10n_din5008",
 			"repair",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_din5008_sale": {
@@ -1366,6 +1772,7 @@ _addons: {
 			"l10n_din5008",
 			"sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_din5008_stock": {
@@ -1374,6 +1781,7 @@ _addons: {
 			"l10n_din5008",
 			"stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_dk": {
@@ -1384,6 +1792,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_dk_fik": {
@@ -1391,6 +1800,7 @@ _addons: {
 		depends: [
 			"l10n_dk",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_dk_nemhandel": {
@@ -1400,6 +1810,11 @@ _addons: {
 			"account_edi_ubl_cii",
 			"l10n_dk",
 		]
+		test_depends: [
+			"account",
+			"l10n_account_edi_ubl_cii_tests",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_dk_nemhandel_response": {
@@ -1407,6 +1822,7 @@ _addons: {
 		depends: [
 			"l10n_dk_nemhandel",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_dk_oioubl": {
@@ -1414,6 +1830,10 @@ _addons: {
 		depends: [
 			"account_edi_ubl_cii",
 			"l10n_dk",
+		]
+		test_depends: [
+			"account",
+			"l10n_account_edi_ubl_cii_tests",
 		]
 		has_tests: true
 	}
@@ -1423,6 +1843,7 @@ _addons: {
 			"account",
 			"base_iban",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_dz": {
@@ -1431,6 +1852,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ec": {
@@ -1443,6 +1865,9 @@ _addons: {
 			"l10n_latam_base",
 			"l10n_latam_invoice_document",
 		]
+		test_depends: [
+			"account_edi",
+		]
 		has_tests: true
 	}
 	"l10n_ec_sale": {
@@ -1451,6 +1876,7 @@ _addons: {
 			"l10n_ec",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_ec_stock": {
@@ -1459,6 +1885,7 @@ _addons: {
 			"l10n_ec",
 			"stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ee": {
@@ -1467,6 +1894,7 @@ _addons: {
 			"account",
 			"account_edi_ubl_cii",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_eg": {
@@ -1474,6 +1902,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_eg_edi_eta": {
@@ -1481,6 +1910,9 @@ _addons: {
 		depends: [
 			"account_edi",
 			"l10n_eg",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -1492,6 +1924,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_es_edi_facturae": {
@@ -1499,6 +1932,9 @@ _addons: {
 		depends: [
 			"certificate",
 			"l10n_es",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -1509,6 +1945,7 @@ _addons: {
 			"certificate",
 			"l10n_es",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_es_edi_tbai": {
@@ -1516,6 +1953,9 @@ _addons: {
 		depends: [
 			"certificate",
 			"l10n_es",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -1525,6 +1965,10 @@ _addons: {
 			"l10n_es_edi_tbai",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_es_edi_verifactu": {
@@ -1532,6 +1976,9 @@ _addons: {
 		depends: [
 			"certificate",
 			"l10n_es",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -1541,6 +1988,9 @@ _addons: {
 			"l10n_es_edi_verifactu",
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_es_pos": {
@@ -1549,6 +1999,10 @@ _addons: {
 			"l10n_es",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_et": {
@@ -1556,6 +2010,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_eu_oss": {
@@ -1563,6 +2018,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_fi": {
@@ -1573,6 +2029,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_fi_sale": {
@@ -1581,6 +2038,7 @@ _addons: {
 			"l10n_fi",
 			"sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_fr": {
@@ -1588,6 +2046,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_fr_account": {
@@ -1599,6 +2058,7 @@ _addons: {
 			"base_vat",
 			"l10n_fr",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_fr_facturx_chorus_pro": {
@@ -1608,6 +2068,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"l10n_fr_account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_fr_hr_holidays": {
@@ -1615,6 +2076,7 @@ _addons: {
 		depends: [
 			"hr_holidays",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_fr_hr_work_entry_holidays": {
@@ -1623,6 +2085,7 @@ _addons: {
 			"hr_work_entry_holidays",
 			"l10n_fr_hr_holidays",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_fr_pdp": {
@@ -1633,6 +2096,12 @@ _addons: {
 			"iap",
 			"l10n_fr_account",
 		]
+		test_depends: [
+			"account",
+			"account_edi_ubl_cii",
+			"account_peppol",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_fr_pdp_pos": {
@@ -1641,6 +2110,7 @@ _addons: {
 			"l10n_fr_pdp",
 			"point_of_sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_fr_pos_cert": {
@@ -1648,6 +2118,10 @@ _addons: {
 		depends: [
 			"l10n_fr_account",
 			"point_of_sale",
+		]
+		test_depends: [
+			"account_edi",
+			"web",
 		]
 		has_tests: true
 	}
@@ -1657,6 +2131,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gcc_invoice": {
@@ -1664,6 +2139,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gcc_invoice_stock_account": {
@@ -1672,6 +2148,7 @@ _addons: {
 			"l10n_gcc_invoice",
 			"stock_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gcc_pos": {
@@ -1680,6 +2157,10 @@ _addons: {
 			"l10n_gcc_invoice",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_ge": {
@@ -1687,6 +2168,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gf": {
@@ -1695,6 +2177,7 @@ _addons: {
 			"account",
 			"l10n_fr_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gn": {
@@ -1703,6 +2186,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gp": {
@@ -1711,6 +2195,7 @@ _addons: {
 			"account",
 			"l10n_fr_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gq": {
@@ -1719,6 +2204,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gr": {
@@ -1729,12 +2215,16 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gr_edi": {
 		dir: "addons/l10n_gr_edi"
 		depends: [
 			"l10n_gr",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -1744,6 +2234,9 @@ _addons: {
 			"account_edi_proxy_client",
 			"l10n_gr_edi",
 		]
+		test_depends: [
+			"account",
+		]
 		has_tests: true
 	}
 	"l10n_gt": {
@@ -1752,6 +2245,7 @@ _addons: {
 			"account",
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_gw": {
@@ -1760,6 +2254,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_hk": {
@@ -1768,6 +2263,7 @@ _addons: {
 			"account",
 			"account_qr_code_emv",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_hn": {
@@ -1776,6 +2272,7 @@ _addons: {
 			"account",
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_hr": {
@@ -1784,6 +2281,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_hr_edi": {
@@ -1793,6 +2291,9 @@ _addons: {
 			"account_peppol",
 			"l10n_hr",
 		]
+		test_depends: [
+			"account",
+		]
 		has_tests: true
 	}
 	"l10n_hr_kuna": {
@@ -1800,6 +2301,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_hu": {
@@ -1808,6 +2310,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_hu_edi": {
@@ -1817,12 +2320,19 @@ _addons: {
 			"base_iban",
 			"l10n_hu",
 		]
+		test_depends: [
+			"account",
+		]
 		has_tests: true
 	}
 	"l10n_hu_edi_receive": {
 		dir: "addons/l10n_hu_edi_receive"
 		depends: [
 			"l10n_hu_edi",
+		]
+		test_depends: [
+			"account",
+			"web",
 		]
 		has_tests: true
 	}
@@ -1833,12 +2343,16 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_id_efaktur_coretax": {
 		dir: "addons/l10n_id_efaktur_coretax"
 		depends: [
 			"l10n_id",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -1847,6 +2361,10 @@ _addons: {
 		depends: [
 			"l10n_id",
 			"point_of_sale",
+		]
+		test_depends: [
+			"account",
+			"web",
 		]
 		has_tests: true
 	}
@@ -1858,6 +2376,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_il": {
@@ -1865,6 +2384,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_in": {
@@ -1876,6 +2396,9 @@ _addons: {
 			"base_vat",
 			"iap",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_in_edi": {
@@ -1884,6 +2407,7 @@ _addons: {
 			"account_edi",
 			"l10n_in",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_in_ewaybill": {
@@ -1891,6 +2415,7 @@ _addons: {
 		depends: [
 			"l10n_in",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_in_ewaybill_irn": {
@@ -1898,6 +2423,9 @@ _addons: {
 		depends: [
 			"l10n_in_edi",
 			"l10n_in_ewaybill",
+		]
+		test_depends: [
+			"l10n_in",
 		]
 		has_tests: true
 	}
@@ -1907,12 +2435,18 @@ _addons: {
 			"l10n_in_ewaybill",
 			"l10n_in_stock",
 		]
+		test_depends: [
+			"l10n_in",
+		]
 		has_tests: true
 	}
 	"l10n_in_hr_holidays": {
 		dir: "addons/l10n_in_hr_holidays"
 		depends: [
 			"hr_holidays",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -1922,6 +2456,10 @@ _addons: {
 			"l10n_in",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_in_purchase_stock": {
@@ -1930,6 +2468,7 @@ _addons: {
 			"l10n_in_stock",
 			"purchase_stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_in_sale": {
@@ -1938,6 +2477,7 @@ _addons: {
 			"l10n_in",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_in_sale_stock": {
@@ -1947,6 +2487,7 @@ _addons: {
 			"l10n_in_stock",
 			"sale_stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_in_stock": {
@@ -1956,6 +2497,7 @@ _addons: {
 			"stock",
 			"stock_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_iq": {
@@ -1963,6 +2505,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_it": {
@@ -1973,6 +2516,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_it_edi": {
@@ -1982,6 +2526,12 @@ _addons: {
 			"account_edi_proxy_client",
 			"l10n_it",
 		]
+		test_depends: [
+			"account",
+			"base",
+			"portal",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_it_edi_doi": {
@@ -1990,6 +2540,7 @@ _addons: {
 			"l10n_it_edi",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_it_edi_sale": {
@@ -1998,6 +2549,7 @@ _addons: {
 			"l10n_it_edi",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_it_stock_ddt": {
@@ -2007,6 +2559,9 @@ _addons: {
 			"stock_account",
 			"stock_delivery",
 		]
+		test_depends: [
+			"sale",
+		]
 		has_tests: true
 	}
 	"l10n_jo": {
@@ -2014,6 +2569,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_jo_edi": {
@@ -2021,6 +2577,9 @@ _addons: {
 		depends: [
 			"account_edi_ubl_cii",
 			"l10n_jo",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2030,6 +2589,10 @@ _addons: {
 			"l10n_jo_edi",
 			"pos_edi_ubl",
 		]
+		test_depends: [
+			"point_of_sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_jp": {
@@ -2037,12 +2600,16 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_jp_ubl_pint": {
 		dir: "addons/l10n_jp_ubl_pint"
 		depends: [
 			"account_edi_ubl_cii",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2051,12 +2618,17 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ke_edi_tremol": {
 		dir: "addons/l10n_ke_edi_tremol"
 		depends: [
 			"l10n_ke",
+		]
+		test_depends: [
+			"account",
+			"web",
 		]
 		has_tests: true
 	}
@@ -2066,6 +2638,7 @@ _addons: {
 			"account_qr_code_emv",
 			"l10n_account_withholding_tax",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_km": {
@@ -2074,6 +2647,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_kr": {
@@ -2081,6 +2655,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_kw": {
@@ -2089,6 +2664,7 @@ _addons: {
 			"account",
 			"l10n_gcc_invoice",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_kz": {
@@ -2096,6 +2672,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_latam_base": {
@@ -2103,6 +2680,9 @@ _addons: {
 		depends: [
 			"base_vat",
 			"contacts",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -2112,6 +2692,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_latam_invoice_document": {
@@ -2120,6 +2701,7 @@ _addons: {
 			"account",
 			"account_debit_note",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_lb_account": {
@@ -2127,6 +2709,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_lk": {
@@ -2135,12 +2718,16 @@ _addons: {
 			"account",
 			"l10n_account_withholding_tax",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_lk_invoice": {
 		dir: "addons/l10n_lk_invoice"
 		depends: [
 			"l10n_lk",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2150,6 +2737,7 @@ _addons: {
 			"account",
 			"account_edi_ubl_cii",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_lu": {
@@ -2160,6 +2748,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_lv": {
@@ -2169,6 +2758,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ma": {
@@ -2177,6 +2767,7 @@ _addons: {
 			"account",
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mc": {
@@ -2185,6 +2776,7 @@ _addons: {
 			"account",
 			"l10n_fr_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ml": {
@@ -2193,6 +2785,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mn": {
@@ -2200,6 +2793,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mq": {
@@ -2208,6 +2802,7 @@ _addons: {
 			"account",
 			"l10n_fr_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mr": {
@@ -2216,6 +2811,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mt": {
@@ -2225,6 +2821,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mt_pos": {
@@ -2232,6 +2829,7 @@ _addons: {
 		depends: [
 			"point_of_sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mu_account": {
@@ -2239,6 +2837,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_mx": {
@@ -2246,6 +2845,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_my": {
@@ -2254,6 +2854,7 @@ _addons: {
 			"account",
 			"account_tax_python",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_my_edi": {
@@ -2263,6 +2864,9 @@ _addons: {
 			"l10n_my",
 			"l10n_my_ubl_pint",
 		]
+		test_depends: [
+			"account",
+		]
 		has_tests: true
 	}
 	"l10n_my_edi_pos": {
@@ -2271,12 +2875,18 @@ _addons: {
 			"l10n_my_edi",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+		]
 		has_tests: true
 	}
 	"l10n_my_ubl_pint": {
 		dir: "addons/l10n_my_ubl_pint"
 		depends: [
 			"account_edi_ubl_cii",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2286,6 +2896,7 @@ _addons: {
 			"account",
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ne": {
@@ -2294,6 +2905,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ng": {
@@ -2302,6 +2914,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_nl": {
@@ -2312,6 +2925,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_no": {
@@ -2322,6 +2936,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_nz": {
@@ -2329,6 +2944,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_om": {
@@ -2337,6 +2953,7 @@ _addons: {
 			"account",
 			"l10n_gcc_invoice",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_pa": {
@@ -2344,6 +2961,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_pe": {
@@ -2356,6 +2974,10 @@ _addons: {
 			"l10n_latam_base",
 			"l10n_latam_invoice_document",
 		]
+		test_depends: [
+			"portal",
+			"web",
+		]
 		has_tests: false
 	}
 	"l10n_pe_pos": {
@@ -2363,6 +2985,10 @@ _addons: {
 		depends: [
 			"l10n_pe",
 			"point_of_sale",
+		]
+		test_depends: [
+			"account_edi",
+			"web",
 		]
 		has_tests: true
 	}
@@ -2373,6 +2999,7 @@ _addons: {
 			"base_vat",
 			"l10n_account_withholding_tax",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_pk": {
@@ -2380,6 +3007,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_pl": {
@@ -2390,12 +3018,16 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_pl_bank_verification": {
 		dir: "addons/l10n_pl_bank_verification"
 		depends: [
 			"l10n_pl",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2405,6 +3037,10 @@ _addons: {
 			"certificate",
 			"l10n_pl",
 		]
+		test_depends: [
+			"account",
+			"base",
+		]
 		has_tests: true
 	}
 	"l10n_pl_edi_jst": {
@@ -2413,6 +3049,7 @@ _addons: {
 			"l10n_pl",
 			"l10n_pl_edi",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_pt": {
@@ -2423,6 +3060,9 @@ _addons: {
 			"base",
 			"base_vat",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_qa": {
@@ -2431,6 +3071,7 @@ _addons: {
 			"account",
 			"l10n_gcc_invoice",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_re": {
@@ -2439,6 +3080,7 @@ _addons: {
 			"account",
 			"l10n_fr_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ro": {
@@ -2448,6 +3090,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ro_cpv_code": {
@@ -2455,6 +3098,7 @@ _addons: {
 		depends: [
 			"l10n_ro_edi",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_ro_edi": {
@@ -2462,6 +3106,11 @@ _addons: {
 		depends: [
 			"account_edi_ubl_cii",
 			"l10n_ro",
+		]
+		test_depends: [
+			"account",
+			"l10n_account_edi_ubl_cii_tests",
+			"web",
 		]
 		has_tests: true
 	}
@@ -2472,6 +3121,11 @@ _addons: {
 			"stock_delivery",
 			"stock_picking_batch",
 		]
+		test_depends: [
+			"account",
+			"stock_account",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_ro_edi_stock_batch": {
@@ -2480,6 +3134,7 @@ _addons: {
 			"l10n_ro_edi_stock",
 			"stock_picking_batch",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_rs": {
@@ -2488,6 +3143,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_rs_edi": {
@@ -2496,6 +3152,9 @@ _addons: {
 			"account_edi_ubl_cii",
 			"l10n_rs",
 		]
+		test_depends: [
+			"l10n_account_edi_ubl_cii_tests",
+		]
 		has_tests: true
 	}
 	"l10n_rw": {
@@ -2503,6 +3162,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_sa": {
@@ -2512,6 +3172,7 @@ _addons: {
 			"account_debit_note",
 			"l10n_gcc_invoice",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_sa_edi": {
@@ -2523,6 +3184,10 @@ _addons: {
 			"certificate",
 			"l10n_sa",
 		]
+		test_depends: [
+			"portal",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_sa_edi_pos": {
@@ -2530,6 +3195,11 @@ _addons: {
 		depends: [
 			"l10n_sa_edi",
 			"l10n_sa_pos",
+		]
+		test_depends: [
+			"account",
+			"point_of_sale",
+			"web",
 		]
 		has_tests: true
 	}
@@ -2539,6 +3209,12 @@ _addons: {
 			"l10n_gcc_pos",
 			"l10n_sa",
 		]
+		test_depends: [
+			"account",
+			"account_edi",
+			"point_of_sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_sa_withholding_tax": {
@@ -2547,6 +3223,7 @@ _addons: {
 			"l10n_account_withholding_tax",
 			"l10n_sa",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_se": {
@@ -2556,6 +3233,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_sg": {
@@ -2564,12 +3242,16 @@ _addons: {
 			"account",
 			"account_qr_code_emv",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_sg_ubl_pint": {
 		dir: "addons/l10n_sg_ubl_pint"
 		depends: [
 			"account_edi_ubl_cii",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2580,6 +3262,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_sk": {
@@ -2589,6 +3272,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_sn": {
@@ -2597,6 +3281,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_syscohada": {
@@ -2604,6 +3289,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_td": {
@@ -2612,6 +3298,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_test_pos_qr_payment": {
@@ -2624,6 +3311,10 @@ _addons: {
 			"l10n_hk",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_tg": {
@@ -2632,6 +3323,7 @@ _addons: {
 			"account",
 			"l10n_syscohada",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_th": {
@@ -2640,6 +3332,7 @@ _addons: {
 			"account",
 			"account_qr_code_emv",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_tn": {
@@ -2647,12 +3340,16 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_tr": {
 		dir: "addons/l10n_tr"
 		depends: [
 			"account",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -2662,6 +3359,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"l10n_tr",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_tr_nilvera_base_vat": {
@@ -2670,6 +3368,7 @@ _addons: {
 			"base_vat",
 			"l10n_tr_nilvera",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_tr_nilvera_edispatch": {
@@ -2679,6 +3378,9 @@ _addons: {
 			"stock",
 			"stock_account",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_tr_nilvera_einvoice": {
@@ -2686,6 +3388,9 @@ _addons: {
 		depends: [
 			"account_edi_ubl_cii",
 			"l10n_tr_nilvera",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2695,6 +3400,7 @@ _addons: {
 			"contacts",
 			"l10n_tr_nilvera_einvoice",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_tw": {
@@ -2703,6 +3409,7 @@ _addons: {
 			"account",
 			"base_address_extended",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_tw_edi_ecpay": {
@@ -2710,6 +3417,9 @@ _addons: {
 		depends: [
 			"base_vat",
 			"l10n_tw",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2719,6 +3429,9 @@ _addons: {
 			"l10n_tw_edi_ecpay",
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_tw_edi_ecpay_website_sale": {
@@ -2727,6 +3440,10 @@ _addons: {
 			"l10n_tw_edi_ecpay",
 			"website_sale",
 		]
+		test_depends: [
+			"portal",
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_tz_account": {
@@ -2734,6 +3451,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ua": {
@@ -2741,6 +3459,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ug": {
@@ -2748,6 +3467,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_uk": {
@@ -2757,6 +3477,7 @@ _addons: {
 			"base_iban",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_us": {
@@ -2764,6 +3485,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_us_account": {
@@ -2772,6 +3494,7 @@ _addons: {
 			"account",
 			"l10n_us",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_uy": {
@@ -2781,6 +3504,7 @@ _addons: {
 			"l10n_latam_base",
 			"l10n_latam_invoice_document",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_uy_pos": {
@@ -2788,6 +3512,9 @@ _addons: {
 		depends: [
 			"l10n_uy",
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -2797,6 +3524,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_ve": {
@@ -2804,6 +3532,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_vn": {
@@ -2813,12 +3542,16 @@ _addons: {
 			"account_qr_code_emv",
 			"base_iban",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"l10n_vn_edi_viettel": {
 		dir: "addons/l10n_vn_edi_viettel"
 		depends: [
 			"l10n_vn",
+		]
+		test_depends: [
+			"account",
 		]
 		has_tests: true
 	}
@@ -2828,6 +3561,9 @@ _addons: {
 			"l10n_vn_edi_viettel",
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"l10n_yt": {
@@ -2836,6 +3572,7 @@ _addons: {
 			"account",
 			"l10n_fr_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_za": {
@@ -2844,6 +3581,7 @@ _addons: {
 			"account",
 			"base_vat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"l10n_zm_account": {
@@ -2851,6 +3589,7 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"link_tracker": {
@@ -2859,6 +3598,7 @@ _addons: {
 			"mail",
 			"utm",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"loyalty": {
@@ -2868,12 +3608,19 @@ _addons: {
 			"portal",
 			"product",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"lunch": {
 		dir: "addons/lunch"
 		depends: [
 			"mail",
+		]
+		test_depends: [
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -2886,6 +3633,9 @@ _addons: {
 			"html_editor",
 			"web_tour",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"mail_bot": {
@@ -2893,6 +3643,7 @@ _addons: {
 		depends: [
 			"mail",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mail_bot_hr": {
@@ -2901,6 +3652,7 @@ _addons: {
 			"hr",
 			"mail_bot",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mail_group": {
@@ -2908,6 +3660,9 @@ _addons: {
 		depends: [
 			"mail",
 			"portal",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -2918,12 +3673,18 @@ _addons: {
 			"iap",
 			"web",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: true
 	}
 	"maintenance": {
 		dir: "addons/maintenance"
 		depends: [
 			"mail",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -2933,6 +3694,10 @@ _addons: {
 			"link_tracker",
 			"mass_mailing",
 			"website",
+		]
+		test_depends: [
+			"base",
+			"mail",
 		]
 		has_tests: true
 	}
@@ -2948,6 +3713,11 @@ _addons: {
 			"utm",
 			"web_tour",
 		]
+		test_depends: [
+			"base",
+			"html_editor",
+			"web",
+		]
 		has_tests: true
 	}
 	"mass_mailing_crm": {
@@ -2956,6 +3726,7 @@ _addons: {
 			"crm",
 			"mass_mailing",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_crm_sms": {
@@ -2964,6 +3735,7 @@ _addons: {
 			"mass_mailing_crm",
 			"mass_mailing_sms",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_event": {
@@ -2972,6 +3744,7 @@ _addons: {
 			"event",
 			"mass_mailing",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_event_sms": {
@@ -2983,6 +3756,9 @@ _addons: {
 			"mass_mailing_sms",
 			"sms",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: true
 	}
 	"mass_mailing_event_track": {
@@ -2991,6 +3767,7 @@ _addons: {
 			"mass_mailing",
 			"website_event_track",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_event_track_sms": {
@@ -3001,6 +3778,7 @@ _addons: {
 			"sms",
 			"website_event_track",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_sale": {
@@ -3009,6 +3787,7 @@ _addons: {
 			"mass_mailing",
 			"sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_sale_sms": {
@@ -3017,6 +3796,7 @@ _addons: {
 			"mass_mailing_sale",
 			"mass_mailing_sms",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_slides": {
@@ -3025,6 +3805,7 @@ _addons: {
 			"mass_mailing",
 			"website_slides",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"mass_mailing_sms": {
@@ -3034,6 +3815,11 @@ _addons: {
 			"portal",
 			"sms",
 		]
+		test_depends: [
+			"base",
+			"link_tracker",
+			"web",
+		]
 		has_tests: true
 	}
 	"mass_mailing_themes": {
@@ -3041,6 +3827,7 @@ _addons: {
 		depends: [
 			"mass_mailing",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"microsoft_account": {
@@ -3048,6 +3835,7 @@ _addons: {
 		depends: [
 			"base_setup",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"microsoft_calendar": {
@@ -3056,6 +3844,10 @@ _addons: {
 			"calendar",
 			"microsoft_account",
 		]
+		test_depends: [
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"microsoft_outlook": {
@@ -3063,6 +3855,7 @@ _addons: {
 		depends: [
 			"mail",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"mrp": {
@@ -3072,6 +3865,11 @@ _addons: {
 			"resource",
 			"stock",
 		]
+		test_depends: [
+			"mail",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"mrp_account": {
@@ -3079,6 +3877,9 @@ _addons: {
 		depends: [
 			"mrp",
 			"stock_account",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3088,6 +3889,9 @@ _addons: {
 			"mrp",
 			"stock_landed_costs",
 		]
+		test_depends: [
+			"stock_account",
+		]
 		has_tests: true
 	}
 	"mrp_product_expiry": {
@@ -3095,6 +3899,9 @@ _addons: {
 		depends: [
 			"mrp",
 			"product_expiry",
+		]
+		test_depends: [
+			"stock",
 		]
 		has_tests: true
 	}
@@ -3104,12 +3911,17 @@ _addons: {
 			"mrp",
 			"repair",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"mrp_subcontracting": {
 		dir: "addons/mrp_subcontracting"
 		depends: [
 			"mrp",
+		]
+		test_depends: [
+			"stock",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3119,6 +3931,9 @@ _addons: {
 			"mrp_account",
 			"mrp_subcontracting",
 		]
+		test_depends: [
+			"stock_account",
+		]
 		has_tests: true
 	}
 	"mrp_subcontracting_dropshipping": {
@@ -3126,6 +3941,9 @@ _addons: {
 		depends: [
 			"mrp_subcontracting",
 			"stock_dropshipping",
+		]
+		test_depends: [
+			"stock_account",
 		]
 		has_tests: true
 	}
@@ -3135,6 +3953,7 @@ _addons: {
 			"mrp_subcontracting",
 			"stock_landed_costs",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"mrp_subcontracting_purchase": {
@@ -3142,6 +3961,9 @@ _addons: {
 		depends: [
 			"mrp_subcontracting",
 			"purchase_mrp",
+		]
+		test_depends: [
+			"mrp_subcontracting_account",
 		]
 		has_tests: true
 	}
@@ -3151,6 +3973,7 @@ _addons: {
 			"mrp_subcontracting",
 			"repair",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"onboarding": {
@@ -3158,12 +3981,20 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: true
 	}
 	"partner_autocomplete": {
 		dir: "addons/partner_autocomplete"
 		depends: [
 			"iap_mail",
+		]
+		test_depends: [
+			"iap",
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3173,6 +4004,9 @@ _addons: {
 			"crm",
 			"sale",
 		]
+		test_depends: [
+			"product",
+		]
 		has_tests: true
 	}
 	"payment": {
@@ -3181,12 +4015,20 @@ _addons: {
 			"onboarding",
 			"portal",
 		]
+		test_depends: [
+			"base",
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"payment_adyen": {
 		dir: "addons/payment_adyen"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3195,6 +4037,7 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_asiapay": {
@@ -3202,12 +4045,16 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_authorize": {
 		dir: "addons/payment_authorize"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3216,12 +4063,16 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_custom": {
 		dir: "addons/payment_custom"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3230,6 +4081,9 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"payment_dpo": {
@@ -3237,6 +4091,7 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_ecpay": {
@@ -3244,12 +4099,16 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_flutterwave": {
 		dir: "addons/payment_flutterwave"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3258,12 +4117,16 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_mercado_pago": {
 		dir: "addons/payment_mercado_pago"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3272,6 +4135,7 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_nuvei": {
@@ -3279,6 +4143,7 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_paymob": {
@@ -3286,12 +4151,16 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_paypal": {
 		dir: "addons/payment_paypal"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3300,12 +4169,16 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_razorpay": {
 		dir: "addons/payment_razorpay"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3314,12 +4187,16 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"payment_stripe": {
 		dir: "addons/payment_stripe"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3328,6 +4205,9 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"payment_worldline": {
@@ -3335,12 +4215,18 @@ _addons: {
 		depends: [
 			"payment",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"payment_xendit": {
 		dir: "addons/payment_xendit"
 		depends: [
 			"payment",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3350,6 +4236,7 @@ _addons: {
 			"base",
 			"mail",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"point_of_sale": {
@@ -3365,6 +4252,15 @@ _addons: {
 			"resource",
 			"stock_account",
 		]
+		test_depends: [
+			"account",
+			"barcodes_gs1_nomenclature",
+			"bus",
+			"mail",
+			"product",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"portal": {
@@ -3376,6 +4272,9 @@ _addons: {
 			"mail",
 			"web",
 		]
+		test_depends: [
+			"base",
+		]
 		has_tests: true
 	}
 	"portal_rating": {
@@ -3383,6 +4282,10 @@ _addons: {
 		depends: [
 			"portal",
 			"rating",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: false
 	}
@@ -3392,12 +4295,19 @@ _addons: {
 			"account_tax_python",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_adyen": {
 		dir: "addons/pos_adyen"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3406,12 +4316,19 @@ _addons: {
 		depends: [
 			"point_of_sale",
 		]
+		test_depends: [
+			"bus",
+			"web",
+		]
 		has_tests: false
 	}
 	"pos_cashmatic": {
 		dir: "addons/pos_cashmatic"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -3420,12 +4337,19 @@ _addons: {
 		depends: [
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_dpopay": {
 		dir: "addons/pos_dpopay"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -3435,6 +4359,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"point_of_sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"pos_event": {
@@ -3442,6 +4367,9 @@ _addons: {
 		depends: [
 			"event_product",
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3451,12 +4379,17 @@ _addons: {
 			"pos_event",
 			"pos_sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"pos_glory_cash": {
 		dir: "addons/pos_glory_cash"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"bus",
+			"web",
 		]
 		has_tests: false
 	}
@@ -3466,6 +4399,9 @@ _addons: {
 			"hr",
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_hr_restaurant": {
@@ -3474,12 +4410,19 @@ _addons: {
 			"pos_hr",
 			"pos_restaurant",
 		]
+		test_depends: [
+			"point_of_sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_imin": {
 		dir: "addons/pos_imin"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -3489,12 +4432,20 @@ _addons: {
 			"loyalty",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"bus",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_mercado_pago": {
 		dir: "addons/pos_mercado_pago"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -3504,6 +4455,9 @@ _addons: {
 			"payment_mollie",
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_mrp": {
@@ -3511,6 +4465,9 @@ _addons: {
 		depends: [
 			"mrp",
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3520,6 +4477,12 @@ _addons: {
 			"account_payment",
 			"point_of_sale",
 		]
+		test_depends: [
+			"account",
+			"mail",
+			"payment",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_online_payment_self_order": {
@@ -3528,12 +4491,22 @@ _addons: {
 			"pos_online_payment",
 			"pos_self_order",
 		]
+		test_depends: [
+			"http_routing",
+			"mail",
+			"point_of_sale",
+			"pos_restaurant",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_pine_labs": {
 		dir: "addons/pos_pine_labs"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -3542,12 +4515,18 @@ _addons: {
 		depends: [
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_razorpay": {
 		dir: "addons/pos_razorpay"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3557,12 +4536,19 @@ _addons: {
 			"point_of_sale",
 			"repair",
 		]
+		test_depends: [
+			"pos_sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_restaurant": {
 		dir: "addons/pos_restaurant"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3573,6 +4559,10 @@ _addons: {
 			"pos_adyen",
 			"pos_restaurant",
 		]
+		test_depends: [
+			"point_of_sale",
+			"web",
+		]
 		has_tests: false
 	}
 	"pos_restaurant_loyalty": {
@@ -3580,6 +4570,10 @@ _addons: {
 		depends: [
 			"pos_loyalty",
 			"pos_restaurant",
+		]
+		test_depends: [
+			"point_of_sale",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3590,12 +4584,18 @@ _addons: {
 			"pos_restaurant",
 			"pos_stripe",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"pos_safaricom": {
 		dir: "addons/pos_safaricom"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3605,6 +4605,13 @@ _addons: {
 			"point_of_sale",
 			"sale_management",
 		]
+		test_depends: [
+			"account",
+			"mail",
+			"payment",
+			"sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_sale_loyalty": {
@@ -3613,6 +4620,10 @@ _addons: {
 			"pos_loyalty",
 			"pos_sale",
 		]
+		test_depends: [
+			"point_of_sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_sale_margin": {
@@ -3620,6 +4631,9 @@ _addons: {
 		depends: [
 			"pos_sale",
 			"sale_margin",
+		]
+		test_depends: [
+			"point_of_sale",
 		]
 		has_tests: true
 	}
@@ -3630,6 +4644,11 @@ _addons: {
 			"link_tracker",
 			"pos_restaurant",
 		]
+		test_depends: [
+			"mail",
+			"point_of_sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_self_order_adyen": {
@@ -3638,6 +4657,7 @@ _addons: {
 			"pos_adyen",
 			"pos_self_order",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"pos_self_order_pine_labs": {
@@ -3645,6 +4665,9 @@ _addons: {
 		depends: [
 			"pos_pine_labs",
 			"pos_self_order",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -3654,6 +4677,11 @@ _addons: {
 			"pos_qfpay",
 			"pos_self_order",
 		]
+		test_depends: [
+			"account",
+			"point_of_sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"pos_self_order_razorpay": {
@@ -3661,6 +4689,9 @@ _addons: {
 		depends: [
 			"pos_razorpay",
 			"pos_self_order",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -3670,6 +4701,7 @@ _addons: {
 			"pos_sale",
 			"pos_self_order",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"pos_self_order_stripe": {
@@ -3677,6 +4709,9 @@ _addons: {
 		depends: [
 			"pos_self_order",
 			"pos_stripe",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3686,6 +4721,9 @@ _addons: {
 			"pos_self_order",
 			"pos_viva_com",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"pos_sms": {
@@ -3693,6 +4731,9 @@ _addons: {
 		depends: [
 			"point_of_sale",
 			"sms",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3702,12 +4743,19 @@ _addons: {
 			"payment_stripe",
 			"point_of_sale",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"pos_viva_com": {
 		dir: "addons/pos_viva_com"
 		depends: [
 			"point_of_sale",
+		]
+		test_depends: [
+			"account",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3716,6 +4764,7 @@ _addons: {
 		depends: [
 			"mail",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"product": {
@@ -3725,6 +4774,9 @@ _addons: {
 			"mail",
 			"uom",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"product_email_template": {
@@ -3732,12 +4784,17 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"product_expiry": {
 		dir: "addons/product_expiry"
 		depends: [
 			"stock",
+		]
+		test_depends: [
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3746,12 +4803,16 @@ _addons: {
 		depends: [
 			"account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"product_matrix": {
 		dir: "addons/product_matrix"
 		depends: [
 			"account",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3768,6 +4829,10 @@ _addons: {
 			"web",
 			"web_tour",
 		]
+		test_depends: [
+			"html_editor",
+			"test_mail",
+		]
 		has_tests: true
 	}
 	"project_account": {
@@ -3776,6 +4841,7 @@ _addons: {
 			"account",
 			"project",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"project_hr_expense": {
@@ -3783,6 +4849,9 @@ _addons: {
 		depends: [
 			"hr_expense",
 			"project_account",
+		]
+		test_depends: [
+			"project",
 		]
 		has_tests: true
 	}
@@ -3792,6 +4861,7 @@ _addons: {
 			"hr_skills",
 			"project",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"project_mail_plugin": {
@@ -3800,6 +4870,7 @@ _addons: {
 			"mail_plugin",
 			"project",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"project_mrp": {
@@ -3808,6 +4879,7 @@ _addons: {
 			"mrp",
 			"project",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"project_mrp_account": {
@@ -3815,6 +4887,9 @@ _addons: {
 		depends: [
 			"mrp_account",
 			"project_mrp",
+		]
+		test_depends: [
+			"project",
 		]
 		has_tests: true
 	}
@@ -3825,6 +4900,7 @@ _addons: {
 			"sale_mrp",
 			"sale_project",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"project_mrp_stock_landed_costs": {
@@ -3833,6 +4909,7 @@ _addons: {
 			"mrp_landed_costs",
 			"project_mrp_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"project_purchase": {
@@ -3840,6 +4917,12 @@ _addons: {
 		depends: [
 			"project_account",
 			"purchase",
+		]
+		test_depends: [
+			"account",
+			"product",
+			"project",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3849,6 +4932,7 @@ _addons: {
 			"project_purchase",
 			"project_stock",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"project_sale_expense": {
@@ -3858,6 +4942,10 @@ _addons: {
 			"sale_expense",
 			"sale_project",
 		]
+		test_depends: [
+			"hr_expense",
+			"sale",
+		]
 		has_tests: true
 	}
 	"project_sms": {
@@ -3866,6 +4954,7 @@ _addons: {
 			"project",
 			"sms",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"project_stock": {
@@ -3874,6 +4963,7 @@ _addons: {
 			"project",
 			"stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"project_stock_account": {
@@ -3881,6 +4971,9 @@ _addons: {
 		depends: [
 			"project_stock",
 			"stock_account",
+		]
+		test_depends: [
+			"stock",
 		]
 		has_tests: true
 	}
@@ -3890,6 +4983,7 @@ _addons: {
 			"project_stock_account",
 			"stock_landed_costs",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"project_timesheet_holidays": {
@@ -3898,6 +4992,7 @@ _addons: {
 			"hr_holidays",
 			"hr_timesheet",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"project_todo": {
@@ -3905,12 +5000,27 @@ _addons: {
 		depends: [
 			"project",
 		]
+		test_depends: [
+			"base",
+			"html_editor",
+			"mail",
+			"resource",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"purchase": {
 		dir: "addons/purchase"
 		depends: [
 			"account",
+		]
+		test_depends: [
+			"mail",
+			"portal",
+			"product",
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -3920,6 +5030,9 @@ _addons: {
 			"account_edi_ubl_cii",
 			"purchase",
 		]
+		test_depends: [
+			"account",
+		]
 		has_tests: true
 	}
 	"purchase_mrp": {
@@ -3927,6 +5040,12 @@ _addons: {
 		depends: [
 			"mrp",
 			"purchase_stock",
+		]
+		test_depends: [
+			"account",
+			"stock",
+			"stock_account",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3936,6 +5055,11 @@ _addons: {
 			"product_matrix",
 			"purchase",
 		]
+		test_depends: [
+			"account",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"purchase_repair": {
@@ -3944,12 +5068,16 @@ _addons: {
 			"purchase_stock",
 			"repair",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"purchase_requisition": {
 		dir: "addons/purchase_requisition"
 		depends: [
 			"purchase",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -3959,6 +5087,7 @@ _addons: {
 			"purchase_requisition",
 			"sale_purchase",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"purchase_requisition_stock": {
@@ -3967,6 +5096,7 @@ _addons: {
 			"purchase_requisition",
 			"purchase_stock",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"purchase_stock": {
@@ -3975,12 +5105,24 @@ _addons: {
 			"purchase",
 			"stock_account",
 		]
+		test_depends: [
+			"account",
+			"base",
+			"mail",
+			"product",
+			"stock",
+			"web",
+		]
 		has_tests: true
 	}
 	"rating": {
 		dir: "addons/rating"
 		depends: [
 			"mail",
+		]
+		test_depends: [
+			"base",
+			"web",
 		]
 		has_tests: true
 	}
@@ -3990,6 +5132,11 @@ _addons: {
 			"sale_management",
 			"sale_stock",
 		]
+		test_depends: [
+			"product",
+			"stock_account",
+			"web",
+		]
 		has_tests: true
 	}
 	"resource": {
@@ -3998,6 +5145,7 @@ _addons: {
 			"base",
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"resource_mail": {
@@ -4006,6 +5154,9 @@ _addons: {
 			"mail",
 			"resource",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"rpc": {
@@ -4013,6 +5164,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale": {
@@ -4022,6 +5174,18 @@ _addons: {
 			"sales_team",
 			"utm",
 		]
+		test_depends: [
+			"account",
+			"base",
+			"http_routing",
+			"mail",
+			"payment",
+			"portal",
+			"product",
+			"uom",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"sale_crm": {
@@ -4030,6 +5194,7 @@ _addons: {
 			"crm",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_edi_ubl": {
@@ -4038,6 +5203,7 @@ _addons: {
 			"account_edi_ubl_cii",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_expense": {
@@ -4045,6 +5211,9 @@ _addons: {
 		depends: [
 			"hr_expense",
 			"sale_management",
+		]
+		test_depends: [
+			"sale",
 		]
 		has_tests: true
 	}
@@ -4054,6 +5223,9 @@ _addons: {
 			"sale_expense",
 			"sale_margin",
 		]
+		test_depends: [
+			"hr_expense",
+		]
 		has_tests: true
 	}
 	"sale_gelato": {
@@ -4062,6 +5234,7 @@ _addons: {
 			"delivery",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_gelato_stock": {
@@ -4070,6 +5243,7 @@ _addons: {
 			"sale_gelato",
 			"sale_stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"sale_loyalty": {
@@ -4077,6 +5251,10 @@ _addons: {
 		depends: [
 			"loyalty",
 			"sale",
+		]
+		test_depends: [
+			"payment",
+			"web",
 		]
 		has_tests: true
 	}
@@ -4086,6 +5264,7 @@ _addons: {
 			"delivery",
 			"sale_loyalty",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_management": {
@@ -4094,12 +5273,22 @@ _addons: {
 			"digest",
 			"sale",
 		]
+		test_depends: [
+			"account",
+			"http_routing",
+			"mail",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"sale_margin": {
 		dir: "addons/sale_margin"
 		depends: [
 			"sale_management",
+		]
+		test_depends: [
+			"sale",
 		]
 		has_tests: true
 	}
@@ -4109,6 +5298,13 @@ _addons: {
 			"mrp",
 			"sale_stock",
 		]
+		test_depends: [
+			"base",
+			"mail",
+			"sale",
+			"stock",
+			"stock_account",
+		]
 		has_tests: true
 	}
 	"sale_mrp_margin": {
@@ -4117,12 +5313,19 @@ _addons: {
 			"sale_mrp",
 			"sale_stock_margin",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_pdf_quote_builder": {
 		dir: "addons/sale_pdf_quote_builder"
 		depends: [
 			"sale_management",
+		]
+		test_depends: [
+			"http_routing",
+			"product",
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -4131,6 +5334,9 @@ _addons: {
 		depends: [
 			"product_matrix",
 			"sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -4141,6 +5347,13 @@ _addons: {
 			"sale_management",
 			"sale_service",
 		]
+		test_depends: [
+			"mail",
+			"project",
+			"sale",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"sale_project_stock": {
@@ -4150,6 +5363,10 @@ _addons: {
 			"sale_project",
 			"sale_stock",
 		]
+		test_depends: [
+			"stock",
+			"stock_account",
+		]
 		has_tests: true
 	}
 	"sale_project_stock_account": {
@@ -4158,6 +5375,7 @@ _addons: {
 			"project_stock_account",
 			"sale_project",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_purchase": {
@@ -4166,6 +5384,7 @@ _addons: {
 			"purchase",
 			"sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_purchase_project": {
@@ -4175,6 +5394,7 @@ _addons: {
 			"sale_project",
 			"sale_purchase",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_purchase_stock": {
@@ -4184,6 +5404,7 @@ _addons: {
 			"sale_purchase",
 			"sale_stock",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sale_service": {
@@ -4191,6 +5412,7 @@ _addons: {
 		depends: [
 			"sale_management",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"sale_sms": {
@@ -4199,6 +5421,7 @@ _addons: {
 			"sale",
 			"sms",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"sale_stock": {
@@ -4206,6 +5429,13 @@ _addons: {
 		depends: [
 			"sale",
 			"stock_account",
+		]
+		test_depends: [
+			"base",
+			"mail",
+			"product",
+			"stock",
+			"web",
 		]
 		has_tests: true
 	}
@@ -4215,6 +5445,9 @@ _addons: {
 			"sale_margin",
 			"sale_stock",
 		]
+		test_depends: [
+			"stock_account",
+		]
 		has_tests: true
 	}
 	"sale_stock_product_expiry": {
@@ -4222,6 +5455,10 @@ _addons: {
 		depends: [
 			"product_expiry",
 			"sale_stock",
+		]
+		test_depends: [
+			"stock",
+			"web",
 		]
 		has_tests: true
 	}
@@ -4231,6 +5468,14 @@ _addons: {
 			"hr_timesheet",
 			"sale_project",
 		]
+		test_depends: [
+			"analytic",
+			"mail",
+			"project",
+			"sale",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"sale_timesheet_margin": {
@@ -4239,6 +5484,7 @@ _addons: {
 			"sale_margin",
 			"sale_timesheet",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"sales_team": {
@@ -4246,6 +5492,9 @@ _addons: {
 		depends: [
 			"base",
 			"mail",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -4257,12 +5506,18 @@ _addons: {
 			"mail",
 			"phone_validation",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"sms_twilio": {
 		dir: "addons/sms_twilio"
 		depends: [
 			"sms",
+		]
+		test_depends: [
+			"mail",
 		]
 		has_tests: true
 	}
@@ -4272,6 +5527,9 @@ _addons: {
 			"iap_mail",
 			"mail",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"snailmail_account": {
@@ -4280,6 +5538,7 @@ _addons: {
 			"account",
 			"snailmail",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"social_media": {
@@ -4287,6 +5546,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet": {
@@ -4296,6 +5556,9 @@ _addons: {
 			"portal",
 			"web",
 		]
+		test_depends: [
+			"mail",
+		]
 		has_tests: true
 	}
 	"spreadsheet_account": {
@@ -4304,12 +5567,18 @@ _addons: {
 			"account",
 			"spreadsheet",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"spreadsheet_dashboard": {
 		dir: "addons/spreadsheet_dashboard"
 		depends: [
 			"spreadsheet",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -4319,6 +5588,7 @@ _addons: {
 			"account",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_event_sale": {
@@ -4327,6 +5597,7 @@ _addons: {
 			"event_sale",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_hr_expense": {
@@ -4335,6 +5606,7 @@ _addons: {
 			"sale_expense",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_hr_timesheet": {
@@ -4343,6 +5615,7 @@ _addons: {
 			"hr_timesheet",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_im_livechat": {
@@ -4351,6 +5624,7 @@ _addons: {
 			"im_livechat",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_pos_hr": {
@@ -4359,6 +5633,7 @@ _addons: {
 			"pos_hr",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_pos_restaurant": {
@@ -4368,6 +5643,7 @@ _addons: {
 			"pos_restaurant",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_sale": {
@@ -4376,6 +5652,7 @@ _addons: {
 			"sale",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_sale_timesheet": {
@@ -4384,6 +5661,7 @@ _addons: {
 			"sale_timesheet",
 			"spreadsheet_dashboard",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_stock_account": {
@@ -4392,6 +5670,7 @@ _addons: {
 			"spreadsheet_dashboard",
 			"stock_account",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_website_sale": {
@@ -4400,6 +5679,7 @@ _addons: {
 			"spreadsheet_dashboard",
 			"website_sale",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"spreadsheet_dashboard_website_sale_slides": {
@@ -4408,6 +5688,7 @@ _addons: {
 			"spreadsheet_dashboard",
 			"website_sale_slides",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"stock": {
@@ -4417,6 +5698,12 @@ _addons: {
 			"digest",
 			"product",
 		]
+		test_depends: [
+			"base",
+			"mail",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"stock_account": {
@@ -4424,6 +5711,10 @@ _addons: {
 		depends: [
 			"account",
 			"stock",
+		]
+		test_depends: [
+			"base",
+			"web",
 		]
 		has_tests: true
 	}
@@ -4433,12 +5724,19 @@ _addons: {
 			"delivery",
 			"sale_stock",
 		]
+		test_depends: [
+			"sale",
+			"stock",
+		]
 		has_tests: true
 	}
 	"stock_dropshipping": {
 		dir: "addons/stock_dropshipping"
 		depends: [
 			"sale_purchase_stock",
+		]
+		test_depends: [
+			"stock_account",
 		]
 		has_tests: true
 	}
@@ -4448,6 +5746,7 @@ _addons: {
 			"fleet",
 			"stock_picking_batch",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"stock_landed_costs": {
@@ -4456,6 +5755,7 @@ _addons: {
 			"purchase_stock",
 			"stock_account",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"stock_maintenance": {
@@ -4464,12 +5764,16 @@ _addons: {
 			"maintenance",
 			"stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"stock_picking_batch": {
 		dir: "addons/stock_picking_batch"
 		depends: [
 			"stock",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -4479,6 +5783,7 @@ _addons: {
 			"sms",
 			"stock",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"survey": {
@@ -4490,6 +5795,10 @@ _addons: {
 			"mail",
 			"web_tour",
 		]
+		test_depends: [
+			"base",
+			"web",
+		]
 		has_tests: true
 	}
 	"survey_crm": {
@@ -4498,16 +5807,21 @@ _addons: {
 			"crm",
 			"survey",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_access_rights": {
 		dir: "odoo/addons/test_access_rights"
 		depends: []
+		test_depends: [
+			"base",
+		]
 		has_tests: true
 	}
 	"test_action_bindings": {
 		dir: "odoo/addons/test_action_bindings"
 		depends: []
+		test_depends: []
 		has_tests: true
 	}
 	"test_assetsbundle": {
@@ -4515,11 +5829,15 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"test_auth_custom": {
 		dir: "odoo/addons/test_auth_custom"
 		depends: []
+		test_depends: []
 		has_tests: true
 	}
 	"test_base_automation": {
@@ -4527,11 +5845,17 @@ _addons: {
 		depends: [
 			"base_automation",
 		]
+		test_depends: [
+			"base",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"test_convert": {
 		dir: "odoo/addons/test_convert"
 		depends: []
+		test_depends: []
 		has_tests: true
 	}
 	"test_converter": {
@@ -4539,6 +5863,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_crm_full": {
@@ -4555,11 +5880,15 @@ _addons: {
 			"website_crm_livechat",
 			"website_crm_partner_assign",
 		]
+		test_depends: [
+			"website",
+		]
 		has_tests: true
 	}
 	"test_data_module": {
 		dir: "odoo/addons/test_data_module"
 		depends: []
+		test_depends: []
 		has_tests: false
 	}
 	"test_data_module_install": {
@@ -4567,6 +5896,7 @@ _addons: {
 		depends: [
 			"test_data_module",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_discuss_full": {
@@ -4587,6 +5917,9 @@ _addons: {
 			"website_sale",
 			"website_slides",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"test_event_full": {
@@ -4606,6 +5939,15 @@ _addons: {
 			"website_event_track_live",
 			"website_event_track_quiz",
 		]
+		test_depends: [
+			"base",
+			"mail",
+			"sales_team",
+			"sms",
+			"web",
+			"website",
+			"website_sale",
+		]
 		has_tests: true
 	}
 	"test_html_field_history": {
@@ -4613,6 +5955,7 @@ _addons: {
 		depends: [
 			"html_editor",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_http": {
@@ -4623,6 +5966,9 @@ _addons: {
 			"web",
 			"web_tour",
 		]
+		test_depends: [
+			"base",
+		]
 		has_tests: true
 	}
 	"test_import_export": {
@@ -4632,6 +5978,9 @@ _addons: {
 			"web",
 			"website",
 		]
+		test_depends: [
+			"base",
+		]
 		has_tests: true
 	}
 	"test_inherit": {
@@ -4640,6 +5989,7 @@ _addons: {
 			"base",
 			"test_orm",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_inherit_depends": {
@@ -4648,6 +5998,7 @@ _addons: {
 			"test_inherit",
 			"test_orm",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_inherits": {
@@ -4655,6 +6006,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_inherits_depends": {
@@ -4662,6 +6014,7 @@ _addons: {
 		depends: [
 			"test_inherits",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_lint": {
@@ -4669,6 +6022,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_mail": {
@@ -4676,6 +6030,11 @@ _addons: {
 		depends: [
 			"mail",
 			"test_orm",
+		]
+		test_depends: [
+			"base",
+			"sms",
+			"web",
 		]
 		has_tests: true
 	}
@@ -4694,6 +6053,11 @@ _addons: {
 			"test_mail_sms",
 			"test_mass_mailing",
 		]
+		test_depends: [
+			"auth_signup",
+			"base",
+			"web",
+		]
 		has_tests: true
 	}
 	"test_mail_sms": {
@@ -4703,6 +6067,12 @@ _addons: {
 			"sms",
 			"sms_twilio",
 			"test_orm",
+		]
+		test_depends: [
+			"base",
+			"link_tracker",
+			"phone_validation",
+			"test_mail",
 		]
 		has_tests: true
 	}
@@ -4716,6 +6086,9 @@ _addons: {
 			"sale_timesheet",
 			"web_tour",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"test_mass_mailing": {
@@ -4727,11 +6100,16 @@ _addons: {
 			"test_mail",
 			"test_mail_sms",
 		]
+		test_depends: [
+			"mail",
+			"phone_validation",
+		]
 		has_tests: true
 	}
 	"test_mimetypes": {
 		dir: "odoo/addons/test_mimetypes"
 		depends: []
+		test_depends: []
 		has_tests: true
 	}
 	"test_orm": {
@@ -4741,6 +6119,7 @@ _addons: {
 			"web",
 			"web_tour",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_read_group": {
@@ -4749,6 +6128,7 @@ _addons: {
 			"base",
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_resource": {
@@ -4756,6 +6136,7 @@ _addons: {
 		depends: [
 			"resource",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_rpc": {
@@ -4763,6 +6144,9 @@ _addons: {
 		depends: [
 			"rpc",
 			"web",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -4773,6 +6157,14 @@ _addons: {
 			"sale_management",
 			"sale_product_matrix",
 		]
+		test_depends: [
+			"account",
+			"mail",
+			"product_matrix",
+			"sale",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"test_sale_purchase_edi_ubl": {
@@ -4781,6 +6173,10 @@ _addons: {
 			"purchase_edi_ubl_bis3",
 			"sale_edi_ubl",
 		]
+		test_depends: [
+			"account_edi_ubl_cii",
+			"sale",
+		]
 		has_tests: true
 	}
 	"test_search_panel": {
@@ -4788,6 +6184,7 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_spreadsheet": {
@@ -4795,6 +6192,7 @@ _addons: {
 		depends: [
 			"spreadsheet",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_testing_utilities": {
@@ -4803,12 +6201,16 @@ _addons: {
 			"base",
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_translation_import": {
 		dir: "odoo/addons/test_translation_import"
 		depends: [
 			"base",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -4817,6 +6219,7 @@ _addons: {
 		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"test_website": {
@@ -4825,6 +6228,13 @@ _addons: {
 			"theme_default",
 			"web_unsplash",
 			"website",
+		]
+		test_depends: [
+			"base",
+			"html_editor",
+			"http_routing",
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -4841,6 +6251,11 @@ _addons: {
 			"website_sale_wishlist",
 			"website_slides",
 		]
+		test_depends: [
+			"base",
+			"web",
+			"website_sale",
+		]
 		has_tests: true
 	}
 	"test_website_slides_full": {
@@ -4850,6 +6265,10 @@ _addons: {
 			"website_slides_forum",
 			"website_slides_survey",
 		]
+		test_depends: [
+			"web",
+			"website_slides",
+		]
 		has_tests: true
 	}
 	"theme_default": {
@@ -4857,6 +6276,7 @@ _addons: {
 		depends: [
 			"website",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"transifex": {
@@ -4865,12 +6285,16 @@ _addons: {
 			"base",
 			"web",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"uom": {
 		dir: "addons/uom"
 		depends: [
 			"base",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -4880,12 +6304,17 @@ _addons: {
 			"base",
 			"web",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"web": {
 		dir: "addons/web"
 		depends: [
 			"base",
+		]
+		test_depends: [
+			"bus",
+			"http_routing",
 		]
 		has_tests: true
 	}
@@ -4894,12 +6323,16 @@ _addons: {
 		depends: [
 			"web",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"web_tour": {
 		dir: "addons/web_tour"
 		depends: [
 			"web",
+		]
+		test_depends: [
+			"base",
 		]
 		has_tests: true
 	}
@@ -4908,6 +6341,10 @@ _addons: {
 		depends: [
 			"base_setup",
 			"html_editor",
+		]
+		test_depends: [
+			"base",
+			"web",
 		]
 		has_tests: true
 	}
@@ -4926,6 +6363,10 @@ _addons: {
 			"utm",
 			"web",
 		]
+		test_depends: [
+			"base",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"website_blog": {
@@ -4935,12 +6376,23 @@ _addons: {
 			"website_mail",
 			"website_partner",
 		]
+		test_depends: [
+			"html_editor",
+			"http_routing",
+			"mail",
+			"web",
+			"web_tour",
+			"website",
+		]
 		has_tests: true
 	}
 	"website_cf_turnstile": {
 		dir: "addons/website_cf_turnstile"
 		depends: [
 			"website",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -4949,6 +6401,9 @@ _addons: {
 		depends: [
 			"crm",
 			"website",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -4960,6 +6415,10 @@ _addons: {
 			"iap_mail",
 			"website_crm",
 		]
+		test_depends: [
+			"crm",
+			"iap",
+		]
 		has_tests: true
 	}
 	"website_crm_livechat": {
@@ -4968,6 +6427,7 @@ _addons: {
 			"website_crm",
 			"website_livechat",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"website_crm_partner_assign": {
@@ -4981,6 +6441,16 @@ _addons: {
 			"website_google_map",
 			"website_partner",
 		]
+		test_depends: [
+			"base",
+			"html_builder",
+			"html_editor",
+			"http_routing",
+			"mail",
+			"web",
+			"web_tour",
+			"website",
+		]
 		has_tests: true
 	}
 	"website_crm_sms": {
@@ -4989,6 +6459,7 @@ _addons: {
 			"crm",
 			"website_sms",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"website_customer": {
@@ -4997,6 +6468,12 @@ _addons: {
 			"website_crm_partner_assign",
 			"website_google_map",
 			"website_partner",
+		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"web",
+			"website",
 		]
 		has_tests: true
 	}
@@ -5009,6 +6486,14 @@ _addons: {
 			"website_mail",
 			"website_partner",
 		]
+		test_depends: [
+			"base",
+			"google_recaptcha",
+			"html_editor",
+			"http_routing",
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"website_event_booth": {
@@ -5017,6 +6502,9 @@ _addons: {
 			"event_booth",
 			"website_event",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"website_event_booth_exhibitor": {
@@ -5024,6 +6512,10 @@ _addons: {
 		depends: [
 			"website_event_booth",
 			"website_event_exhibitor",
+		]
+		test_depends: [
+			"base",
+			"web",
 		]
 		has_tests: true
 	}
@@ -5034,6 +6526,11 @@ _addons: {
 			"website_event_booth",
 			"website_sale",
 		]
+		test_depends: [
+			"base",
+			"web",
+			"website_event_sale",
+		]
 		has_tests: true
 	}
 	"website_event_booth_sale_exhibitor": {
@@ -5041,6 +6538,11 @@ _addons: {
 		depends: [
 			"website_event_booth_sale",
 			"website_event_exhibitor",
+		]
+		test_depends: [
+			"web",
+			"website_event_booth_exhibitor",
+			"website_sale",
 		]
 		has_tests: false
 	}
@@ -5050,12 +6552,18 @@ _addons: {
 			"event_crm",
 			"website_event",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"website_event_exhibitor": {
 		dir: "addons/website_event_exhibitor"
 		depends: [
 			"website_event",
+		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"web",
 		]
 		has_tests: true
 	}
@@ -5066,6 +6574,11 @@ _addons: {
 			"website_event",
 			"website_sale",
 		]
+		test_depends: [
+			"base",
+			"payment",
+			"web",
+		]
 		has_tests: true
 	}
 	"website_event_track": {
@@ -5073,12 +6586,22 @@ _addons: {
 		depends: [
 			"website_event",
 		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"mail",
+			"web",
+			"website",
+		]
 		has_tests: true
 	}
 	"website_event_track_live": {
 		dir: "addons/website_event_track_live"
 		depends: [
 			"website_event_track",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -5088,6 +6611,9 @@ _addons: {
 			"website_event_track_live",
 			"website_event_track_quiz",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"website_event_track_quiz": {
@@ -5095,6 +6621,9 @@ _addons: {
 		depends: [
 			"website_event_track",
 			"website_profile",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -5105,6 +6634,16 @@ _addons: {
 			"website_mail",
 			"website_profile",
 		]
+		test_depends: [
+			"gamification",
+			"html_builder",
+			"html_editor",
+			"http_routing",
+			"mail",
+			"web",
+			"web_tour",
+			"website",
+		]
 		has_tests: true
 	}
 	"website_google_map": {
@@ -5113,6 +6652,7 @@ _addons: {
 			"base_geolocalize",
 			"website_partner",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"website_hr_recruitment": {
@@ -5120,6 +6660,14 @@ _addons: {
 		depends: [
 			"hr_recruitment",
 			"website_mail",
+		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"http_routing",
+			"web",
+			"web_tour",
+			"website",
 		]
 		has_tests: true
 	}
@@ -5129,6 +6677,7 @@ _addons: {
 			"im_livechat",
 			"website_hr_recruitment",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"website_links": {
@@ -5136,6 +6685,11 @@ _addons: {
 		depends: [
 			"link_tracker",
 			"website",
+		]
+		test_depends: [
+			"mail",
+			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
@@ -5145,6 +6699,12 @@ _addons: {
 			"im_livechat",
 			"website",
 		]
+		test_depends: [
+			"base",
+			"bus",
+			"mail",
+			"web",
+		]
 		has_tests: true
 	}
 	"website_mail": {
@@ -5153,6 +6713,10 @@ _addons: {
 			"mail",
 			"website",
 		]
+		test_depends: [
+			"google_recaptcha",
+			"web",
+		]
 		has_tests: false
 	}
 	"website_mail_group": {
@@ -5160,6 +6724,11 @@ _addons: {
 		depends: [
 			"mail_group",
 			"website",
+		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"web",
 		]
 		has_tests: true
 	}
@@ -5170,6 +6739,11 @@ _addons: {
 			"mass_mailing",
 			"website",
 		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"web",
+		]
 		has_tests: true
 	}
 	"website_mass_mailing_sms": {
@@ -5178,6 +6752,7 @@ _addons: {
 			"mass_mailing_sms",
 			"website_mass_mailing",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"website_partner": {
@@ -5185,6 +6760,7 @@ _addons: {
 		depends: [
 			"website",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"website_payment": {
@@ -5193,6 +6769,14 @@ _addons: {
 			"account_payment",
 			"portal",
 			"website",
+		]
+		test_depends: [
+			"base",
+			"html_builder",
+			"html_editor",
+			"mail",
+			"payment",
+			"web",
 		]
 		has_tests: true
 	}
@@ -5203,6 +6787,11 @@ _addons: {
 			"html_editor",
 			"website_partner",
 		]
+		test_depends: [
+			"http_routing",
+			"web",
+			"website",
+		]
 		has_tests: true
 	}
 	"website_project": {
@@ -5210,6 +6799,11 @@ _addons: {
 		depends: [
 			"project",
 			"website",
+		]
+		test_depends: [
+			"http_routing",
+			"mail",
+			"web",
 		]
 		has_tests: true
 	}
@@ -5225,6 +6819,19 @@ _addons: {
 			"website_mail",
 			"website_payment",
 		]
+		test_depends: [
+			"account",
+			"account_payment",
+			"base",
+			"html_editor",
+			"http_routing",
+			"mail",
+			"payment",
+			"portal",
+			"product",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"website_sale_autocomplete": {
@@ -5232,6 +6839,9 @@ _addons: {
 		depends: [
 			"google_address_autocomplete",
 			"website_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: true
 	}
@@ -5242,6 +6852,13 @@ _addons: {
 			"payment_custom",
 			"website_sale_stock",
 		]
+		test_depends: [
+			"delivery",
+			"payment",
+			"web",
+			"website",
+			"website_sale",
+		]
 		has_tests: true
 	}
 	"website_sale_collect_wishlist": {
@@ -5250,12 +6867,17 @@ _addons: {
 			"website_sale_collect",
 			"website_sale_wishlist",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"website_sale_comparison": {
 		dir: "addons/website_sale_comparison"
 		depends: [
 			"website_sale",
+		]
+		test_depends: [
+			"web",
+			"website",
 		]
 		has_tests: true
 	}
@@ -5265,6 +6887,9 @@ _addons: {
 			"website_sale_comparison",
 			"website_sale_wishlist",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: false
 	}
 	"website_sale_gelato": {
@@ -5273,6 +6898,7 @@ _addons: {
 			"sale_gelato",
 			"website_sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"website_sale_loyalty": {
@@ -5282,6 +6908,14 @@ _addons: {
 			"website_links",
 			"website_sale",
 		]
+		test_depends: [
+			"base",
+			"html_builder",
+			"html_editor",
+			"payment",
+			"sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"website_sale_mass_mailing": {
@@ -5290,6 +6924,7 @@ _addons: {
 			"website_mass_mailing",
 			"website_sale",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"website_sale_mondialrelay": {
@@ -5297,6 +6932,9 @@ _addons: {
 		depends: [
 			"delivery_mondialrelay",
 			"website_sale",
+		]
+		test_depends: [
+			"web",
 		]
 		has_tests: false
 	}
@@ -5306,6 +6944,12 @@ _addons: {
 			"sale_mrp",
 			"website_sale_stock",
 		]
+		test_depends: [
+			"account",
+			"product",
+			"web",
+			"website_sale",
+		]
 		has_tests: true
 	}
 	"website_sale_slides": {
@@ -5313,6 +6957,11 @@ _addons: {
 		depends: [
 			"website_sale",
 			"website_slides",
+		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"web",
 		]
 		has_tests: true
 	}
@@ -5323,6 +6972,13 @@ _addons: {
 			"stock_delivery",
 			"website_sale",
 		]
+		test_depends: [
+			"delivery",
+			"payment",
+			"product",
+			"sale",
+			"web",
+		]
 		has_tests: true
 	}
 	"website_sale_stock_wishlist": {
@@ -5331,12 +6987,21 @@ _addons: {
 			"website_sale_stock",
 			"website_sale_wishlist",
 		]
+		test_depends: [
+			"web",
+			"website_sale",
+		]
 		has_tests: false
 	}
 	"website_sale_wishlist": {
 		dir: "addons/website_sale_wishlist"
 		depends: [
 			"website_sale",
+		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"web",
 		]
 		has_tests: true
 	}
@@ -5348,6 +7013,15 @@ _addons: {
 			"website_mail",
 			"website_profile",
 		]
+		test_depends: [
+			"base",
+			"gamification",
+			"html_builder",
+			"html_editor",
+			"mail",
+			"web",
+			"web_tour",
+		]
 		has_tests: true
 	}
 	"website_slides_forum": {
@@ -5355,6 +7029,11 @@ _addons: {
 		depends: [
 			"website_forum",
 			"website_slides",
+		]
+		test_depends: [
+			"html_builder",
+			"html_editor",
+			"web",
 		]
 		has_tests: false
 	}
@@ -5364,6 +7043,9 @@ _addons: {
 			"survey",
 			"website_slides",
 		]
+		test_depends: [
+			"web",
+		]
 		has_tests: true
 	}
 	"website_sms": {
@@ -5372,6 +7054,7 @@ _addons: {
 			"sms",
 			"website",
 		]
+		test_depends: []
 		has_tests: false
 	}
 	"website_timesheet": {
@@ -5380,6 +7063,7 @@ _addons: {
 			"hr_timesheet",
 			"website",
 		]
+		test_depends: []
 		has_tests: false
 	}
 }

@@ -35,7 +35,7 @@ def load_addons_from_cue(cue_path: Path) -> dict:
     with open(cue_path, encoding="utf-8") as f:
         content = f.read()
     entry_pattern = re.compile(
-        r'"([a-zA-Z0-9_-]+)":\s*\{\s*dir:\s*"([^"]+)"\s*depends:\s*\[(.*?)\]\s*has_tests:\s*(true|false)',
+        r'"([a-zA-Z0-9_-]+)":\s*\{\s*dir:\s*"([^"]+)"\s*depends:\s*\[(.*?)\](?:\s*test_depends:\s*\[(.*?)\])?\s*has_tests:\s*(true|false)',
         re.DOTALL,
     )
     for m in entry_pattern.finditer(content):
@@ -47,11 +47,18 @@ def load_addons_from_cue(cue_path: Path) -> dict:
             for d in raw_deps.splitlines()
             if d.strip().strip(",").strip().strip('"').strip()
         ]
-        has_tests = m.group(4) == "true"
+        raw_test_deps = m.group(4) or ""
+        test_deps = [
+            d.strip().strip(",").strip().strip('"').strip()
+            for d in raw_test_deps.splitlines()
+            if d.strip().strip(",").strip().strip('"').strip()
+        ]
+        has_tests = m.group(5) == "true"
         manifests[name] = {
             "name": name,
             "dir": dir_path,
             "depends": deps,
+            "test_depends": test_deps,
             "has_tests": has_tests,
             "auto_install": False,
         }
@@ -70,12 +77,23 @@ def index_all_manifests(repo_root: Path) -> dict:
             addon_name = p.parent.name
             data = get_manifest(p)
             rel_dir = p.parent.relative_to(repo_root).as_posix()
+            tests_dir = p.parent / "tests"
+            test_deps = set()
+            if tests_dir.is_dir():
+                for py in tests_dir.glob("**/*.py"):
+                    test_deps.update(extract_python_imports(py))
+            static_dir = p.parent / "static"
+            if static_dir.is_dir():
+                for js in static_dir.glob("**/*.js"):
+                    test_deps.update(extract_js_imports(js))
+            test_deps.discard(addon_name)
             manifests[addon_name] = {
                 "name": addon_name,
                 "dir": rel_dir,
                 "depends": data.get("depends", []),
+                "test_depends": sorted(list(test_deps)),
                 "auto_install": data.get("auto_install", False),
-                "has_tests": (p.parent / "tests").is_dir(),
+                "has_tests": tests_dir.is_dir(),
             }
 
     # In a sparse checkout, disk manifests may be partial; fall back to .enact/addons.cue for unpopulated addons
@@ -127,7 +145,8 @@ def find_addon_dependencies(repo_root: Path, addon_dir: Path, manifests: dict) -
     deps = set()
     addon_name = addon_dir.name
     if addon_name in manifests:
-        deps.update(manifests[addon_name]["depends"])
+        deps.update(manifests[addon_name].get("depends", []))
+        deps.update(manifests[addon_name].get("test_depends", []))
 
     # 1. Scan tests
     tests_dir = addon_dir / "tests"
@@ -168,7 +187,8 @@ def resolve_component_sparse(
         visited.add(addon)
 
         if addon in manifests:
-            for dep in manifests[addon]["depends"]:
+            all_deps = set(manifests[addon].get("depends", [])) | set(manifests[addon].get("test_depends", []))
+            for dep in all_deps:
                 if not include_l10n and dep.startswith("l10n_"):
                     continue
                 if dep not in closure:
@@ -264,6 +284,10 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
         m_dir = m["dir"]
         has_tests = m.get("has_tests", (repo_root / m_dir / "tests").is_dir())
         deps = sorted([d for d in m.get("depends", []) if d in manifests and d != name])
+        test_deps = sorted([
+            d for d in m.get("test_depends", [])
+            if d in manifests and d != name and d not in deps
+        ])
         lines.append(f'\t"{name}": {{')
         lines.append(f'\t\tdir: "{m_dir}"')
         if deps:
@@ -273,6 +297,13 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
             lines.append("\t\t]")
         else:
             lines.append("\t\tdepends: []")
+        if test_deps:
+            lines.append("\t\ttest_depends: [")
+            for d in test_deps:
+                lines.append(f'\t\t\t"{d}",')
+            lines.append("\t\t]")
+        else:
+            lines.append("\t\ttest_depends: []")
         ht_str = "true" if has_tests else "false"
         lines.append(f"\t\thas_tests: {ht_str}")
         lines.append("\t}")

@@ -199,7 +199,7 @@ jobs:
       run: |-
         if [ -f "enve.lock" ]; then
           if [ -n "$ENACT_R2_BUCKET" ]; then
-            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure
+            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure -j 16
           fi
           enve run $([ -f enve.lock ] && echo --locked) -- true
         fi
@@ -208,6 +208,7 @@ jobs:
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+        ENVE_CACHE_CONCURRENCY: '16'
     - name: Execute Stage [preflight]
       run: |-
         UPDATED_ARG=""
@@ -422,13 +423,13 @@ jobs:
       run: |-
         if [ -f "enve.lock" ]; then
           if [ -n "$ENACT_R2_BUCKET" ]; then
-            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure
+            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure -j 16
           fi
           enve run $([ -f enve.lock ] && echo --locked) -- true
         fi
         if [ -n "${{ matrix.component_dir }}" ] && [ "${{ matrix.component_dir }}" != "." ] && [ -f "${{ matrix.component_dir }}/enve.lock" ]; then
           if [ -n "$ENACT_R2_BUCKET" ]; then
-            enve cache pull "${{ matrix.component_dir }}/enve.lock" --cache "$ENACT_R2_BUCKET" --insecure
+            enve cache pull "${{ matrix.component_dir }}/enve.lock" --cache "$ENACT_R2_BUCKET" --insecure -j 16
           fi
           (cd "${{ matrix.component_dir }}" && enve run $([ -f enve.lock ] && echo --locked) -- true)
         fi
@@ -437,6 +438,7 @@ jobs:
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+        ENVE_CACHE_CONCURRENCY: '16'
     - name: Execute Component Task
       run: ${{ matrix.command }}
       env:
@@ -453,11 +455,11 @@ jobs:
         if [ -n "$ENACT_R2_BUCKET" ]; then
           if [ -f "enve.lock" ]; then
             echo "🛰️ Pushing missing/updated closures to Cloudflare R2 from repository root..."
-            enve cache push enve.lock --cache "$ENACT_R2_BUCKET" || true
+            enve cache push enve.lock --cache "$ENACT_R2_BUCKET" -j 16 || true
           fi
           if [ -n "${{ matrix.component_dir }}" ] && [ "${{ matrix.component_dir }}" != "." ] && [ -f "${{ matrix.component_dir }}/enve.lock" ]; then
             echo "🛰️ Pushing missing/updated closures to Cloudflare R2 from ${{ matrix.component_dir }}..."
-            (cd "${{ matrix.component_dir }}" && enve cache push enve.lock --cache "$ENACT_R2_BUCKET") || true
+            (cd "${{ matrix.component_dir }}" && enve cache push enve.lock --cache "$ENACT_R2_BUCKET" -j 16) || true
           fi
         fi
       env:
@@ -465,6 +467,7 @@ jobs:
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
+        ENVE_CACHE_CONCURRENCY: '16'
     - name: Upload Execution Telemetry & Workflow Dashboard
       if: always()
       continue-on-error: true
