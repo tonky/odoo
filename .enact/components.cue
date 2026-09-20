@@ -97,7 +97,7 @@ pipeline: {
 				watch_paths: [...string] | *["\(meta.dir)/**"]
 				scoping: domainRoots: [...string] | *[meta.dir]
 				if meta.has_tests {
-					test: string | *"uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} -i \(name) -u \(name) --test-enable --stop-after-init --no-http $([ -n '{selected_targets}' ] && echo --test-tags $(echo '{selected_targets}' | sed 's|^|/|; s| |,/|g'))"
+					test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} -i \(name) -u \(name) --test-enable --stop-after-init --no-http $([ -n '{selected_targets}' ] && echo --test-tags $(echo '{selected_targets}' | sed 's|addons/||g; s|^|/|; s| |,/|g'))"
 				}
 			}
 		}
