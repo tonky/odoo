@@ -33,6 +33,8 @@ env:
   GOPATH: /tmp/go
   UV_CACHE_DIR: /tmp/.cache/uv
   XDG_CACHE_HOME: /tmp/.cache
+  ENVE_SERVICE_UID: '1000'
+  ENVE_SERVICE_GID: '1000'
 jobs:
   detect:
     name: Detect Affected Components
