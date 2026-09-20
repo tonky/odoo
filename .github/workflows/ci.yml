@@ -84,9 +84,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -176,9 +175,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -281,9 +279,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -359,9 +356,8 @@ jobs:
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          [ -f "$BIN_DIR/enact" ] && cp -f "$BIN_DIR/enact" "$HOME/.cargo/bin/enact" 2>/dev/null || true
-          [ -f "$BIN_DIR/enve" ] && cp -f "$BIN_DIR/enve" "$HOME/.cargo/bin/enve" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin/enact" "$HOME/.cargo/bin/enve" 2>/dev/null || true
+          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
+          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"

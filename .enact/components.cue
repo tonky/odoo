@@ -15,10 +15,6 @@ package replay
 		}
 	}
 	shards: "auto"
-	testDepends: [...string] | *[]
-	sparseCheckout: [
-		for d in testDepends { "addons/\(d)" },
-	]
 	lint:   string | *"[ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true"
 	scoping: {
 		barrels: []
@@ -63,6 +59,9 @@ pipeline: {
 		"addons/web_tour",
 		"addons/iap",
 	]
+	sparseCheckoutHooks: [
+		"bin/odoo-scope sparse -c {component_root}",
+	]
 	jobs: {}
 	triggers: {
 		pull_request: {
@@ -95,7 +94,6 @@ pipeline: {
 				title:               string | *"Odoo Addon \(name)"
 				root:                meta.dir
 				dependsOnComponents: meta.depends
-				testDepends:         meta.test_depends
 				watch_paths: [...string] | *["\(meta.dir)/**"]
 				scoping: domainRoots: [...string] | *[meta.dir]
 				if meta.has_tests {

@@ -47,6 +47,7 @@ package.json
 /bin/*
 !/bin/enact
 !/bin/enve
+!/bin/odoo-scope
 /build/
 /dist/
 /include/
