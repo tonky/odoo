@@ -38,7 +38,6 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   GOCACHE: /tmp/go-build
   GOPATH: /tmp/go
-  PATH: ${{ github.workspace }}/bin:${{ env.PATH }}
   UV_CACHE_DIR: /tmp/.cache/uv
   XDG_CACHE_HOME: /tmp/.cache
 jobs:

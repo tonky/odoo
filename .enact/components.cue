@@ -46,9 +46,7 @@ package replay
 pipeline: {
 	name:        "odoo-platform"
 	description: "Odoo Modular ERP: Accelerated CI/CD Pipeline (enact + enve)"
-	env: {
-		PATH: "${{ github.workspace }}/bin:${{ env.PATH }}"
-	}
+	env: {}
 	sparseCheckout: [
 		".enact",
 		"bin",
