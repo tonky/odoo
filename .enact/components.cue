@@ -99,7 +99,7 @@ pipeline: {
 				watch_paths: [...string] | *["\(meta.dir)/**"]
 				scoping: domainRoots: [...string] | *[meta.dir]
 				if meta.has_tests {
-					test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) -i \(name) -u \(name) --test-enable --stop-after-init --test-tags $([ -n '{selected_targets}' ] && echo '{selected_targets}' | sed 's|addons/||g; s|^|/|; s| |,/|g' || echo '/\(name)')"
+					test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo -i \(name) -u \(name) --test-enable --stop-after-init --test-tags $([ -n '{selected_targets}' ] && echo '{selected_targets}' | sed 's|addons/||g; s|^|/|; s| |,/|g' || echo '/\(name)')"
 				}
 			}
 		}
@@ -126,7 +126,7 @@ pipeline: {
 				"odoo/**",
 			]
 			lint: "([ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true)"
-			test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) -i base -u base --test-enable --stop-after-init --test-tags /base"
+			test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo -i base -u base --test-enable --stop-after-init --test-tags /base"
 		}
 		"web": {
 			description: "Odoo web client, owl components, and UI assets"
