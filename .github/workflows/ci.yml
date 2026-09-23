@@ -109,7 +109,7 @@ jobs:
           UPDATED_ARG="--updated ${{ inputs.updated }}"
         fi
         NO_CACHE_ARG=""
-        if [ "${{ inputs.no_cache }}" = "true" ]; then
+        if [ "${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.labels.*.name, 'no-cache') || contains(github.event.pull_request.labels.*.name, 'showcase') || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || startsWith(github.head_ref, 'showcase/') || startsWith(github.ref_name, 'showcase/') }}" = "true" ]; then
           NO_CACHE_ARG="--no-cache"
         fi
         BASE_ARG=""
@@ -230,7 +230,7 @@ jobs:
           UPDATED_ARG="--updated ${{ inputs.updated }}"
         fi
         NO_CACHE_ARG=""
-        if [ "${{ inputs.no_cache }}" = "true" ]; then
+        if [ "${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.labels.*.name, 'no-cache') || contains(github.event.pull_request.labels.*.name, 'showcase') || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || startsWith(github.head_ref, 'showcase/') || startsWith(github.ref_name, 'showcase/') }}" = "true" ]; then
           NO_CACHE_ARG="--no-cache"
         fi
         enact run --pipeline .enact $UPDATED_ARG $NO_CACHE_ARG preflight
