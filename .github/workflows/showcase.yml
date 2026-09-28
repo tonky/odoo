@@ -59,7 +59,7 @@ jobs:
       upstream_cpu_minutes: ${{ steps.prep.outputs.upstream_cpu_minutes }}
       upstream_wall_minutes: ${{ steps.prep.outputs.upstream_wall_minutes }}
     steps:
-      - name: Checkout Repository (sparse)
+      - name: Checkout Repository
         uses: actions/checkout@v7
         with:
           fetch-depth: '100'
@@ -67,18 +67,6 @@ jobs:
           filter: blob:none
           lfs: 'false'
           show-progress: 'false'
-          sparse-checkout: |-
-            .enact
-            cue.mod
-            .github
-            bin
-            tools
-            showcase
-            helpers
-            patches
-            enve.cue
-            enve.lock
-          sparse-checkout-cone-mode: 'true'
           submodules: 'false'
 
       - name: Restore enact CLI binary cache
@@ -231,7 +219,7 @@ jobs:
             addons/web_editor
             addons/website
             addons/website_sale
-          sparse-checkout-cone-mode: 'true'
+          sparse-checkout-cone-mode: 'false'
           submodules: 'false'
 
       - name: Download Showcase Baseline & PR Patch
@@ -382,7 +370,7 @@ jobs:
           lfs: 'false'
           show-progress: 'false'
           sparse-checkout: ${{ matrix.sparse_checkout }}
-          sparse-checkout-cone-mode: 'true'
+          sparse-checkout-cone-mode: 'false'
           submodules: 'false'
 
       - name: Checkout Repository (full)
@@ -526,7 +514,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout Repository (sparse)
+      - name: Checkout Repository
         uses: actions/checkout@v7
         with:
           fetch-depth: '1'
@@ -534,13 +522,6 @@ jobs:
           filter: blob:none
           lfs: 'false'
           show-progress: 'false'
-          sparse-checkout: |-
-            .enact
-            cue.mod
-            .github
-            bin
-            tools
-          sparse-checkout-cone-mode: 'true'
           submodules: 'false'
 
       - name: Restore enact CLI binary cache
