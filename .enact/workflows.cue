@@ -1,16 +1,20 @@
 package replay
 
-// Reusable Stage Catalog for Odoo
-_preflightStage: {
-	name:      "preflight"
-	tasks:     ["lint", "style", "security"]
-	fail_fast: true
-	services:  "disabled"
-}
+let J = pipeline.#jobs
 
-_testStage: {
-	name:      "tests"
-	tasks:     ["test", "unit"]
-	fail_fast: false
-	services:  "on_demand"
-}
+// Reusable Stage Catalog for Odoo
+_stages: [
+	{
+		name: "preflight"
+		select: [J.lint]
+		fail_fast: true
+		services:  "disabled"
+	},
+	{
+		name:   "tests"
+		matrix: true
+		select: [J.test]
+		fail_fast: false
+		services:  "on_demand"
+	},
+]

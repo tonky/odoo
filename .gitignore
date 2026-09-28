@@ -3,13 +3,18 @@ _build/
 
 # dotfiles
 .*
-!.git
 !.gitignore
 !.gitkeep
 !.github
 !.mailmap
 !.weblate.json
 !.enact
+.enact/runs
+.enact/cache
+.enact/telemetry*
+.enact/*.html
+.enact/upstream-baseline.json
+.enact/changed-files.txt
 # compiled python files
 *.py[co]
 __pycache__/
@@ -49,6 +54,7 @@ package.json
 !/bin/enact
 !/bin/enve
 !/bin/odoo-scope
+!/bin/trace-runner
 /build/
 /dist/
 /include/
@@ -56,12 +62,4 @@ package.json
 /man/
 /share/
 /src/
-
-# enact runtime artifacts
-.enact/cache/
-.enact/runs/
-.enact/targets/
-.enact/*.json
-!.enact/odoo-index.json
-.enact/*.html
-cue.mod/
+tmp/

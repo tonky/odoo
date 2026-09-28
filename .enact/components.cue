@@ -1,36 +1,45 @@
 package replay
 
-#OdooAddonBase: {
+import "enact.dev/schema"
+
+// How an addon's `test` job picks its tests: a changed Python file by import analysis,
+// then odoo-scope's targets; a view, asset or data change runs the addon whole.
+#OdooTargetScope: schema.#TargetScope & {
+	fallback: "all"
+	hooks: {
+		post: [
+			"bin/odoo-scope targets -c {component_root} {changed_files}",
+		]
+	}
+}
+
+#OdooAddonBase: schema.#Component & {
 	technology: "python"
 	resources: {
 		cpus:      float | *1.5
 		memory_mb: int | *3072
 	}
 	services: {
-		db: {
-			name:          "db"
-			port:          5432
-			user:          "odoo"
-			database:      "test_odoo"
-			template:      "test_odoo_template"
-			template_init: "bash $(git rev-parse --show-toplevel)/setup/ci/post-start-postgres.sh"
+		db: schema.#PostgresService & {
+			name:     "db"
+			user:     "odoo"
+			database: "test_odoo"
+			enact: {
+				template:      "test_odoo_template"
+				template_init: "bash $(git rev-parse --show-toplevel)/setup/ci/post-start-postgres.sh"
+			}
 		}
 	}
 	shards: "auto"
 	lint:   string | *"[ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true"
+	workspace_scope: {
+		include_dependencies: true
+	}
 	scoping: {
 		barrels: []
-		domainRoots: [...string]
-		fullRunPatterns: []
-		selector: {
-			command:     "bin/odoo-scope targets -c {component_root} {changed_files}"
-			fallback:    "none"
-			format:      "lines"
-			granularity: "file"
-			originDir:   "."
-			timeout:     60
-		}
-		serviceMarkers: [
+		domain_roots: [...string]
+		full_run_patterns: []
+		service_markers: [
 			"odoo-bin",
 			"odoo.tests",
 			"tagged",
@@ -39,30 +48,33 @@ package replay
 			"SingleTransactionCase",
 			"Common",
 		]
-		universalSymbols: []
+		universal_symbols: []
 	}
 }
 
-pipeline: {
+pipeline: schema.#Pipeline & {
 	name:        "odoo-platform"
 	description: "Odoo Modular ERP: Accelerated CI/CD Pipeline (enact + enve)"
 	env: {}
-	sparseCheckout: [
-		".enact",
-		"bin",
-		"odoo",
-		"setup",
-		"addons/bus",
-		"addons/rpc",
-		"addons/web",
-		"addons/http_routing",
-		"addons/web_tour",
-		"addons/iap",
-	]
-	sparseCheckoutHooks: [
-		"bin/odoo-scope sparse -c {component_root}",
-	]
-	jobs: {}
+	workspace_scope: {
+		include: [
+			".enact",
+			"bin",
+			"odoo",
+			"setup",
+			"addons/bus",
+			"addons/rpc",
+			"addons/web",
+			"addons/http_routing",
+			"addons/web_tour",
+			"addons/iap",
+		]
+		hooks: {
+			post: [
+				"bin/odoo-scope sparse -c {component_root}",
+			]
+		}
+	}
 	triggers: {
 		pull_request: {
 			branches: [
@@ -83,21 +95,32 @@ pipeline: {
 			paths: [
 				"**/*",
 			]
-			tags: []
 		}
 		schedule: []
 	}
 	components: {
-		for name, meta in _addons {
-			"\(name)": #OdooAddonBase & {
-				name:                "\(name)"
-				title:               string | *"Odoo Addon \(name)"
-				root:                meta.dir
-				dependsOnComponents: meta.depends
+		for addon, meta in _addons {
+			("\(addon)"): #OdooAddonBase & {
+				name:                  "\(addon)"
+				title:                 string | *"Odoo Addon \(addon)"
+				root:                  meta.dir
+				depends_on:            meta.depends
 				watch_paths: [...string] | *["\(meta.dir)/**"]
-				scoping: domainRoots: [...string] | *[meta.dir]
 				if meta.has_tests {
-					test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo -i \(name) -u \(name) --test-enable --stop-after-init --test-tags $([ -n '{selected_targets}' ] && echo '{selected_targets}' | sed 's|addons/||g; s|^|/|; s| |,/|g' || echo '/\(name)')"
+					target_scope: #OdooTargetScope & {
+						default_target: "/\(addon)"
+						rules: [
+							{
+								match: ["\(meta.dir)/**/*.py"]
+								engine: "python"
+							},
+							{
+								match: ["\(meta.dir)/**/*.js", "\(meta.dir)/**/*.xml", "\(meta.dir)/**/*.csv"]
+								action: "full_component"
+							},
+						]
+					}
+					test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d {shard_db} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo -i \(addon) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}"
 				}
 			}
 		}
@@ -110,7 +133,7 @@ pipeline: {
 				memory_mb: 4096
 			}
 			root: "odoo/addons/base"
-			scoping: domainRoots: [
+			scoping: domain_roots: [
 				"odoo/addons/base",
 				"odoo",
 			]
@@ -124,7 +147,7 @@ pipeline: {
 				"odoo/**",
 			]
 			lint: "([ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true)"
-			test: string | *"ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo -i base -u base --test-enable --stop-after-init --test-tags /base"
+			test: "ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo -i base -u base --test-enable --stop-after-init --test-tags {targets_tags}"
 		}
 		"web": {
 			description: "Odoo web client, owl components, and UI assets"

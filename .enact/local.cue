@@ -5,10 +5,7 @@ pipeline: {
 		local: {
 			layout:   "staged"
 			services: "on_demand"
-			stages: [
-				_preflightStage,
-				_testStage,
-			]
+			stages:   _stages
 		}
 	}
 }

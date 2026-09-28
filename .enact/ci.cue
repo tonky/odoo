@@ -2,11 +2,13 @@ package replay
 
 pipeline: {
 	ci: {
+		no_cache: {
+			labels: ["no-cache", "showcase"]
+			branch_prefixes: ["showcase/"]
+		}
 		concurrency: {
 			max_parallel_jobs: 8
-			max_total_shards:  16
 		}
-		strategy: "auto"
 		workers: {
 			"standard": {
 				available:    4
@@ -22,7 +24,7 @@ pipeline: {
 				cost_per_min: 0.032
 				cpus:         8.0
 				labels: [
-					"ubuntu-latest-8",
+					"ubuntu-latest",
 				]
 				memory_mb: 32768
 			}
@@ -32,10 +34,7 @@ pipeline: {
 		ci: {
 			layout:   "staged"
 			services: "on_demand"
-			stages: [
-				_preflightStage,
-				_testStage,
-			]
+			stages:   _stages
 		}
 	}
 }
