@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def run_cmd(cmd, cwd=None, check=True, capture=True):
+def run_cmd(cmd, cwd=None, check=True, capture=True, strip=True):
     """Executes a shell command and returns stdout."""
     res = subprocess.run(
         cmd,
@@ -31,7 +31,9 @@ def run_cmd(cmd, cwd=None, check=True, capture=True):
         stdout=subprocess.PIPE if capture else None,
         stderr=subprocess.PIPE if capture else None,
     )
-    return res.stdout.strip() if capture else ""
+    if not capture:
+        return ""
+    return res.stdout.strip() if strip else res.stdout
 
 
 def set_gha_output(key: str, value: str):
@@ -169,36 +171,38 @@ def main():
             json.dump(upstream_baseline, f, indent=2)
         print(f"   💾 Saved upstream baseline metrics to {baseline_file}")
 
-    # 3. Ensure base and head commits are available in local git tree
-    print("🌿 Ensuring commits are available locally...")
+    # 3. Resolve changed files & patch
+    print("🌿 Resolving PR diff and changed files...")
+    enact_dir = repo_dir / ".enact"
+    enact_dir.mkdir(parents=True, exist_ok=True)
+    changed_files = []
+    patch_content = ""
+
     if args.pr:
         pr_id_clean = args.pr.strip().rstrip("/").split("/")[-1]
-        run_cmd(f"git fetch --no-tags --depth=1 origin pull/{pr_id_clean}/head 2>/dev/null || git fetch --no-tags --depth=1 https://github.com/{upstream_repo}.git pull/{pr_id_clean}/head 2>/dev/null || true", cwd=repo_dir, check=False)
-        base_branch = pr_data.get("baseRefName") if 'pr_data' in locals() else ""
-        if base_branch:
-            run_cmd(f"git fetch --no-tags --depth=1 origin {base_branch} 2>/dev/null || git fetch --no-tags --depth=1 https://github.com/{upstream_repo}.git {base_branch} 2>/dev/null || true", cwd=repo_dir, check=False)
+        repo_flag = ["--repo", upstream_repo] if upstream_repo else []
+        try:
+            diff_files_out = run_cmd(["gh", "pr", "diff", pr_id_clean, "--name-only"] + repo_flag, cwd=repo_dir)
+            changed_files = [line.strip() for line in diff_files_out.splitlines() if line.strip()]
+        except Exception as e:
+            print(f"⚠️ Could not list changed files via gh pr diff: {e}")
 
-    def ensure_commit(sha: str):
-        if not sha:
-            return
-        res = subprocess.run(f"git rev-parse --verify {sha}^{{commit}}", cwd=repo_dir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if res.returncode == 0:
-            return  # Already available locally
-        run_cmd(f"git fetch --no-tags --depth=1 origin {sha} 2>/dev/null || true", cwd=repo_dir, check=False)
-        res = subprocess.run(f"git rev-parse --verify {sha}^{{commit}}", cwd=repo_dir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if res.returncode != 0 and upstream_repo:
-            run_cmd(f"git fetch --no-tags --depth=1 https://github.com/{upstream_repo}.git {sha} 2>/dev/null || true", cwd=repo_dir, check=False)
+        try:
+            patch_content = run_cmd(["gh", "pr", "diff", pr_id_clean] + repo_flag, cwd=repo_dir, strip=False)
+        except Exception as e:
+            print(f"⚠️ Could not obtain patch via gh pr diff: {e}")
 
-    ensure_commit(base_sha)
-    ensure_commit(head_sha)
-
-    # 4. Compute changed files between base and head
-    try:
-        changed_output = run_cmd(f"git diff --name-only {base_sha}...{head_sha}", cwd=repo_dir)
-        changed_files = [line.strip() for line in changed_output.splitlines() if line.strip()]
-    except Exception:
-        changed_output = run_cmd("git diff --name-only HEAD~1", cwd=repo_dir)
-        changed_files = [line.strip() for line in changed_output.splitlines() if line.strip()]
+    # Fallback to local git diff if gh pr diff was not used
+    if not changed_files and base_sha and head_sha:
+        try:
+            diff_files_out = run_cmd(f"git diff --name-only {base_sha}...{head_sha}", cwd=repo_dir)
+            changed_files = [line.strip() for line in diff_files_out.splitlines() if line.strip()]
+        except Exception:
+            try:
+                diff_files_out = run_cmd("git diff --name-only HEAD~1", cwd=repo_dir)
+                changed_files = [line.strip() for line in diff_files_out.splitlines() if line.strip()]
+            except Exception:
+                changed_files = []
 
     print(f"📝 Changed files detected: {len(changed_files)}")
     for f in changed_files[:8]:
@@ -206,42 +210,29 @@ def main():
     if len(changed_files) > 8:
         print(f"   ... and {len(changed_files) - 8} more")
 
-    # Save changed files list
-    enact_dir = repo_dir / ".enact"
-    enact_dir.mkdir(parents=True, exist_ok=True)
+    # Save changed-files.txt
     with open(enact_dir / "changed-files.txt", "w") as f:
         f.write("\n".join(changed_files))
 
-    # 5. Non-destructively overlay PR code if checkout requested
-    # Checkout only the changed files from head_sha (excluding protected enact/enve/workflow paths)
-    current_head = run_cmd("git rev-parse HEAD", cwd=repo_dir)
-    if current_head != head_sha and head_sha and changed_files:
-        print(f"🔄 Projecting PR code changes from {head_sha[:10]} ({len(changed_files)} files)...")
-        protected_prefixes = (".enact", "enve.cue", "enve.lock", "showcase", "helpers", ".github/workflows")
-        pr_files_to_checkout = [
-            f for f in changed_files
-            if not any(f.startswith(p) for p in protected_prefixes)
-        ]
-        if pr_files_to_checkout:
-            # Batch checkout changed files
-            chunk_size = 50
-            for i in range(0, len(pr_files_to_checkout), chunk_size):
-                chunk = pr_files_to_checkout[i:i + chunk_size]
-                quoted = " ".join(f"'{f}'" for f in chunk)
-                run_cmd(f"git checkout {head_sha} -- {quoted}", cwd=repo_dir, check=False)
-        print("   ✓ PR code changes projected successfully.")
-
-    # Save PR diff patch for downstream test/preflight jobs
-    try:
-        patch_content = run_cmd("git diff", cwd=repo_dir, check=False)
-        if not patch_content and base_sha and head_sha:
-            patch_content = run_cmd(f"git diff {base_sha}...{head_sha}", cwd=repo_dir, check=False)
+    # 4. Save and Apply PR patch to workspace
+    if patch_content:
         with open(enact_dir / "pr-changes.patch", "w") as f:
-            f.write(patch_content or "")
-        if patch_content:
-            print(f"   💾 Generated pr-changes.patch ({len(patch_content)} bytes)")
-    except Exception as e:
-        print(f"   ⚠️ Could not generate patch: {e}")
+            f.write(patch_content)
+        print(f"   💾 Saved pr-changes.patch ({len(patch_content)} bytes)")
+
+        # Apply patch non-destructively
+        print(f"🔄 Projecting PR code changes onto workspace...")
+        res = subprocess.run(["git", "apply", "--check", "-"], input=patch_content, text=True, cwd=repo_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if res.returncode == 0:
+            subprocess.run(["git", "apply", "-"], input=patch_content, text=True, cwd=repo_dir, check=True)
+            print("   ✓ PR code patch applied cleanly.")
+        else:
+            res_3way = subprocess.run(["git", "apply", "--3way", "-"], input=patch_content, text=True, cwd=repo_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res_3way.returncode == 0:
+                print("   ✓ PR code patch applied via 3-way merge.")
+            else:
+                print("   ⚠️ Clean apply failed; trying with reject fallback...")
+                subprocess.run(["git", "apply", "--reject", "-"], input=patch_content, text=True, cwd=repo_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # 6. Set GitHub Actions outputs
     set_gha_output("base_sha", base_sha)

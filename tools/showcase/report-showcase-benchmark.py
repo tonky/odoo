@@ -70,15 +70,16 @@ def main():
                 report = enact_data.get("report", {})
                 if not enact_wall_s:
                     enact_wall_s = report.get("wall_duration_ms", 0.0) / 1000.0
+                services_dict = report.get("services") or {}
                 if not enact_cpu_s:
-                    srv_cpu = (report.get("services", {}).get("total", {}).get("total_cpu_time_ms", 0.0)) / 1000.0
+                    srv_cpu = (services_dict.get("total") or {}).get("total_cpu_time_ms", 0.0) / 1000.0
                     comp_cpu = sum(
-                        c.get("total", {}).get("total_cpu_time_ms", 0.0) / 1000.0
-                        for c in report.get("components", {}).values()
+                        (c.get("total") or {}).get("total_cpu_time_ms", 0.0) / 1000.0
+                        for c in (report.get("components") or {}).values()
                     )
                     enact_cpu_s = srv_cpu + comp_cpu
-                enact_peak_ram = report.get("services", {}).get("total", {}).get("peak_ram_bytes", 0)
-                enact_components = list(report.get("components", {}).keys())
+                enact_peak_ram = (services_dict.get("total") or {}).get("peak_ram_bytes", 0)
+                enact_components = list((report.get("components") or {}).keys())
         except Exception as e:
             print(f"Warning: could not parse telemetry.json: {e}", file=sys.stderr)
 
