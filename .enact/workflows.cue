@@ -1,6 +1,8 @@
 package replay
 
-let J = pipeline.#jobs
+import "enact.dev/schema"
+
+let J = schema.#Pipeline.#jobs
 
 // Reusable Stage Catalog for Odoo
 _stages: [
