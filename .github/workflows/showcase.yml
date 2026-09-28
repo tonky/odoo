@@ -323,12 +323,14 @@ jobs:
 
       - name: Execute Stage [Preflight]
         run: |-
-          BASE_SHA="${{ needs.detect.outputs.base_sha }}"
-          BASE_ARG=""
-          if [ -n "$BASE_SHA" ]; then
-            BASE_ARG="--base $BASE_SHA"
+          FILES_ARG=""
+          if [ -f ".enact/changed-files.txt" ] && [ -s ".enact/changed-files.txt" ]; then
+            FILES_CSV=$(paste -sd, .enact/changed-files.txt)
+            if [ -n "$FILES_CSV" ]; then
+              FILES_ARG="--files $FILES_CSV"
+            fi
           fi
-          enact run --pipeline .enact $BASE_ARG preflight
+          enact run --pipeline .enact $FILES_ARG preflight
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
           AWS_REGION: auto

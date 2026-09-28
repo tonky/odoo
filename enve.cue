@@ -1,7 +1,7 @@
 package replay
 
 // Odoo ERP test services and environment, adapted for replay.
-devEnv: {
+profiles: dev: {
     "description": "Odoo Modular ERP (Python + Rootless PostgreSQL on Loopback)",
     "disabledServices": [],
     "environment": {
@@ -49,11 +49,10 @@ devEnv: {
             "external": false,
             "files": {},
             "healthCheck": {
-                "intervalMs": 10000,
+                "interval": "10s",
                 "port": 5432,
                 "retries": 15,
-                "timeout": "10000ms",
-                "timeoutMs": 10000
+                "timeout": "10s"
             },
             "host": "127.0.0.1",
             "isolation": "auto",
@@ -69,15 +68,14 @@ devEnv: {
             "name": "db",
             "port": 5432,
             "readinessProbe": {
-                "initialDelayMs": 0,
+                "initialDelay": "0s",
                 "port": 5432,
-                "timeout": "15000ms",
-                "timeoutMs": 15000
+                "timeout": "15s"
             },
             "resources": {},
             "restartPolicy": "on-failure",
             "socketDir": "/tmp",
-            "timeout": "15000ms"
+            "timeout": "15s"
         }
     },
     "tools": [
