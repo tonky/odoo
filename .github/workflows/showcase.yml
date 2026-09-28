@@ -171,6 +171,17 @@ jobs:
           lfs: 'false'
           show-progress: 'false'
           sparse-checkout: |-
+            enve.cue
+            enve.lock
+            odoo-bin
+            requirements.txt
+            setup.py
+            setup.cfg
+            pyproject.toml
+            Justfile
+            oxlint.json
+            ruff.toml
+            uv.lock
             .enact
             cue.mod
             .github
@@ -178,7 +189,6 @@ jobs:
             tools
             showcase
             patches
-            .
             addons/account
             addons/base
             addons/bus
@@ -370,8 +380,19 @@ jobs:
           fetch-tags: 'false'
           filter: blob:none
           lfs: 'false'
-          show-progress: 'false'
-          sparse-checkout: ${{ matrix.sparse_checkout }}
+          sparse-checkout: |
+            enve.cue
+            enve.lock
+            odoo-bin
+            requirements.txt
+            setup.py
+            setup.cfg
+            pyproject.toml
+            Justfile
+            oxlint.json
+            ruff.toml
+            uv.lock
+            ${{ matrix.sparse_checkout }}
           sparse-checkout-cone-mode: 'false'
           submodules: 'false'
 
@@ -494,13 +515,13 @@ jobs:
           ENACT_RUNNER_TIER: ${{ matrix.runner_tier }}
           ENACT_TOPOLOGY: ${{ matrix.topology }}
 
-      - name: Upload Telemetry for [${{ matrix.component }}]
+      - name: Upload Telemetry for [${{ matrix.task_id }}]
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           if-no-files-found: ignore
-          name: telemetry-comp-${{ matrix.component }}
+          name: telemetry-${{ matrix.task_id }}
           path: |-
             .enact/telemetry.json
             .enact/summary.html
