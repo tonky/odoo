@@ -58,6 +58,17 @@ pipeline: schema.#Pipeline & {
 	env: {}
 	workspace_scope: {
 		include: [
+			"enve.cue",
+			"enve.lock",
+			"odoo-bin",
+			"requirements.txt",
+			"setup.py",
+			"setup.cfg",
+			"pyproject.toml",
+			"Justfile",
+			"oxlint.json",
+			"ruff.toml",
+			"uv.lock",
 			".enact",
 			"bin",
 			"odoo",
@@ -146,6 +157,9 @@ pipeline: schema.#Pipeline & {
 				"odoo/addons/base/**",
 				"odoo/**",
 			]
+			depends_on: [
+				"root",
+			]
 			lint: "([ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true)"
 			test: "ODOO_TEST_MAX_FAILED_TESTS=1 uv run python $(git rev-parse --show-toplevel)/odoo-bin -d test_odoo_${ENACT_SHARD_INDEX:-1} --http-port=$(( 8069 + ${ENACT_SHARD_INDEX:-1} )) --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo -i base -u base --test-enable --stop-after-init --test-tags {targets_tags}"
 		}
@@ -193,6 +207,58 @@ pipeline: schema.#Pipeline & {
 				"stock",
 				"inventory",
 			]
+		}
+		"root": {
+			description: "Odoo platform entrypoints, runtime dependencies, packaging, and tooling"
+			title:       "Odoo Platform Entrypoints & Packaging"
+			root:        "."
+			watch_paths: [
+				".gitignore",
+				".weblate.json",
+				"CONTRIBUTING.md",
+				"COPYRIGHT",
+				"Justfile",
+				"LICENSE",
+				"MANIFEST.in",
+				"README.md",
+				"SECURITY.md",
+				"enve.cue",
+				"enve.lock",
+				"odoo-bin",
+				"oxlint.json",
+				"pyproject.toml",
+				"replay-runtime.json",
+				"requirements.txt",
+				"ruff.toml",
+				"setup.cfg",
+				"setup.py",
+				"uv.lock",
+				"setup/**",
+				"debian/**",
+				"bin/**",
+				"tools/**",
+			]
+			lint: "([ -n '{changed_files}' ] && ruff check --config $(git rev-parse --show-toplevel)/ruff.toml {changed_files} || true)"
+		}
+		"ci": {
+			description: "CI/CD pipelines, schemas, and automation workflows"
+			title:       "CI/CD & Pipeline Infrastructure"
+			root:        ".github"
+			watch_paths: [
+				".enact/**",
+				".github/**",
+				"cue.mod/**",
+			]
+			lint: "cue vet .enact/... 2>/dev/null || true"
+		}
+		"doc": {
+			description: "Odoo documentation, guides, and Sphinx resources"
+			title:       "Odoo Documentation"
+			root:        "doc"
+			watch_paths: [
+				"doc/**",
+			]
+			lint: "true"
 		}
 	}
 }

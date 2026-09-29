@@ -15,6 +15,9 @@ _build/
 .enact/*.html
 .enact/upstream-baseline.json
 .enact/changed-files.txt
+.enact/dynamic_resources.json
+.enact/pr-changes.patch
+.enact/targets/
 # compiled python files
 *.py[co]
 __pycache__/

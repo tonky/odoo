@@ -14,6 +14,7 @@ _addons: {
 		]
 		test_depends: [
 			"base",
+			"base_vat",
 			"mail",
 			"payment",
 			"test_mail",
@@ -1130,6 +1131,7 @@ _addons: {
 		]
 		test_depends: [
 			"web",
+			"web_tour",
 		]
 		has_tests: true
 	}
