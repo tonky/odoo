@@ -97,8 +97,14 @@ if [ "$HAS_TABLES" != "1" ]; then
       echo "💾 Caching test_odoo_template snapshot to $SNAPSHOT..."
       if command -v pg_dump >/dev/null 2>&1; then
         pg_dump -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -Fc -d test_odoo_template -f "${SNAPSHOT}.tmp" 2>/dev/null && mv "${SNAPSHOT}.tmp" "$SNAPSHOT" 2>/dev/null || true
+        if [ ! -s "${REPO_SNAPSHOT}.zst" ] && [ -d "${TOPLEVEL}/setup/ci" ]; then
+          zstd -19 -c "$SNAPSHOT" > "${REPO_SNAPSHOT}.zst.tmp" 2>/dev/null && mv "${REPO_SNAPSHOT}.zst.tmp" "${REPO_SNAPSHOT}.zst" 2>/dev/null || true
+        fi
       elif command -v enve >/dev/null 2>&1; then
         enve run -- pg_dump -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -Fc -d test_odoo_template -f "${SNAPSHOT}.tmp" 2>/dev/null && mv "${SNAPSHOT}.tmp" "$SNAPSHOT" 2>/dev/null || true
+        if [ ! -s "${REPO_SNAPSHOT}.zst" ] && [ -d "${TOPLEVEL}/setup/ci" ]; then
+          zstd -19 -c "$SNAPSHOT" > "${REPO_SNAPSHOT}.zst.tmp" 2>/dev/null && mv "${REPO_SNAPSHOT}.zst.tmp" "${REPO_SNAPSHOT}.zst" 2>/dev/null || true
+        fi
       fi
     fi
   fi

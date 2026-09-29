@@ -6,11 +6,6 @@ import "enact.dev/schema"
 // then odoo-scope's targets; a view, asset or data change runs the addon whole.
 #OdooTargetScope: schema.#TargetScope & {
 	fallback: "all"
-	hooks: {
-		post: [
-			"bin/odoo-scope targets -c {component_root} {changed_files}",
-		]
-	}
 }
 
 #OdooAddonBase: schema.#Component & {
@@ -73,12 +68,20 @@ pipeline: schema.#Pipeline & {
 			"bin",
 			"odoo",
 			"setup",
+			"addons/api_doc",
+			"addons/auth_passkey",
+			"addons/auth_totp",
+			"addons/base_import",
+			"addons/base_import_module",
+			"addons/base_setup",
 			"addons/bus",
+			"addons/html_editor",
+			"addons/http_routing",
+			"addons/iap",
 			"addons/rpc",
 			"addons/web",
-			"addons/http_routing",
 			"addons/web_tour",
-			"addons/iap",
+			"addons/web_unsplash",
 		]
 		hooks: {
 			post: [

@@ -21,7 +21,7 @@ on:
         required: false
         default: 'false'
       base_ref:
-        description: Target base branch for diff detection (e.g. perf/ci-modernization, master, main)
+        description: Target base branch for diff detection (e.g. main, master, a release branch)
         required: false
       no_cache:
         description: Disable task cache, forcing full execution
@@ -60,10 +60,34 @@ jobs:
           .enact
           cue.mod
           .github
-          setup
           bin
           enve.cue
           enve.lock
+          odoo-bin
+          requirements.txt
+          setup.py
+          setup.cfg
+          pyproject.toml
+          Justfile
+          oxlint.json
+          ruff.toml
+          uv.lock
+          odoo
+          setup
+          addons/api_doc
+          addons/auth_passkey
+          addons/auth_totp
+          addons/base_import
+          addons/base_import_module
+          addons/base_setup
+          addons/bus
+          addons/html_editor
+          addons/http_routing
+          addons/iap
+          addons/rpc
+          addons/web
+          addons/web_tour
+          addons/web_unsplash
         sparse-checkout-cone-mode: 'true'
         submodules: 'false'
     - name: Restore enact CLI binary cache
@@ -84,24 +108,38 @@ jobs:
         path: .enact/cache
         restore-keys: ${{ runner.os }}-enact-tasks-
     - name: Ensure enve & enact CLI on PATH
-      run: |-
+      run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
         mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
         if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix /nix/store 2>/dev/null || true
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
         fi
-        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+        if [ -d "/nix" ]; then
+          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
+            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            rm -rf /nix/store 2>/dev/null || true
+          fi
           ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          for b in enact enve; do
+            if [ -f "$BIN_DIR/$b" ]; then
+              cp -f "$BIN_DIR/$b" "$HOME/.cargo/bin/" 2>/dev/null || true
+              chmod +x "$HOME/.cargo/bin/$b" "$BIN_DIR/$b" 2>/dev/null || true
+            fi
+          done
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
         export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+        # Host aliases from enve.cue (default profile): enve maps them inside its sandbox only.
+        if command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
+          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
+            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
+            | sudo tee -a /etc/hosts >/dev/null || true
+        fi
     - name: Compute Affected Component Matrix
       id: diff
       run: |-
@@ -110,43 +148,51 @@ jobs:
           cd "${GITHUB_WORKSPACE}"
         fi
         UPDATED_ARG=""
-        if [ "${{ inputs.all }}" = "true" ]; then
+        if [ "${ENACT_INPUT_ALL:-}" = "true" ]; then
           UPDATED_ARG="--all"
-        elif [ -n "${{ inputs.updated }}" ]; then
-          UPDATED_ARG="--updated ${{ inputs.updated }}"
+        elif [ -n "${ENACT_INPUT_UPDATED:-}" ]; then
+          UPDATED_ARG="--updated $ENACT_INPUT_UPDATED"
         fi
         NO_CACHE_ARG=""
-        if [ "${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.labels.*.name, 'no-cache') || contains(github.event.pull_request.labels.*.name, 'showcase') || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || startsWith(github.head_ref, 'showcase/') || startsWith(github.ref_name, 'showcase/') }}" = "true" ]; then
+        if [ "${ENACT_FORCE_NO_CACHE:-}" = "true" ]; then
           NO_CACHE_ARG="--no-cache"
         fi
         BASE_ARG=""
-        BASE_REF="${{ inputs.base_ref || github.base_ref || github.event.pull_request.base.ref }}"
+        BASE_REF="${ENACT_BASE_REF:-}"
         if [ -z "$BASE_REF" ]; then
-          if [ "${{ github.event_name }}" = "push" ]; then
-            if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-              BASE_REF="${{ github.event.before }}"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            if [ -n "${ENACT_EVENT_BEFORE:-}" ] && [ "${ENACT_EVENT_BEFORE:-}" != "0000000000000000000000000000000000000000" ]; then
+              BASE_REF="${ENACT_EVENT_BEFORE:-}"
             else
               BASE_REF="HEAD~1"
             fi
           else
-            if [ "${{ github.ref_name }}" != "perf/ci-modernization" ] && [ "${{ github.ref_name }}" != "${{ github.event.repository.default_branch || 'master' }}" ]; then
-              if ! git rev-parse --verify origin/perf/ci-modernization >/dev/null 2>&1; then
-                git fetch --no-tags --depth=50 origin perf/ci-modernization 2>/dev/null || true
+            INTEGRATION_BRANCH="${ENACT_INTEGRATION_BRANCH:-}"
+            if [ -n "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "${ENACT_DEFAULT_BRANCH:-master}" ]; then
+              if ! git rev-parse --verify "origin/$INTEGRATION_BRANCH" >/dev/null 2>&1; then
+                git fetch --no-tags --depth=50 origin "$INTEGRATION_BRANCH" 2>/dev/null || true
               fi
-              if git rev-parse --verify origin/perf/ci-modernization >/dev/null 2>&1; then
-                BASE_REF="perf/ci-modernization"
+              if git rev-parse --verify "origin/$INTEGRATION_BRANCH" >/dev/null 2>&1; then
+                BASE_REF="$INTEGRATION_BRANCH"
               fi
             fi
             if [ -z "$BASE_REF" ]; then
-              BASE_REF="${{ github.event.repository.default_branch || 'master' }}"
+              BASE_REF="${ENACT_DEFAULT_BRANCH:-master}"
             fi
           fi
         fi
         if [ -n "$BASE_REF" ]; then
           if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1 && ! git rev-parse --verify "origin/$BASE_REF" >/dev/null 2>&1; then
-            git fetch --no-tags --depth=50 origin "$BASE_REF" 2>/dev/null || git fetch --deepen=50 2>/dev/null || true
+            git fetch --no-tags --depth=50 origin "$BASE_REF" 2>/dev/null || true
+          fi
+          if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+            git fetch --deepen=100 origin 2>/dev/null || git fetch --unshallow origin 2>/dev/null || true
           fi
           MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git merge-base HEAD "origin/$BASE_REF" 2>/dev/null || echo "")
+          if [ -z "$MERGE_BASE" ] && [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+            git fetch --deepen=500 origin 2>/dev/null || git fetch --unshallow origin 2>/dev/null || true
+            MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git merge-base HEAD "origin/$BASE_REF" 2>/dev/null || echo "")
+          fi
           if [ -n "$MERGE_BASE" ]; then
             BASE_ARG="--base $MERGE_BASE"
           elif git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
@@ -155,21 +201,28 @@ jobs:
             BASE_ARG="--base origin/$BASE_REF"
           fi
         fi
-        if [ -z "$BASE_ARG" ] && [ "${{ github.event_name }}" = "push" ]; then
+        if [ -z "$BASE_ARG" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
           if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
             BASE_ARG="--base HEAD~1"
           fi
         fi
-        MATRIX=$(enact affected --pipeline .enact $BASE_ARG $UPDATED_ARG $NO_CACHE_ARG --format json)
+        MATRIX=$(enact affected --pipeline .enact --workflow ci $BASE_ARG $UPDATED_ARG $NO_CACHE_ARG --format json)
         echo "$MATRIX"
         echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID }}
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_BASE_REF: ${{ inputs.base_ref || github.base_ref || github.event.pull_request.base.ref }}
+        ENACT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'master' }}
+        ENACT_EVENT_BEFORE: ${{ github.event.before }}
+        ENACT_FORCE_NO_CACHE: ${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || contains(github.event.pull_request.labels.*.name, 'no-cache') || contains(github.event.pull_request.labels.*.name, 'showcase') || startsWith(github.head_ref, 'showcase/') || startsWith(github.ref_name, 'showcase/') }}
+        ENACT_INPUT_ALL: ${{ inputs.all }}
+        ENACT_INPUT_UPDATED: ${{ inputs.updated }}
+        ENACT_INTEGRATION_BRANCH: ${{ vars.ENACT_INTEGRATION_BRANCH }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET }}
   preflight:
-    name: 'Stage: Preflight Quality Gate'
+    name: 'Stage: Preflight'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -185,20 +238,34 @@ jobs:
           .enact
           cue.mod
           .github
-          setup
           bin
-          helpers
           enve.cue
           enve.lock
-          package.json
-          pnpm-lock.yaml
-          pnpm-workspace.yaml
-          biome.json
-          biome.jsonc
-          tsconfig.json
-          turbo.json
-          patches
-          scripts
+          odoo-bin
+          requirements.txt
+          setup.py
+          setup.cfg
+          pyproject.toml
+          Justfile
+          oxlint.json
+          ruff.toml
+          uv.lock
+          odoo
+          setup
+          addons/api_doc
+          addons/auth_passkey
+          addons/auth_totp
+          addons/base_import
+          addons/base_import_module
+          addons/base_setup
+          addons/bus
+          addons/html_editor
+          addons/http_routing
+          addons/iap
+          addons/rpc
+          addons/web
+          addons/web_tour
+          addons/web_unsplash
           addons/account
           addons/account_add_gln
           addons/account_check_printing
@@ -218,18 +285,15 @@ jobs:
           addons/account_test
           addons/account_update_tax_tags
           addons/analytic
-          addons/api_doc
           addons/attachment_indexation
           addons/auth_ldap
           addons/auth_oauth
-          addons/auth_passkey
           addons/auth_passkey_portal
           addons/auth_password_policy
           addons/auth_password_policy_portal
           addons/auth_password_policy_signup
           addons/auth_signup
           addons/auth_timeout
-          addons/auth_totp
           addons/auth_totp_mail
           addons/auth_totp_portal
           addons/barcodes
@@ -239,14 +303,10 @@ jobs:
           addons/base_automation
           addons/base_geolocalize
           addons/base_iban
-          addons/base_import
-          addons/base_import_module
           addons/base_install_request
-          addons/base_setup
           addons/base_sparse_field
           addons/base_vat
           addons/board
-          addons/bus
           addons/calendar
           addons/calendar_sms
           addons/certificate
@@ -266,6 +326,7 @@ jobs:
           addons/delivery_mondialrelay
           addons/delivery_stock_picking_batch
           addons/digest
+          doc
           addons/event
           addons/event_booth
           addons/event_booth_sale
@@ -311,9 +372,6 @@ jobs:
           addons/hr_work_entry
           addons/hr_work_entry_holidays
           addons/html_builder
-          addons/html_editor
-          addons/http_routing
-          addons/iap
           addons/iap_crm
           addons/iap_mail
           addons/im_livechat
@@ -697,7 +755,7 @@ jobs:
           addons/repair
           addons/resource
           addons/resource_mail
-          addons/rpc
+          .
           addons/sale
           addons/sale_crm
           addons/sale_edi_ubl
@@ -802,10 +860,7 @@ jobs:
           addons/transifex
           addons/uom
           addons/utm
-          addons/web
           addons/web_hierarchy
-          addons/web_tour
-          addons/web_unsplash
           addons/website
           addons/website_blog
           addons/website_cf_turnstile
@@ -881,24 +936,38 @@ jobs:
         path: .enact/cache
         restore-keys: ${{ runner.os }}-enact-tasks-
     - name: Ensure enve & enact CLI on PATH
-      run: |-
+      run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
         mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
         if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix /nix/store 2>/dev/null || true
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
         fi
-        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+        if [ -d "/nix" ]; then
+          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
+            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            rm -rf /nix/store 2>/dev/null || true
+          fi
           ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          for b in enact enve; do
+            if [ -f "$BIN_DIR/$b" ]; then
+              cp -f "$BIN_DIR/$b" "$HOME/.cargo/bin/" 2>/dev/null || true
+              chmod +x "$HOME/.cargo/bin/$b" "$BIN_DIR/$b" 2>/dev/null || true
+            fi
+          done
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
         export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+        # Host aliases from enve.cue (default profile): enve maps them inside its sandbox only.
+        if command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
+          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
+            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
+            | sudo tee -a /etc/hosts >/dev/null || true
+        fi
     - name: Restore Nix Store (L1 GHA Cache)
       id: nix_l1_cache
       continue-on-error: true
@@ -912,6 +981,13 @@ jobs:
           ${{ runner.os }}-nix-store-
     - name: Pull Dependencies via enve
       run: |-
+        if [ -d "/nix" ]; then
+          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
+            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            rm -rf /nix/store 2>/dev/null || true
+          fi
+          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+        fi
         if [ -f "enve.lock" ]; then
           if [ "${{ steps.nix_l1_cache.outputs.cache-hit }}" != "true" ] && [ -n "$ENACT_R2_BUCKET" ]; then
             enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure -j 16
@@ -924,54 +1000,6 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
         ENVE_CACHE_CONCURRENCY: '16'
-    - name: Restore Node & TypeScript build cache
-      id: node_l1_cache
-      continue-on-error: true
-      uses: actions/cache/restore@v6
-      with:
-        key: ${{ runner.os }}-node-stage-preflight-${{ hashFiles('package.json', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lockb') }}
-        path: |-
-          ~/.local/share/pnpm/store
-          ~/.cache/pnpm
-          ~/.npm
-          node_modules/.cache
-          .turbo
-          .turbo/cache
-          packages/*/dist
-          packages/@n8n/*/dist
-          packages/frontend/@n8n/*/dist
-        restore-keys: ${{ runner.os }}-node-stage-preflight-
-    - name: Install Project Dependencies
-      run: |-
-        RUN_PREFIX=""
-        if command -v enve >/dev/null 2>&1 && [ -f "enve.lock" ]; then
-          RUN_PREFIX="enve run $([ -f enve.lock ] && echo --locked) -- "
-        fi
-        FILTER_ARGS=""
-        if [ -f "pnpm-lock.yaml" ]; then
-          echo "📦 Installing project dependencies via pnpm..."
-          $RUN_PREFIX pnpm config set fetch-retries 2 2>/dev/null || true
-          $RUN_PREFIX pnpm config set fetch-retry-maxtimeout 10000 2>/dev/null || true
-          $RUN_PREFIX pnpm config set network-concurrency 16 2>/dev/null || true
-          $RUN_PREFIX pnpm install $FILTER_ARGS --frozen-lockfile --offline --config.audit=false --config.minimum-release-age=0 --config.package-import-method=hardlink 2>/dev/null || $RUN_PREFIX pnpm install $FILTER_ARGS --frozen-lockfile --prefer-offline --config.audit=false --config.minimum-release-age=0 --config.package-import-method=hardlink 2>/dev/null || $RUN_PREFIX pnpm install $FILTER_ARGS --no-frozen-lockfile --prefer-offline --config.audit=false --config.minimum-release-age=0 --config.package-import-method=hardlink
-        elif [ -f "package-lock.json" ]; then
-          echo "📦 Installing project dependencies via npm..."
-          $RUN_PREFIX npm ci --prefer-offline 2>/dev/null || $RUN_PREFIX npm install
-        fi
-        git checkout -- pnpm-lock.yaml package-lock.json yarn.lock bun.lockb 2>/dev/null || true
-      env:
-        ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Verify Workspace Package Integrity
-      run: |-
-        RUN_PREFIX=""
-        if command -v enve >/dev/null 2>&1 && [ -f "enve.lock" ]; then
-          RUN_PREFIX="enve run $([ -f enve.lock ] && echo --locked) -- "
-        fi
-        if [ -f "scripts/check-workspace-private-deps.mjs" ]; then
-          echo "🔍 Checking workspace package dependencies..."
-          $RUN_PREFIX node scripts/check-workspace-private-deps.mjs
-        fi
     - name: Verify Pipeline Contracts & Sparse Cones (enact ci-verify)
       run: |-
         ENACT_BIN=""
@@ -984,46 +1012,54 @@ jobs:
           echo "🔬 Running enact ci-verify..."
           $ENACT_BIN ci-verify --pipeline .enact
         fi
-    - name: Execute Stage [Preflight Quality Gate]
+    - name: Execute Stage [Preflight]
       run: |-
         UPDATED_ARG=""
-        if [ "${{ inputs.all }}" = "true" ]; then
+        if [ "${ENACT_INPUT_ALL:-}" = "true" ]; then
           UPDATED_ARG="--all"
-        elif [ -n "${{ inputs.updated }}" ]; then
-          UPDATED_ARG="--updated ${{ inputs.updated }}"
+        elif [ -n "${ENACT_INPUT_UPDATED:-}" ]; then
+          UPDATED_ARG="--updated $ENACT_INPUT_UPDATED"
         fi
         NO_CACHE_ARG=""
-        if [ "${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.labels.*.name, 'no-cache') || contains(github.event.pull_request.labels.*.name, 'showcase') || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || startsWith(github.head_ref, 'showcase/') || startsWith(github.ref_name, 'showcase/') }}" = "true" ]; then
+        if [ "${ENACT_FORCE_NO_CACHE:-}" = "true" ]; then
           NO_CACHE_ARG="--no-cache"
         fi
         BASE_ARG=""
-        BASE_REF="${{ inputs.base_ref || github.base_ref || github.event.pull_request.base.ref }}"
+        BASE_REF="${ENACT_BASE_REF:-}"
         if [ -z "$BASE_REF" ]; then
-          if [ "${{ github.event_name }}" = "push" ]; then
-            if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-              BASE_REF="${{ github.event.before }}"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            if [ -n "${ENACT_EVENT_BEFORE:-}" ] && [ "${ENACT_EVENT_BEFORE:-}" != "0000000000000000000000000000000000000000" ]; then
+              BASE_REF="${ENACT_EVENT_BEFORE:-}"
             else
               BASE_REF="HEAD~1"
             fi
           else
-            if [ "${{ github.ref_name }}" != "perf/ci-modernization" ] && [ "${{ github.ref_name }}" != "${{ github.event.repository.default_branch || 'master' }}" ]; then
-              if ! git rev-parse --verify origin/perf/ci-modernization >/dev/null 2>&1; then
-                git fetch --no-tags --depth=50 origin perf/ci-modernization 2>/dev/null || true
+            INTEGRATION_BRANCH="${ENACT_INTEGRATION_BRANCH:-}"
+            if [ -n "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "${ENACT_DEFAULT_BRANCH:-master}" ]; then
+              if ! git rev-parse --verify "origin/$INTEGRATION_BRANCH" >/dev/null 2>&1; then
+                git fetch --no-tags --depth=50 origin "$INTEGRATION_BRANCH" 2>/dev/null || true
               fi
-              if git rev-parse --verify origin/perf/ci-modernization >/dev/null 2>&1; then
-                BASE_REF="perf/ci-modernization"
+              if git rev-parse --verify "origin/$INTEGRATION_BRANCH" >/dev/null 2>&1; then
+                BASE_REF="$INTEGRATION_BRANCH"
               fi
             fi
             if [ -z "$BASE_REF" ]; then
-              BASE_REF="${{ github.event.repository.default_branch || 'master' }}"
+              BASE_REF="${ENACT_DEFAULT_BRANCH:-master}"
             fi
           fi
         fi
         if [ -n "$BASE_REF" ]; then
           if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1 && ! git rev-parse --verify "origin/$BASE_REF" >/dev/null 2>&1; then
-            git fetch --no-tags --depth=50 origin "$BASE_REF" 2>/dev/null || git fetch --deepen=50 2>/dev/null || true
+            git fetch --no-tags --depth=50 origin "$BASE_REF" 2>/dev/null || true
+          fi
+          if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+            git fetch --deepen=100 origin 2>/dev/null || git fetch --unshallow origin 2>/dev/null || true
           fi
           MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git merge-base HEAD "origin/$BASE_REF" 2>/dev/null || echo "")
+          if [ -z "$MERGE_BASE" ] && [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+            git fetch --deepen=500 origin 2>/dev/null || git fetch --unshallow origin 2>/dev/null || true
+            MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git merge-base HEAD "origin/$BASE_REF" 2>/dev/null || echo "")
+          fi
           if [ -n "$MERGE_BASE" ]; then
             BASE_ARG="--base $MERGE_BASE"
           elif git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
@@ -1032,7 +1068,7 @@ jobs:
             BASE_ARG="--base origin/$BASE_REF"
           fi
         fi
-        if [ -z "$BASE_ARG" ] && [ "${{ github.event_name }}" = "push" ]; then
+        if [ -z "$BASE_ARG" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
           if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
             BASE_ARG="--base HEAD~1"
           fi
@@ -1042,23 +1078,14 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_BASE_REF: ${{ inputs.base_ref || github.base_ref || github.event.pull_request.base.ref }}
+        ENACT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'master' }}
+        ENACT_EVENT_BEFORE: ${{ github.event.before }}
+        ENACT_FORCE_NO_CACHE: ${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || contains(github.event.pull_request.labels.*.name, 'no-cache') || contains(github.event.pull_request.labels.*.name, 'showcase') || startsWith(github.head_ref, 'showcase/') || startsWith(github.ref_name, 'showcase/') }}
+        ENACT_INPUT_ALL: ${{ inputs.all }}
+        ENACT_INPUT_UPDATED: ${{ inputs.updated }}
+        ENACT_INTEGRATION_BRANCH: ${{ vars.ENACT_INTEGRATION_BRANCH }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
-    - name: Save Node & TypeScript build cache
-      if: github.event_name == 'push' && steps.node_l1_cache.outputs.cache-hit != 'true'
-      continue-on-error: true
-      uses: actions/cache/save@v6
-      with:
-        key: ${{ runner.os }}-node-stage-preflight-${{ hashFiles('package.json', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lockb') }}
-        path: |-
-          ~/.local/share/pnpm/store
-          ~/.cache/pnpm
-          ~/.npm
-          node_modules/.cache
-          .turbo
-          .turbo/cache
-          packages/*/dist
-          packages/@n8n/*/dist
-          packages/frontend/@n8n/*/dist
     - name: Save Nix Store (L1 GHA Cache)
       if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.nix_l1_cache.outputs.cache-hit != 'true'
       continue-on-error: true
@@ -1101,10 +1128,7 @@ jobs:
           .enact
           cue.mod
           .github
-          setup
           bin
-          enve.cue
-          enve.lock
         sparse-checkout-cone-mode: 'true'
         submodules: 'false'
     - name: Restore enact CLI binary cache
@@ -1117,24 +1141,38 @@ jobs:
         path: ~/.cargo/bin/enact
         restore-keys: ${{ runner.os }}-enact-cli-
     - name: Ensure enve & enact CLI on PATH
-      run: |-
+      run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
         mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
         if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix /nix/store 2>/dev/null || true
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
         fi
-        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+        if [ -d "/nix" ]; then
+          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
+            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            rm -rf /nix/store 2>/dev/null || true
+          fi
           ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          for b in enact enve; do
+            if [ -f "$BIN_DIR/$b" ]; then
+              cp -f "$BIN_DIR/$b" "$HOME/.cargo/bin/" 2>/dev/null || true
+              chmod +x "$HOME/.cargo/bin/$b" "$BIN_DIR/$b" 2>/dev/null || true
+            fi
+          done
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
         export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+        # Host aliases from enve.cue (default profile): enve maps them inside its sandbox only.
+        if command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
+          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
+            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
+            | sudo tee -a /etc/hosts >/dev/null || true
+        fi
     - name: Download All Component Telemetry
       continue-on-error: true
       uses: actions/download-artifact@v8
@@ -1197,24 +1235,38 @@ jobs:
         path: ~/.cargo/bin/enact
         restore-keys: ${{ runner.os }}-enact-cli-
     - name: Ensure enve & enact CLI on PATH
-      run: |-
+      run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
         mkdir -p "$HOME/.cargo/bin" "$HOME/.local/share/enve/store"
         if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix /nix/store 2>/dev/null || true
+          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R $(id -u):$(id -g) /nix 2>/dev/null || true
         fi
-        if [ -d "/nix" ] && [ ! -e "/nix/store" ]; then
+        if [ -d "/nix" ]; then
+          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
+            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            rm -rf /nix/store 2>/dev/null || true
+          fi
           ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
         fi
         BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
         if [ -d "$BIN_DIR" ]; then
-          cp -f "$BIN_DIR"/* "$HOME/.cargo/bin/" 2>/dev/null || true
-          chmod +x "$HOME/.cargo/bin"/* "$BIN_DIR"/* 2>/dev/null || true
+          for b in enact enve; do
+            if [ -f "$BIN_DIR/$b" ]; then
+              cp -f "$BIN_DIR/$b" "$HOME/.cargo/bin/" 2>/dev/null || true
+              chmod +x "$HOME/.cargo/bin/$b" "$BIN_DIR/$b" 2>/dev/null || true
+            fi
+          done
           echo "$BIN_DIR" >> "$GITHUB_PATH"
         fi
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
         export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+        # Host aliases from enve.cue (default profile): enve maps them inside its sandbox only.
+        if command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
+          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
+            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
+            | sudo tee -a /etc/hosts >/dev/null || true
+        fi
     - name: Restore enact Task CAS Cache
       id: enact-tasks-cache
       continue-on-error: true
@@ -1223,35 +1275,6 @@ jobs:
         key: ${{ runner.os }}-enact-tasks-${{ github.sha }}
         path: .enact/cache
         restore-keys: ${{ runner.os }}-enact-tasks-
-    - name: Restore Node & TypeScript build cache
-      id: node_l1_cache
-      if: hashFiles('package.json', 'pnpm-lock.yaml') != ''
-      continue-on-error: true
-      uses: actions/cache/restore@v6
-      with:
-        key: ${{ runner.os }}-node-${{ matrix.task_id }}-${{ hashFiles('package.json', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lockb') }}
-        path: |-
-          ~/.local/share/pnpm/store
-          ~/.cache/pnpm
-          ~/.npm
-          node_modules/.cache
-          .turbo
-          .turbo/cache
-          packages/*/dist
-          packages/@n8n/*/dist
-          packages/frontend/@n8n/*/dist
-        restore-keys: ${{ runner.os }}-node-${{ matrix.task_id }}-
-    - name: Restore Playwright browser cache
-      id: playwright_l1_cache
-      if: contains(matrix.component, 'playwright') || contains(matrix.component, 'e2e')
-      continue-on-error: true
-      uses: actions/cache/restore@v6
-      with:
-        key: ${{ runner.os }}-playwright-${{ hashFiles('**/packages/testing/playwright/package.json', 'pnpm-workspace.yaml', 'package.json', 'pnpm-lock.yaml') }}
-        path: |-
-          ~/.cache/ms-playwright
-          /tmp/.cache/ms-playwright
-        restore-keys: ${{ runner.os }}-playwright-
     - name: Restore Python build & venv cache
       id: python_l1_cache
       if: hashFiles('pyproject.toml', 'requirements.txt') != ''
@@ -1288,49 +1311,6 @@ jobs:
           ~/.cargo/git/db
           target/
         restore-keys: ${{ runner.os }}-rust-
-    - name: Pre-warm Database Template Snapshot from Cloudflare R2
-      if: ${{ env.ENACT_SNAPSHOT_NAME != '' || contains(matrix.component, 'db') || contains(matrix.component, 'cli') }}
-      continue-on-error: true
-      run: |-
-        if [ -n "$ENACT_R2_BUCKET" ]; then
-          SNAPSHOT_NAME="${ENACT_SNAPSHOT_NAME:-base_template.dump.zst}"
-          mkdir -p "$HOME/.cache/enact/snapshots"
-          if [ ! -s "$HOME/.cache/enact/snapshots/$SNAPSHOT_NAME" ]; then
-            echo "🌐 Pre-warming base template snapshot from Cloudflare R2..."
-            curl -fsSL --connect-timeout 5 --max-time 60 --user "${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}" --aws-sigv4 "aws:amz:auto:s3" "${ENACT_R2_BUCKET%/}/snapshots/$SNAPSHOT_NAME" -o "$HOME/.cache/enact/snapshots/$SNAPSHOT_NAME" 2>/dev/null || true
-          fi
-        fi
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
-        AWS_REGION: auto
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
-        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
-        ENACT_SNAPSHOT_NAME: ${{ matrix.snapshot_name || env.ENACT_SNAPSHOT_NAME }}
-    - name: Pre-warm Playwright Browsers from Cloudflare R2
-      if: ${{ contains(matrix.component, 'e2e') || contains(matrix.component, 'playwright') }}
-      continue-on-error: true
-      run: |-
-        if [ "${{ steps.playwright_l1_cache.outputs.cache-hit }}" != "true" ] && [ -n "$ENACT_R2_BUCKET" ]; then
-          echo "🌐 Pre-warming Playwright browsers from Cloudflare R2..."
-          mkdir -p "$HOME/.cache/ms-playwright" "/tmp/.cache/ms-playwright"
-          curl -fsSL --connect-timeout 5 --max-time 60 --user "${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}" --aws-sigv4 "aws:amz:auto:s3" "${ENACT_R2_BUCKET%/}/tools/playwright-browsers-linux-amd64.tar.zst" 2>/dev/null | tar -x --zstd -C "$HOME/.cache/ms-playwright" 2>/dev/null || true
-          cp -r "$HOME/.cache/ms-playwright/." "/tmp/.cache/ms-playwright/" 2>/dev/null || true
-        fi
-        mkdir -p "$HOME/.cache/ms-playwright" "/tmp/.cache/ms-playwright"
-        if [ -d "$HOME/.cache/ms-playwright" ] && [ ! -d "/tmp/.cache/ms-playwright/chromium-1234" ]; then
-          cp -r "$HOME/.cache/ms-playwright/." "/tmp/.cache/ms-playwright/" 2>/dev/null || true
-        fi
-        echo "PLAYWRIGHT_BROWSERS_PATH=/tmp/.cache/ms-playwright" >> "$GITHUB_ENV"
-        BROWSER_BIN=$(fd --type f --perm /111 "chrome-headless-shell" /tmp/.cache/ms-playwright "$HOME/.cache/ms-playwright" 2>/dev/null | head -n 1)
-        if [ -n "$BROWSER_BIN" ]; then
-          echo "BROWSER_BIN=$BROWSER_BIN" >> "$GITHUB_ENV"
-          echo "🌐 Configured browser binary: $BROWSER_BIN"
-        fi
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
-        AWS_REGION: auto
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
-        ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
     - name: Restore Nix Store (L1 GHA Cache)
       id: nix_l1_cache
       continue-on-error: true
@@ -1344,59 +1324,45 @@ jobs:
           ${{ runner.os }}-nix-store-
     - name: Pull Dependencies via enve
       run: |-
+        if [ -d "/nix" ]; then
+          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
+            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            rm -rf /nix/store 2>/dev/null || true
+          fi
+          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+        fi
         if [ -f "enve.lock" ]; then
           if [ "${{ steps.nix_l1_cache.outputs.cache-hit }}" != "true" ] && [ -n "$ENACT_R2_BUCKET" ]; then
             enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" --insecure -j 16
           fi
           enve run $([ -f enve.lock ] && echo --locked) -- true
         fi
-        if [ -n "${{ matrix.component_dir }}" ] && [ "${{ matrix.component_dir }}" != "." ] && [ -f "${{ matrix.component_dir }}/enve.lock" ]; then
+        if [ -n "$ENACT_COMPONENT_DIR" ] && [ "$ENACT_COMPONENT_DIR" != "." ] && [ -f "$ENACT_COMPONENT_DIR/enve.lock" ]; then
           if [ "${{ steps.nix_l1_cache.outputs.cache-hit }}" != "true" ] && [ -n "$ENACT_R2_BUCKET" ]; then
-            enve cache pull "${{ matrix.component_dir }}/enve.lock" --cache "$ENACT_R2_BUCKET" --insecure -j 16
+            enve cache pull "$ENACT_COMPONENT_DIR/enve.lock" --cache "$ENACT_R2_BUCKET" --insecure -j 16
           fi
-          (cd "${{ matrix.component_dir }}" && enve run $([ -f enve.lock ] && echo --locked) -- true)
+          (cd "$ENACT_COMPONENT_DIR" && enve run $([ -f enve.lock ] && echo --locked) -- true)
         fi
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_COMPONENT_DIR: ${{ matrix.component_dir }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
         ENVE_CACHE_CONCURRENCY: '16'
-    - name: Install Project Dependencies
-      if: ${{ hashFiles('package.json', 'pnpm-lock.yaml') != '' }}
-      run: |-
-        RUN_PREFIX=""
-        if command -v enve >/dev/null 2>&1 && [ -f "enve.lock" ]; then
-          RUN_PREFIX="enve run $([ -f enve.lock ] && echo --locked) -- "
-        fi
-        FILTER_ARGS=""
-        if [ -n "${{ matrix.filter_args }}" ]; then
-          FILTER_ARGS="${{ matrix.filter_args }}"
-        fi
-        if [ -f "pnpm-lock.yaml" ]; then
-          echo "📦 Installing project dependencies via pnpm..."
-          $RUN_PREFIX pnpm config set fetch-retries 2 2>/dev/null || true
-          $RUN_PREFIX pnpm config set fetch-retry-maxtimeout 10000 2>/dev/null || true
-          $RUN_PREFIX pnpm config set network-concurrency 16 2>/dev/null || true
-          $RUN_PREFIX pnpm install $FILTER_ARGS --frozen-lockfile --offline --config.audit=false --config.minimum-release-age=0 --config.package-import-method=hardlink 2>/dev/null || $RUN_PREFIX pnpm install $FILTER_ARGS --frozen-lockfile --prefer-offline --config.audit=false --config.minimum-release-age=0 --config.package-import-method=hardlink 2>/dev/null || $RUN_PREFIX pnpm install $FILTER_ARGS --no-frozen-lockfile --prefer-offline --config.audit=false --config.minimum-release-age=0 --config.package-import-method=hardlink
-        elif [ -f "package-lock.json" ]; then
-          echo "📦 Installing project dependencies via npm..."
-          $RUN_PREFIX npm ci --prefer-offline 2>/dev/null || $RUN_PREFIX npm install
-        fi
-        git checkout -- pnpm-lock.yaml package-lock.json yarn.lock bun.lockb 2>/dev/null || true
-      env:
-        ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Execute Component Task
-      run: ${{ matrix.command }}
+      run: eval "$ENACT_MATRIX_COMMAND"
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
-        BROWSER_BIN: ${{ env.BROWSER_BIN }}
         CI_COMPONENT: ${{ matrix.component }}
+        ENACT_MATRIX_COMMAND: ${{ matrix.command }}
+        ENACT_MAX_PARALLEL: ${{ matrix.max_parallel }}
+        ENACT_PREEMPTION_NOTICE_SEC: ${{ matrix.preemption_notice_sec }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
-        PLAYWRIGHT_BROWSERS_PATH: /tmp/.cache/ms-playwright
+        ENACT_RUNNER_TIER: ${{ matrix.runner_tier }}
+        ENACT_TOPOLOGY: ${{ matrix.topology }}
     - name: Push Updated Dependencies to Cloudflare R2
       if: success()
       continue-on-error: true
@@ -1406,15 +1372,16 @@ jobs:
             echo "🛰️ Pushing missing/updated closures to Cloudflare R2 from repository root..."
             enve cache push enve.lock --cache "$ENACT_R2_BUCKET" -j 16 || true
           fi
-          if [ -n "${{ matrix.component_dir }}" ] && [ "${{ matrix.component_dir }}" != "." ] && [ -f "${{ matrix.component_dir }}/enve.lock" ]; then
-            echo "🛰️ Pushing missing/updated closures to Cloudflare R2 from ${{ matrix.component_dir }}..."
-            (cd "${{ matrix.component_dir }}" && enve cache push enve.lock --cache "$ENACT_R2_BUCKET" -j 16) || true
+          if [ -n "$ENACT_COMPONENT_DIR" ] && [ "$ENACT_COMPONENT_DIR" != "." ] && [ -f "$ENACT_COMPONENT_DIR/enve.lock" ]; then
+            echo "🛰️ Pushing missing/updated closures to Cloudflare R2 from $ENACT_COMPONENT_DIR..."
+            (cd "$ENACT_COMPONENT_DIR" && enve cache push enve.lock --cache "$ENACT_R2_BUCKET" -j 16) || true
           fi
         fi
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+        ENACT_COMPONENT_DIR: ${{ matrix.component_dir }}
         ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
         ENVE_CACHE_CONCURRENCY: '16'
     - name: Upload Execution Telemetry & Workflow Dashboard
@@ -1458,15 +1425,6 @@ jobs:
           ~/.cargo/registry/cache
           ~/.cargo/git/db
           target/
-    - name: Save Playwright browser cache
-      if: (github.event_name == 'push' || github.event_name == 'pull_request') && (contains(matrix.component, 'playwright') || contains(matrix.component, 'e2e')) && steps.playwright_l1_cache.outputs.cache-hit != 'true'
-      continue-on-error: true
-      uses: actions/cache/save@v6
-      with:
-        key: ${{ runner.os }}-playwright-${{ hashFiles('**/packages/testing/playwright/package.json', 'pnpm-workspace.yaml', 'package.json', 'pnpm-lock.yaml') }}
-        path: |-
-          ~/.cache/ms-playwright
-          /tmp/.cache/ms-playwright
     - name: Save Nix Store (L1 GHA Cache)
       if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.nix_l1_cache.outputs.cache-hit != 'true'
       continue-on-error: true
