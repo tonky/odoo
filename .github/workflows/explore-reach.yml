@@ -64,3 +64,17 @@ jobs:
           name: trace-reach-bin
           path: .enact/trace-reach.bin
           retention-days: 30
+
+      - name: Push Binary Reach Map to CAS (Cloudflare R2)
+        if: always() && hashFiles('.enact/trace-reach.bin') != ''
+        continue-on-error: true
+        run: |
+          if [ -n "$ENACT_R2_BUCKET" ]; then
+            echo "🚀 Pushing binary reach map to R2 CAS..."
+            enact trace cache push --reach-file .enact/trace-reach.bin --remote-path reach/odoo-trace-reach.bin
+          fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+          AWS_REGION: auto
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+          ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}

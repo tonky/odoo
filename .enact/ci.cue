@@ -19,15 +19,6 @@ pipeline: {
 				]
 				memory_mb: 16384
 			}
-			"large": {
-				available:    2
-				cost_per_min: 0.032
-				cpus:         8.0
-				labels: [
-					"ubuntu-latest",
-				]
-				memory_mb: 32768
-			}
 		}
 	}
 	workflows: {

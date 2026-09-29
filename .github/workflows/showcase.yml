@@ -59,7 +59,7 @@ jobs:
       upstream_cpu_minutes: ${{ steps.prep.outputs.upstream_cpu_minutes }}
       upstream_wall_minutes: ${{ steps.prep.outputs.upstream_wall_minutes }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repository (sparse)
         uses: actions/checkout@v7
         with:
           fetch-depth: '100'
@@ -67,6 +67,26 @@ jobs:
           filter: blob:none
           lfs: 'false'
           show-progress: 'false'
+          sparse-checkout: |-
+            enve.cue
+            enve.lock
+            odoo-bin
+            requirements.txt
+            setup.py
+            setup.cfg
+            pyproject.toml
+            Justfile
+            oxlint.json
+            ruff.toml
+            uv.lock
+            .enact
+            cue.mod
+            .github
+            bin
+            tools
+            showcase
+            patches
+          sparse-checkout-cone-mode: 'false'
           submodules: 'false'
 
       - name: Restore enact CLI binary cache
@@ -106,6 +126,19 @@ jobs:
           fi
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+
+      - name: Pull Remote Reach Map Cache (Cloudflare R2)
+        continue-on-error: true
+        run: |
+          if [ -n "$ENACT_R2_BUCKET" ]; then
+            echo "🌐 Pulling remote reach map from R2 CAS..."
+            enact trace cache pull --reach-file .enact/trace-reach.bin --remote-path reach/odoo-trace-reach.bin --invalidate-diff || true
+          fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ENACT_R2_ACCESS_KEY_ID || env.ENACT_R2_ACCESS_KEY_ID }}
+          AWS_REGION: auto
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ENACT_R2_SECRET_ACCESS_KEY || env.ENACT_R2_SECRET_ACCESS_KEY }}
+          ENACT_R2_BUCKET: ${{ secrets.ENACT_R2_BUCKET || env.ENACT_R2_BUCKET }}
 
       - name: Prepare Showcase Environment & Scrape Upstream CI
         id: prep

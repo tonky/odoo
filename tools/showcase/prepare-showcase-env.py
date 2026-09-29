@@ -220,6 +220,13 @@ def main():
             f.write(patch_content)
         print(f"   💾 Saved pr-changes.patch ({len(patch_content)} bytes)")
 
+        # Ensure changed files are materialized if running under sparse checkout
+        if changed_files:
+            try:
+                run_cmd(["git", "sparse-checkout", "add"] + changed_files, cwd=repo_dir, check=False)
+            except Exception:
+                pass
+
         # Apply patch non-destructively
         print(f"🔄 Projecting PR code changes onto workspace...")
         res = subprocess.run(["git", "apply", "--check", "-"], input=patch_content, text=True, cwd=repo_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
