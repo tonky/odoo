@@ -13,11 +13,11 @@ pipeline: {
 			"standard": {
 				available:    4
 				cost_per_min: 0.008
-				cpus:         2.0
+				cpus:         4.0
 				labels: [
 					"ubuntu-latest",
 				]
-				memory_mb: 7168
+				memory_mb: 16384
 			}
 			"large": {
 				available:    2

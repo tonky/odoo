@@ -11,8 +11,8 @@ import "enact.dev/schema"
 #OdooAddonBase: schema.#Component & {
 	technology: "python"
 	resources: {
-		cpus:      float | *1.5
-		memory_mb: int | *3072
+		cpus:      float | *1.0
+		memory_mb: int | *2048
 	}
 	services: {
 		db: schema.#PostgresService & {

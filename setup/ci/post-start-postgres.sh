@@ -91,20 +91,66 @@ if [ "$HAS_TABLES" != "1" ]; then
       uv run --no-sync python "${TOPLEVEL}/odoo-bin" -d test_odoo_template -i base --stop-after-init --log-level=warn --db_host="$PG_HOST" --db_port="$PG_PORT" --db_user="$PG_USER" 2>/dev/null || true
     fi
 
+    echo "⚡ Pre-generating asset bundles into test_odoo_template (ir_attachment.location=db)..."
+    PREGEN_SCRIPT="
+env['ir.config_parameter'].sudo().set_param('ir_attachment.location', 'db')
+env['ir.qweb']._pregenerate_assets_bundles()
+env.cr.commit()
+"
+    if command -v enve >/dev/null 2>&1; then
+      echo "$PREGEN_SCRIPT" | enve run -- uv run --no-sync python "${TOPLEVEL}/odoo-bin" shell -d test_odoo_template --no-http --log-level=warn --db_host="$PG_HOST" --db_port="$PG_PORT" --db_user="$PG_USER" 2>/dev/null || true
+    else
+      echo "$PREGEN_SCRIPT" | uv run --no-sync python "${TOPLEVEL}/odoo-bin" shell -d test_odoo_template --no-http --log-level=warn --db_host="$PG_HOST" --db_port="$PG_PORT" --db_user="$PG_USER" 2>/dev/null || true
+    fi
+
     HAS_TABLES=$(query_sql "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' LIMIT 1;" test_odoo_template)
     if [ "$HAS_TABLES" = "1" ]; then
       mkdir -p "$SNAPSHOT_DIR"
       echo "💾 Caching test_odoo_template snapshot to $SNAPSHOT..."
       if command -v pg_dump >/dev/null 2>&1; then
         pg_dump -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -Fc -d test_odoo_template -f "${SNAPSHOT}.tmp" 2>/dev/null && mv "${SNAPSHOT}.tmp" "$SNAPSHOT" 2>/dev/null || true
-        if [ ! -s "${REPO_SNAPSHOT}.zst" ] && [ -d "${TOPLEVEL}/setup/ci" ]; then
+        if [ -d "${TOPLEVEL}/setup/ci" ]; then
           zstd -19 -c "$SNAPSHOT" > "${REPO_SNAPSHOT}.zst.tmp" 2>/dev/null && mv "${REPO_SNAPSHOT}.zst.tmp" "${REPO_SNAPSHOT}.zst" 2>/dev/null || true
         fi
       elif command -v enve >/dev/null 2>&1; then
         enve run -- pg_dump -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -Fc -d test_odoo_template -f "${SNAPSHOT}.tmp" 2>/dev/null && mv "${SNAPSHOT}.tmp" "$SNAPSHOT" 2>/dev/null || true
-        if [ ! -s "${REPO_SNAPSHOT}.zst" ] && [ -d "${TOPLEVEL}/setup/ci" ]; then
+        if [ -d "${TOPLEVEL}/setup/ci" ]; then
           zstd -19 -c "$SNAPSHOT" > "${REPO_SNAPSHOT}.zst.tmp" 2>/dev/null && mv "${REPO_SNAPSHOT}.zst.tmp" "${REPO_SNAPSHOT}.zst" 2>/dev/null || true
         fi
+      fi
+    fi
+  fi
+
+  # 4. Ensure pregenerated asset bundles exist with db storage
+  HAS_ASSETS=$(query_sql "SELECT 1 FROM ir_attachment WHERE url LIKE '/web/assets/%' AND db_datas IS NOT NULL LIMIT 1;" test_odoo_template)
+  if [ "$HAS_ASSETS" != "1" ]; then
+    echo "⚡ Pre-generating asset bundles into test_odoo_template (ir_attachment.location=db)..."
+    PREGEN_SCRIPT="
+env['ir.config_parameter'].sudo().set_param('ir_attachment.location', 'db')
+env['ir.qweb']._pregenerate_assets_bundles()
+env.cr.commit()
+"
+    if command -v enve >/dev/null 2>&1; then
+      echo "$PREGEN_SCRIPT" | enve run -- uv run --no-sync python "${TOPLEVEL}/odoo-bin" shell -d test_odoo_template --no-http --log-level=warn --db_host="$PG_HOST" --db_port="$PG_PORT" --db_user="$PG_USER" 2>/dev/null || true
+    else
+      echo "$PREGEN_SCRIPT" | uv run --no-sync python "${TOPLEVEL}/odoo-bin" shell -d test_odoo_template --no-http --log-level=warn --db_host="$PG_HOST" --db_port="$PG_PORT" --db_user="$PG_USER" 2>/dev/null || true
+    fi
+
+    TOPLEVEL=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+    SNAPSHOT_DIR="${ENACT_TEMPLATE_SNAPSHOT_DIR:-${HOME}/.cache/enact/snapshots}"
+    SNAPSHOT="${SNAPSHOT_DIR}/odoo_base_template.dump"
+    REPO_SNAPSHOT="${TOPLEVEL}/setup/ci/odoo_base_template.dump"
+
+    echo "💾 Re-caching test_odoo_template snapshot with pregenerated assets to $SNAPSHOT..."
+    if command -v pg_dump >/dev/null 2>&1; then
+      pg_dump -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -Fc -d test_odoo_template -f "${SNAPSHOT}.tmp" 2>/dev/null && mv "${SNAPSHOT}.tmp" "$SNAPSHOT" 2>/dev/null || true
+      if [ -d "${TOPLEVEL}/setup/ci" ]; then
+        zstd -19 -c "$SNAPSHOT" > "${REPO_SNAPSHOT}.zst.tmp" 2>/dev/null && mv "${REPO_SNAPSHOT}.zst.tmp" "${REPO_SNAPSHOT}.zst" 2>/dev/null || true
+      fi
+    elif command -v enve >/dev/null 2>&1; then
+      enve run -- pg_dump -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -Fc -d test_odoo_template -f "${SNAPSHOT}.tmp" 2>/dev/null && mv "${SNAPSHOT}.tmp" "$SNAPSHOT" 2>/dev/null || true
+      if [ -d "${TOPLEVEL}/setup/ci" ]; then
+        zstd -19 -c "$SNAPSHOT" > "${REPO_SNAPSHOT}.zst.tmp" 2>/dev/null && mv "${REPO_SNAPSHOT}.zst.tmp" "${REPO_SNAPSHOT}.zst" 2>/dev/null || true
       fi
     fi
   fi
