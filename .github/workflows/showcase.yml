@@ -187,7 +187,66 @@ jobs:
             .enact/upstream-baseline.json
             .enact/changed-files.txt
             .enact/pr-changes.patch
+            .enact/trace-reach.bin
+          if-no-files-found: warn
           retention-days: 1
+
+  static-proof:
+    name: 'Stage: Differential Reachability Proof'
+    needs: detect
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Repository (sparse)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '1'
+          fetch-tags: 'false'
+          filter: blob:none
+          lfs: 'false'
+          show-progress: 'false'
+          sparse-checkout: |-
+            .enact
+            bin
+            tools
+          sparse-checkout-cone-mode: 'false'
+          submodules: 'false'
+
+      - name: Download Showcase Baseline Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: showcase-baseline
+          path: .enact/
+
+      - name: Restore enact CLI binary cache
+        id: enact_cli_cache
+        if: hashFiles('bin/enact') == ''
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          key: ${{ runner.os }}-enact-cli-${{ hashFiles('Cargo.lock', 'crates/**') }}
+          path: ~/.cargo/bin/enact
+          restore-keys: ${{ runner.os }}-enact-cli-
+
+      - name: Run Independent Static Proof vs Seccomp Reach Map
+        run: |
+          mkdir -p bin
+          if [ -f "$HOME/.cargo/bin/enact" ]; then
+            cp "$HOME/.cargo/bin/enact" bin/enact
+          fi
+          chmod +x bin/enact
+
+          FILES_ARG=""
+          if [ -s ".enact/changed-files.txt" ]; then
+            FILES_ARG=$(tr '\n' ',' < .enact/changed-files.txt | sed 's/,$//')
+          fi
+
+          echo "::group::Executing Differential Reachability Proof"
+          bin/enact trace verify \
+            --reach-file .enact/trace-reach.bin \
+            --summary-file "$GITHUB_STEP_SUMMARY" \
+            $FILES_ARG
+          echo "::endgroup::"
 
   preflight:
     name: 'Stage: Preflight'
@@ -554,6 +613,7 @@ jobs:
     needs:
       - detect
       - preflight
+      - static-proof
       - test
     if: always()
     runs-on: ubuntu-latest
