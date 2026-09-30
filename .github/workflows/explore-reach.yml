@@ -50,12 +50,15 @@ jobs:
           export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
 
       - name: Run Seccomp Reach Exploration
+        env:
+          INPUT_COMMIT: ${{ inputs.commit }}
+          INPUT_SAMPLES: ${{ inputs.samples || 50 }}
         run: |
           COMMIT_FLAG=""
-          if [ "${{ inputs.commit }}" = "true" ]; then
+          if [ "$INPUT_COMMIT" = "true" ]; then
             COMMIT_FLAG="--commit"
           fi
-          bash tools/showcase/explore-reach-map.sh -n "${{ inputs.samples || 50 }}" $COMMIT_FLAG
+          bash tools/showcase/explore-reach-map.sh -n "$INPUT_SAMPLES" $COMMIT_FLAG
 
       - name: Upload Binary Reach Map Artifact
         if: always()

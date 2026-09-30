@@ -142,28 +142,35 @@ jobs:
 
       - name: Prepare Showcase Environment & Scrape Upstream CI
         id: prep
-        run: |
-          python3 tools/showcase/prepare-showcase-env.py \
-            --pr "${{ inputs.pr }}" \
-            --head "${{ inputs.head_ref || github.event.pull_request.head.sha }}" \
-            --base "${{ inputs.base_ref || github.event.pull_request.base.ref || 'master' }}" \
-            --repo "${{ inputs.upstream_repo || 'odoo/odoo' }}" \
-            --workspace "${GITHUB_WORKSPACE:-$PWD}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_PR: ${{ inputs.pr }}
+          INPUT_HEAD: ${{ inputs.head_ref || github.event.pull_request.head.sha }}
+          INPUT_BASE: ${{ inputs.base_ref || github.event.pull_request.base.ref || 'master' }}
+          INPUT_REPO: ${{ inputs.upstream_repo || 'odoo/odoo' }}
+        run: |
+          python3 tools/showcase/prepare-showcase-env.py \
+            --pr "$INPUT_PR" \
+            --head "$INPUT_HEAD" \
+            --base "$INPUT_BASE" \
+            --repo "$INPUT_REPO" \
+            --workspace "${GITHUB_WORKSPACE:-$PWD}"
 
       - name: Compute Affected Component Matrix via Enact Reachability
         id: diff
+        env:
+          INPUT_ALL: ${{ inputs.all }}
+          INPUT_NO_CACHE: ${{ inputs.no_cache }}
+          BASE_SHA: ${{ steps.prep.outputs.base_sha }}
         run: |
           UPDATED_ARG=""
-          if [ "${{ inputs.all }}" = "true" ]; then
+          if [ "$INPUT_ALL" = "true" ]; then
             UPDATED_ARG="--all"
           fi
           NO_CACHE_ARG=""
-          if [ "${{ inputs.no_cache }}" = "true" ]; then
+          if [ "$INPUT_NO_CACHE" = "true" ]; then
             NO_CACHE_ARG="--no-cache"
           fi
-          BASE_SHA="${{ steps.prep.outputs.base_sha }}"
           BASE_ARG=""
           if [ -n "$BASE_SHA" ]; then
             BASE_ARG="--base $BASE_SHA"
@@ -193,7 +200,7 @@ jobs:
 
   static-proof:
     name: 'Stage: Differential Reachability Proof'
-    needs: detect
+    needs: [detect]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
