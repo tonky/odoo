@@ -209,7 +209,6 @@ jobs:
         with:
           fetch-depth: '1'
           fetch-tags: 'false'
-          filter: blob:none
           lfs: 'false'
           show-progress: 'false'
           sparse-checkout: |-
@@ -266,7 +265,6 @@ jobs:
         with:
           fetch-depth: '1'
           fetch-tags: 'false'
-          filter: blob:none
           lfs: 'false'
           show-progress: 'false'
           sparse-checkout: |-
@@ -477,7 +475,6 @@ jobs:
         with:
           fetch-depth: '1'
           fetch-tags: 'false'
-          filter: blob:none
           lfs: 'false'
           show-progress: 'false'
           sparse-checkout: ${{ matrix.sparse_checkout }}
@@ -490,7 +487,6 @@ jobs:
         with:
           fetch-depth: '1'
           fetch-tags: 'false'
-          filter: blob:none
           lfs: 'false'
           show-progress: 'false'
           submodules: 'false'
@@ -631,7 +627,6 @@ jobs:
         with:
           fetch-depth: '1'
           fetch-tags: 'false'
-          filter: blob:none
           lfs: 'false'
           show-progress: 'false'
           submodules: 'false'
