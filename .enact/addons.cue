@@ -40,6 +40,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"account_check_printing": {
 		dir: "addons/account_check_printing"
@@ -88,6 +89,7 @@ _addons: {
 			"test_mimetypes",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"account_fleet": {
@@ -98,6 +100,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"account_payment": {
@@ -112,6 +115,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["account"]
 		template: "mail"
 	}
 	"account_payment_interco": {
@@ -155,6 +159,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"account_qr_code_emv": {
@@ -173,6 +178,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"account_tax_python": {
@@ -225,6 +231,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"attachment_indexation": {
 		dir: "addons/attachment_indexation"
@@ -264,6 +271,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"auth_passkey_portal": {
 		dir: "addons/auth_passkey_portal"
@@ -275,6 +283,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"auth_password_policy": {
@@ -294,6 +303,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"auth_password_policy_signup": {
 		dir: "addons/auth_password_policy_signup"
@@ -305,6 +315,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"auth_signup": {
 		dir: "addons/auth_signup"
@@ -317,6 +328,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		auto_install: true
 		not_run: [
 			{
 				tests: [
@@ -350,6 +362,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"auth_totp_mail": {
 		dir: "addons/auth_totp_mail"
@@ -363,6 +376,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"auth_totp_portal": {
 		dir: "addons/auth_totp_portal"
@@ -375,6 +389,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"barcodes": {
@@ -404,6 +419,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		not_run: [
 			{
 				tests: [
@@ -470,6 +486,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"base_import_module": {
 		dir: "addons/base_import_module"
@@ -480,6 +497,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"base_install_request": {
 		dir: "addons/base_install_request"
@@ -488,6 +506,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"base_setup": {
 		dir: "addons/base_setup"
@@ -497,6 +516,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		not_run: [
 			{
 				tests: [
@@ -542,6 +562,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 	}
 	"calendar": {
 		dir: "addons/calendar"
@@ -565,6 +586,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"certificate": {
@@ -665,6 +687,7 @@ _addons: {
 			"iap",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"crm_iap_mine": {
@@ -679,6 +702,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"crm_livechat": {
@@ -692,6 +716,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"crm_mail_plugin": {
@@ -702,6 +727,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"crm_sms": {
@@ -712,6 +738,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"data_recycle": {
@@ -756,6 +783,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"digest": {
@@ -811,6 +839,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"event_crm": {
@@ -825,6 +854,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"event_crm_sale": {
@@ -835,6 +865,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"event_product": {
@@ -846,6 +877,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"event_sale": {
@@ -862,6 +894,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"event_sms": {
@@ -874,6 +907,7 @@ _addons: {
 			"phone_validation",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"fleet": {
@@ -907,6 +941,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"google_account": {
 		dir: "addons/google_account"
@@ -954,6 +989,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 	}
 	"google_recaptcha": {
 		dir: "addons/google_recaptcha"
@@ -1007,6 +1043,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_expense": {
@@ -1033,6 +1070,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_gamification": {
@@ -1046,6 +1084,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_holidays": {
@@ -1084,6 +1123,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_holidays_homeworking": {
@@ -1098,6 +1138,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"hr_homeworking": {
 		dir: "addons/hr_homeworking"
@@ -1109,6 +1150,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"hr_homeworking_calendar": {
@@ -1122,6 +1164,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_hourly_cost": {
@@ -1140,6 +1183,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"hr_maintenance": {
 		dir: "addons/hr_maintenance"
@@ -1149,6 +1193,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"hr_org_chart": {
 		dir: "addons/hr_org_chart"
@@ -1161,6 +1206,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["hr"]
 		template: "mail"
 	}
 	"hr_presence": {
@@ -1203,6 +1249,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_recruitment_sms": {
@@ -1213,6 +1260,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"hr_recruitment_survey": {
 		dir: "addons/hr_recruitment_survey"
@@ -1238,6 +1286,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"hr_skills_event": {
@@ -1250,6 +1299,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_skills_slides": {
@@ -1262,6 +1312,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"hr_skills_survey": {
@@ -1272,6 +1323,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_timesheet": {
@@ -1298,6 +1350,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"hr_work_entry": {
@@ -1322,6 +1375,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"html_builder": {
@@ -1348,6 +1402,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"http_routing": {
 		dir: "addons/http_routing"
@@ -1367,6 +1422,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"iap_crm": {
 		dir: "addons/iap_crm"
@@ -1376,6 +1432,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"iap_mail": {
 		dir: "addons/iap_mail"
@@ -1387,6 +1444,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"im_livechat": {
 		dir: "addons/im_livechat"
@@ -1465,6 +1523,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_ae": {
 		dir: "addons/l10n_ae"
@@ -1486,6 +1545,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_anz_ubl_pint": {
 		dir: "addons/l10n_anz_ubl_pint"
@@ -1520,6 +1580,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_ar_stock": {
@@ -1532,6 +1593,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"l10n_ar_website_sale": {
@@ -1603,6 +1665,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_be_pos_sale": {
 		dir: "addons/l10n_be_pos_sale"
@@ -1615,6 +1678,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_bf": {
@@ -1693,6 +1757,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_br_website_sale": {
 		dir: "addons/l10n_br_website_sale"
@@ -1702,6 +1767,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_ca": {
 		dir: "addons/l10n_ca"
@@ -1761,6 +1827,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_ci": {
@@ -1833,6 +1900,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_cr": {
 		dir: "addons/l10n_cr"
@@ -1893,6 +1961,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_din5008_purchase": {
 		dir: "addons/l10n_din5008_purchase"
@@ -1902,6 +1971,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_din5008_repair": {
 		dir: "addons/l10n_din5008_repair"
@@ -1911,6 +1981,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_din5008_sale": {
 		dir: "addons/l10n_din5008_sale"
@@ -1920,6 +1991,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_din5008_stock": {
 		dir: "addons/l10n_din5008_stock"
@@ -1929,6 +2001,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_dk": {
 		dir: "addons/l10n_dk"
@@ -1948,6 +2021,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_dk_nemhandel": {
 		dir: "addons/l10n_dk_nemhandel"
@@ -1962,6 +2036,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["account_edi_ubl_cii", "l10n_dk"]
 		template: "account"
 	}
 	"l10n_dk_nemhandel_response": {
@@ -1971,6 +2046,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_dk_oioubl": {
 		dir: "addons/l10n_dk_oioubl"
@@ -1983,6 +2059,7 @@ _addons: {
 			"l10n_account_edi_ubl_cii_tests",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"l10n_do": {
@@ -2027,6 +2104,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"l10n_ec_stock": {
@@ -2037,6 +2115,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_ee": {
 		dir: "addons/l10n_ee"
@@ -2088,6 +2167,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: ["l10n_es"]
 		template: "account"
 	}
 	"l10n_es_edi_sii": {
@@ -2140,6 +2220,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_es_edi_verifactu": {
@@ -2164,6 +2245,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_es_pos": {
@@ -2216,6 +2298,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_fr": {
 		dir: "addons/l10n_fr"
@@ -2283,6 +2366,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["auth_totp_mail", "l10n_fr_account"]
 		template: "account"
 	}
 	"l10n_fr_pdp_pos": {
@@ -2293,6 +2377,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_fr_pos_cert": {
@@ -2306,6 +2391,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_ga": {
@@ -2333,6 +2419,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_gcc_pos": {
 		dir: "addons/l10n_gcc_pos"
@@ -2345,6 +2432,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_ge": {
@@ -2526,6 +2614,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: ["l10n_hu"]
 		template: "account"
 		not_run: [
 			{
@@ -2568,6 +2657,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"l10n_id_pos": {
@@ -2581,6 +2671,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_ie": {
@@ -2646,6 +2737,7 @@ _addons: {
 			"l10n_in",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"l10n_in_ewaybill_stock": {
@@ -2658,6 +2750,7 @@ _addons: {
 			"l10n_in",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"l10n_in_hr_holidays": {
@@ -2682,6 +2775,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_in_purchase_stock": {
@@ -2692,6 +2786,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_in_sale": {
 		dir: "addons/l10n_in_sale"
@@ -2701,6 +2796,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"l10n_in_sale_stock": {
@@ -2712,6 +2808,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_in_stock": {
 		dir: "addons/l10n_in_stock"
@@ -2722,6 +2819,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_iq": {
 		dir: "addons/l10n_iq"
@@ -2756,6 +2854,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["l10n_it"]
 		template: "account"
 	}
 	"l10n_it_edi_doi": {
@@ -2776,6 +2875,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"l10n_it_stock_ddt": {
@@ -2789,6 +2889,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"l10n_jo": {
@@ -2962,6 +3063,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"l10n_lt": {
@@ -3228,6 +3330,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_ph": {
@@ -3270,6 +3373,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"l10n_pl_edi": {
@@ -3283,6 +3387,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		auto_install: ["l10n_pl"]
 		template: "account"
 	}
 	"l10n_pl_edi_jst": {
@@ -3293,6 +3398,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"l10n_pt": {
@@ -3358,6 +3464,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"l10n_ro_edi_stock": {
@@ -3383,6 +3490,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"l10n_rs": {
@@ -3468,6 +3576,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_sa_withholding_tax": {
@@ -3478,6 +3587,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["l10n_sa"]
 	}
 	"l10n_se": {
 		dir: "addons/l10n_se"
@@ -3629,6 +3739,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_tr_nilvera_edispatch": {
 		dir: "addons/l10n_tr_nilvera_edispatch"
@@ -3653,6 +3764,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: ["l10n_tr_nilvera"]
 		template: "account"
 		not_run: [
 			{
@@ -3671,6 +3783,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: ["l10n_tr_nilvera_einvoice"]
 		template: "account"
 	}
 	"l10n_tw": {
@@ -3704,6 +3817,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"l10n_tw_edi_ecpay_website_sale": {
@@ -3717,6 +3831,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"l10n_tz_account": {
@@ -3791,6 +3906,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"l10n_uz": {
 		dir: "addons/l10n_uz"
@@ -3925,6 +4041,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mail_bot_hr": {
 		dir: "addons/mail_bot_hr"
@@ -3934,6 +4051,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mail_group": {
 		dir: "addons/mail_group"
@@ -4013,6 +4131,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_crm_sms": {
 		dir: "addons/mass_mailing_crm_sms"
@@ -4022,6 +4141,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_event": {
 		dir: "addons/mass_mailing_event"
@@ -4031,6 +4151,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_event_sms": {
 		dir: "addons/mass_mailing_event_sms"
@@ -4045,6 +4166,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"mass_mailing_event_track": {
@@ -4055,6 +4177,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_event_track_sms": {
 		dir: "addons/mass_mailing_event_track_sms"
@@ -4066,6 +4189,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_sale": {
 		dir: "addons/mass_mailing_sale"
@@ -4075,6 +4199,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_sale_sms": {
 		dir: "addons/mass_mailing_sale_sms"
@@ -4084,6 +4209,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_slides": {
 		dir: "addons/mass_mailing_slides"
@@ -4093,6 +4219,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"mass_mailing_sms": {
 		dir: "addons/mass_mailing_sms"
@@ -4116,6 +4243,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"microsoft_account": {
 		dir: "addons/microsoft_account"
@@ -4145,6 +4273,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 	}
 	"mrp": {
 		dir: "addons/mrp"
@@ -4171,6 +4300,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"mrp_landed_costs": {
@@ -4183,6 +4313,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"mrp_product_expiry": {
@@ -4195,6 +4326,7 @@ _addons: {
 			"stock",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"mrp_repair": {
@@ -4205,6 +4337,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"mrp_subcontracting": {
@@ -4229,6 +4362,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"mrp_subcontracting_dropshipping": {
@@ -4241,6 +4375,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"mrp_subcontracting_landed_costs": {
@@ -4251,6 +4386,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"mrp_subcontracting_purchase": {
@@ -4263,6 +4399,7 @@ _addons: {
 			"mrp_subcontracting_account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"mrp_subcontracting_repair": {
@@ -4273,6 +4410,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"onboarding": {
 		dir: "addons/onboarding"
@@ -4303,6 +4441,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"partnership": {
 		dir: "addons/partnership"
@@ -4569,6 +4708,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 	}
 	"point_of_sale": {
 		dir: "addons/point_of_sale"
@@ -4629,6 +4769,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"pos_account_tax_python": {
 		dir: "addons/pos_account_tax_python"
@@ -4641,6 +4782,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_adyen": {
@@ -4716,6 +4858,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_event_sale": {
@@ -4726,6 +4869,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_glory_cash": {
@@ -4749,6 +4893,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_hr_restaurant": {
@@ -4762,6 +4907,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_imin": {
@@ -4786,6 +4932,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_mercado_pago": {
@@ -4820,6 +4967,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_online_payment": {
@@ -4835,6 +4983,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"pos_online_payment_self_order": {
@@ -4851,6 +5000,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_pine_labs": {
@@ -4896,6 +5046,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_restaurant": {
@@ -4921,6 +5072,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"pos_restaurant_loyalty": {
 		dir: "addons/pos_restaurant_loyalty"
@@ -4933,6 +5085,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_restaurant_stripe": {
@@ -4946,6 +5099,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"pos_safaricom": {
 		dir: "addons/pos_safaricom"
@@ -4972,6 +5126,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_sale_loyalty": {
@@ -4985,6 +5140,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_sale_margin": {
@@ -4997,6 +5153,7 @@ _addons: {
 			"point_of_sale",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_self_order": {
@@ -5012,6 +5169,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["pos_restaurant"]
 		template: "point_of_sale"
 	}
 	"pos_self_order_adyen": {
@@ -5022,6 +5180,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"pos_self_order_pine_labs": {
 		dir: "addons/pos_self_order_pine_labs"
@@ -5033,6 +5192,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"pos_self_order_qfpay": {
 		dir: "addons/pos_self_order_qfpay"
@@ -5046,6 +5206,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_self_order_razorpay": {
@@ -5058,6 +5219,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"pos_self_order_sale": {
 		dir: "addons/pos_self_order_sale"
@@ -5067,6 +5229,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"pos_self_order_stripe": {
 		dir: "addons/pos_self_order_stripe"
@@ -5078,6 +5241,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "point_of_sale"
 	}
 	"pos_self_order_viva_com": {
@@ -5090,6 +5254,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"pos_sms": {
 		dir: "addons/pos_sms"
@@ -5133,6 +5298,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 	}
 	"product": {
 		dir: "addons/product"
@@ -5215,6 +5381,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"project_hr_expense": {
@@ -5227,6 +5394,7 @@ _addons: {
 			"project",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"project_hr_skills": {
@@ -5237,6 +5405,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"project_mail_plugin": {
 		dir: "addons/project_mail_plugin"
@@ -5246,6 +5415,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"project_mrp": {
@@ -5256,6 +5426,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"project_mrp_account": {
 		dir: "addons/project_mrp_account"
@@ -5267,6 +5438,7 @@ _addons: {
 			"project",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"project_mrp_sale": {
@@ -5278,6 +5450,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"project_mrp_stock_landed_costs": {
@@ -5288,6 +5461,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"project_purchase": {
 		dir: "addons/project_purchase"
@@ -5302,6 +5476,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"project_purchase_stock": {
@@ -5312,6 +5487,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"project_sale_expense": {
@@ -5326,6 +5502,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"project_sms": {
@@ -5336,6 +5513,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"project_stock": {
@@ -5346,6 +5524,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"project_stock_account": {
 		dir: "addons/project_stock_account"
@@ -5357,6 +5536,7 @@ _addons: {
 			"stock",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"project_stock_landed_costs": {
@@ -5367,6 +5547,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"project_timesheet_holidays": {
 		dir: "addons/project_timesheet_holidays"
@@ -5376,6 +5557,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "hr"
 	}
 	"project_todo": {
@@ -5392,6 +5574,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"purchase": {
@@ -5419,6 +5602,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"purchase_mrp": {
@@ -5434,6 +5618,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"purchase_product_matrix": {
@@ -5458,6 +5643,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"purchase_requisition": {
@@ -5479,6 +5665,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"purchase_requisition_stock": {
@@ -5489,6 +5676,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"purchase_stock": {
@@ -5506,6 +5694,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"rating": {
@@ -5553,6 +5742,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"rpc": {
 		dir: "addons/rpc"
@@ -5561,6 +5751,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 	}
 	"sale": {
 		dir: "addons/sale"
@@ -5592,6 +5783,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_edi_ubl": {
@@ -5602,6 +5794,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"sale_expense": {
@@ -5614,6 +5807,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_expense_margin": {
@@ -5626,6 +5820,7 @@ _addons: {
 			"hr_expense",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_gelato": {
@@ -5646,6 +5841,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"sale_loyalty": {
 		dir: "addons/sale_loyalty"
@@ -5658,6 +5854,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_loyalty_delivery": {
@@ -5668,6 +5865,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_management": {
@@ -5711,6 +5909,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"sale_mrp_margin": {
@@ -5735,6 +5934,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_product_matrix": {
@@ -5763,6 +5963,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: ["project_account", "sale_management"]
 		template: "sale"
 	}
 	"sale_project_stock": {
@@ -5777,6 +5978,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"sale_project_stock_account": {
@@ -5787,6 +5989,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"sale_purchase": {
@@ -5797,6 +6000,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_purchase_project": {
@@ -5808,6 +6012,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_purchase_stock": {
@@ -5819,6 +6024,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"sale_service": {
@@ -5837,6 +6043,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"sale_stock": {
 		dir: "addons/sale_stock"
@@ -5852,6 +6059,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"sale_stock_margin": {
@@ -5864,6 +6072,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"sale_stock_product_expiry": {
@@ -5877,6 +6086,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"sale_timesheet": {
@@ -5894,6 +6104,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sale_timesheet_margin": {
@@ -5904,6 +6115,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"sales_team": {
@@ -5930,6 +6142,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"sms_twilio": {
 		dir: "addons/sms_twilio"
@@ -5952,6 +6165,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"snailmail_account": {
 		dir: "addons/snailmail_account"
@@ -5961,6 +6175,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "mail"
 		not_run: [
 			{
@@ -6002,6 +6217,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"spreadsheet_dashboard": {
@@ -6023,6 +6239,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["account"]
 	}
 	"spreadsheet_dashboard_event_sale": {
 		dir: "addons/spreadsheet_dashboard_event_sale"
@@ -6032,6 +6249,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["event_sale"]
 	}
 	"spreadsheet_dashboard_hr_expense": {
 		dir: "addons/spreadsheet_dashboard_hr_expense"
@@ -6041,6 +6259,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["sale_expense"]
 	}
 	"spreadsheet_dashboard_hr_timesheet": {
 		dir: "addons/spreadsheet_dashboard_hr_timesheet"
@@ -6050,6 +6269,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["hr_timesheet"]
 	}
 	"spreadsheet_dashboard_im_livechat": {
 		dir: "addons/spreadsheet_dashboard_im_livechat"
@@ -6059,6 +6279,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["im_livechat"]
 	}
 	"spreadsheet_dashboard_pos_hr": {
 		dir: "addons/spreadsheet_dashboard_pos_hr"
@@ -6068,6 +6289,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["pos_hr"]
 	}
 	"spreadsheet_dashboard_pos_restaurant": {
 		dir: "addons/spreadsheet_dashboard_pos_restaurant"
@@ -6078,6 +6300,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["pos_hr", "pos_restaurant"]
 	}
 	"spreadsheet_dashboard_sale": {
 		dir: "addons/spreadsheet_dashboard_sale"
@@ -6087,6 +6310,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["sale"]
 	}
 	"spreadsheet_dashboard_sale_timesheet": {
 		dir: "addons/spreadsheet_dashboard_sale_timesheet"
@@ -6096,6 +6320,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["sale_timesheet"]
 	}
 	"spreadsheet_dashboard_stock_account": {
 		dir: "addons/spreadsheet_dashboard_stock_account"
@@ -6105,6 +6330,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["stock_account"]
 	}
 	"spreadsheet_dashboard_website_sale": {
 		dir: "addons/spreadsheet_dashboard_website_sale"
@@ -6114,6 +6340,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["website_sale"]
 	}
 	"spreadsheet_dashboard_website_sale_slides": {
 		dir: "addons/spreadsheet_dashboard_website_sale_slides"
@@ -6123,6 +6350,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["website_sale_slides"]
 	}
 	"stock": {
 		dir: "addons/stock"
@@ -6151,6 +6379,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 		not_run: [
 			{
@@ -6172,6 +6401,7 @@ _addons: {
 			"stock",
 		]
 		has_tests: true
+		auto_install: true
 		template: "stock_account"
 	}
 	"stock_dropshipping": {
@@ -6212,6 +6442,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"stock_picking_batch": {
 		dir: "addons/stock_picking_batch"
@@ -6232,6 +6463,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"survey": {
 		dir: "addons/survey"
@@ -6257,6 +6489,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "mail"
 	}
 	"test_access_rights": {
@@ -6831,6 +7064,7 @@ _addons: {
 			"http_routing",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"web_hierarchy": {
 		dir: "addons/web_hierarchy"
@@ -6849,6 +7083,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"web_unsplash": {
 		dir: "addons/web_unsplash"
@@ -6861,6 +7096,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 	}
 	"website": {
 		dir: "addons/website"
@@ -6936,6 +7172,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_crm_iap_reveal": {
@@ -6961,6 +7198,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"website_crm_partner_assign": {
 		dir: "addons/website_crm_partner_assign"
@@ -6994,6 +7232,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_customer": {
@@ -7042,6 +7281,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_event_booth_exhibitor": {
 		dir: "addons/website_event_booth_exhibitor"
@@ -7054,6 +7294,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_event_booth_sale": {
@@ -7069,6 +7310,7 @@ _addons: {
 			"website_event_sale",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"website_event_booth_sale_exhibitor": {
@@ -7083,6 +7325,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_event_crm": {
 		dir: "addons/website_event_crm"
@@ -7092,6 +7335,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "website"
 		not_run: [
 			{
@@ -7128,6 +7372,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"website_event_track": {
@@ -7165,6 +7410,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_event_track_quiz": {
 		dir: "addons/website_event_track_quiz"
@@ -7221,6 +7467,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_hr_recruitment_livechat": {
@@ -7244,6 +7491,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_livechat": {
@@ -7259,6 +7507,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_mail": {
@@ -7272,6 +7521,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_mail_group": {
 		dir: "addons/website_mail_group"
@@ -7285,6 +7535,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_mass_mailing": {
@@ -7300,6 +7551,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["mass_mailing", "website"]
 		template: "website"
 	}
 	"website_mass_mailing_sms": {
@@ -7310,6 +7562,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_partner": {
@@ -7336,6 +7589,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "account"
 	}
 	"website_profile": {
@@ -7365,6 +7619,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_sale": {
@@ -7405,6 +7660,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"website_sale_collect": {
@@ -7432,6 +7688,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"website_sale_comparison": {
 		dir: "addons/website_sale_comparison"
@@ -7443,6 +7700,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"website_sale_comparison_wishlist": {
@@ -7455,6 +7713,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_sale_gelato": {
 		dir: "addons/website_sale_gelato"
@@ -7464,6 +7723,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"website_sale_loyalty": {
@@ -7482,6 +7742,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: ["sale_loyalty", "website_sale"]
 		template: "website_sale"
 		not_run: [
 			{
@@ -7500,6 +7761,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"website_sale_mondialrelay": {
@@ -7512,6 +7774,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_sale_mrp": {
 		dir: "addons/website_sale_mrp"
@@ -7526,6 +7789,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"website_sale_slides": {
@@ -7557,6 +7821,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website_sale"
 	}
 	"website_sale_stock_wishlist": {
@@ -7570,6 +7835,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_sale_wishlist": {
 		dir: "addons/website_sale_wishlist"
@@ -7582,6 +7848,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "sale"
 	}
 	"website_slides": {
@@ -7616,6 +7883,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		auto_install: true
 	}
 	"website_slides_survey": {
 		dir: "addons/website_slides_survey"
@@ -7627,6 +7895,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		auto_install: true
 		template: "website"
 	}
 	"website_sms": {
@@ -7637,6 +7906,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 	"website_timesheet": {
 		dir: "addons/website_timesheet"
@@ -7646,6 +7916,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: true
 	}
 }
 

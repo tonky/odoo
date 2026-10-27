@@ -24,6 +24,9 @@ on:
       base_ref:
         description: Target base branch for diff detection (e.g. main, master, a release branch)
         required: false
+      files:
+        description: File(s) to plan as changed instead of the git diff, comma-separated (e.g. one test file)
+        required: false
       no_cache:
         description: Disable task cache, forcing full execution
         required: false
@@ -199,7 +202,7 @@ jobs:
           cd "${GITHUB_WORKSPACE}"
         fi
         # Resolves the diff base, and leaves the planning flags of the `enact` command after this
-        # script in "$@": --base, --all or --updated, --no-cache.
+        # script in "$@": --base, --all or --updated and --files, --no-cache.
         BASE_REV=""
         BASE_REF="${ENACT_BASE_REF:-}"
         if [ -n "${ENACT_BASE_SHA:-}" ]; then
@@ -293,8 +296,30 @@ jobs:
         fi
         if [ "${ENACT_INPUT_ALL:-}" = "true" ] || [ -n "$WARM_REACH" ]; then
           set -- "$@" --all
-        elif [ -n "${ENACT_INPUT_UPDATED:-}" ]; then
-          set -- "$@" --updated "$ENACT_INPUT_UPDATED"
+        else
+          if [ -n "${ENACT_INPUT_UPDATED:-}" ]; then
+            set -- "$@" --updated "$ENACT_INPUT_UPDATED"
+          fi
+          # A dispatch's files plan as the change. Each must be a file of HEAD's tree (read from
+          # its trees, so a sparse or blobless checkout answers too), or a typo plans nothing and
+          # the run passes.
+          if [ -n "${ENACT_INPUT_FILES:-}" ]; then
+            OLD_IFS=$IFS
+            IFS=,
+            set -f
+            for path in $ENACT_INPUT_FILES; do
+              case "$(git ls-tree HEAD -- "$path" 2>/dev/null)" in
+                *" blob "*) ;;
+                *)
+                  echo "::error::files input: '$path' is no file at HEAD (comma-separated paths from the repository root)"
+                  exit 1
+                  ;;
+              esac
+            done
+            set +f
+            IFS=$OLD_IFS
+            set -- "$@" --files "$ENACT_INPUT_FILES"
+          fi
         fi
         if [ "${ENACT_FORCE_NO_CACHE:-}" = "true" ]; then
           set -- "$@" --no-cache
@@ -313,6 +338,7 @@ jobs:
         ENACT_EVENT_BEFORE: ${{ github.event.before }}
         ENACT_FORCE_NO_CACHE: ${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || contains(github.event.pull_request.labels.*.name, 'no-cache') }}
         ENACT_INPUT_ALL: ${{ inputs.all }}
+        ENACT_INPUT_FILES: ${{ inputs.files }}
         ENACT_INPUT_UPDATED: ${{ inputs.updated }}
         ENACT_INPUT_WARM_REACH: ${{ inputs.warm_reach }}
         ENACT_INTEGRATION_BRANCH: ${{ vars.ENACT_INTEGRATION_BRANCH }}
@@ -1186,7 +1212,7 @@ jobs:
     - name: Execute Stage [Preflight]
       run: |-
         # Resolves the diff base, and leaves the planning flags of the `enact` command after this
-        # script in "$@": --base, --all or --updated, --no-cache.
+        # script in "$@": --base, --all or --updated and --files, --no-cache.
         BASE_REV=""
         BASE_REF="${ENACT_BASE_REF:-}"
         if [ -n "${ENACT_BASE_SHA:-}" ]; then
@@ -1280,8 +1306,30 @@ jobs:
         fi
         if [ "${ENACT_INPUT_ALL:-}" = "true" ] || [ -n "$WARM_REACH" ]; then
           set -- "$@" --all
-        elif [ -n "${ENACT_INPUT_UPDATED:-}" ]; then
-          set -- "$@" --updated "$ENACT_INPUT_UPDATED"
+        else
+          if [ -n "${ENACT_INPUT_UPDATED:-}" ]; then
+            set -- "$@" --updated "$ENACT_INPUT_UPDATED"
+          fi
+          # A dispatch's files plan as the change. Each must be a file of HEAD's tree (read from
+          # its trees, so a sparse or blobless checkout answers too), or a typo plans nothing and
+          # the run passes.
+          if [ -n "${ENACT_INPUT_FILES:-}" ]; then
+            OLD_IFS=$IFS
+            IFS=,
+            set -f
+            for path in $ENACT_INPUT_FILES; do
+              case "$(git ls-tree HEAD -- "$path" 2>/dev/null)" in
+                *" blob "*) ;;
+                *)
+                  echo "::error::files input: '$path' is no file at HEAD (comma-separated paths from the repository root)"
+                  exit 1
+                  ;;
+              esac
+            done
+            set +f
+            IFS=$OLD_IFS
+            set -- "$@" --files "$ENACT_INPUT_FILES"
+          fi
         fi
         if [ "${ENACT_FORCE_NO_CACHE:-}" = "true" ]; then
           set -- "$@" --no-cache
@@ -1294,6 +1342,7 @@ jobs:
         ENACT_EVENT_BEFORE: ${{ github.event.before }}
         ENACT_FORCE_NO_CACHE: ${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || contains(github.event.pull_request.labels.*.name, 'no-cache') }}
         ENACT_INPUT_ALL: ${{ inputs.all }}
+        ENACT_INPUT_FILES: ${{ inputs.files }}
         ENACT_INPUT_UPDATED: ${{ inputs.updated }}
         ENACT_INPUT_WARM_REACH: ${{ inputs.warm_reach }}
         ENACT_INTEGRATION_BRANCH: ${{ vars.ENACT_INTEGRATION_BRANCH }}

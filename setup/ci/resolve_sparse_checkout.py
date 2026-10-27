@@ -796,6 +796,17 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
             lines.append("\t\ttest_depends: []")
         ht_str = "true" if has_tests else "false"
         lines.append(f"\t\thas_tests: {ht_str}")
+        # What install_set() and odoo-scope's sparse closure follow: an auto_install addon
+        # (not a country's) whose triggers a job installs is installed too, so its directory
+        # is in the job's cone.
+        auto = m.get("auto_install")
+        if auto and m.get("installable", True) and not m.get("countries"):
+            if isinstance(auto, list) and set(auto) != set(deps):
+                # One line: odoo-scope reads the list where the key is.
+                items = ", ".join(f'"{d}"' for d in sorted(auto))
+                lines.append(f"\t\tauto_install: [{items}]")
+            else:
+                lines.append("\t\tauto_install: true")
         if has_tests and name in templates:
             lines.append(f'\t\ttemplate: "{templates[name]}"')
         not_run = {r: t for r, t in m.get("not_run", {}).items() if t} if has_tests else {}
