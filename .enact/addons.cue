@@ -3884,6 +3884,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		auto_install: ["account"]
 	}
 	"l10n_uy": {
 		dir: "addons/l10n_uy"
@@ -7945,6 +7946,8 @@ _templates: {
 		"addons/http_routing",
 		"addons/iap",
 		"addons/iap_mail",
+		"addons/l10n_us",
+		"addons/l10n_us_account",
 		"addons/mail",
 		"addons/mail_bot",
 		"addons/microsoft_outlook",
@@ -8086,6 +8089,8 @@ _templates: {
 		"addons/iap",
 		"addons/iap_mail",
 		"addons/iot_base",
+		"addons/l10n_us",
+		"addons/l10n_us_account",
 		"addons/mail",
 		"addons/mail_bot",
 		"addons/microsoft_outlook",
@@ -8142,6 +8147,8 @@ _templates: {
 		"addons/http_routing",
 		"addons/iap",
 		"addons/iap_mail",
+		"addons/l10n_us",
+		"addons/l10n_us_account",
 		"addons/mail",
 		"addons/mail_bot",
 		"addons/microsoft_outlook",
@@ -8200,6 +8207,8 @@ _templates: {
 		"addons/http_routing",
 		"addons/iap",
 		"addons/iap_mail",
+		"addons/l10n_us",
+		"addons/l10n_us_account",
 		"addons/mail",
 		"addons/mail_bot",
 		"addons/microsoft_outlook",
@@ -8300,6 +8309,8 @@ _templates: {
 		"addons/http_routing",
 		"addons/iap",
 		"addons/iap_mail",
+		"addons/l10n_us",
+		"addons/l10n_us_account",
 		"addons/mail",
 		"addons/mail_bot",
 		"addons/microsoft_outlook",

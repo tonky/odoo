@@ -711,12 +711,34 @@ def dependency_closure(names, manifests: dict) -> set:
     return seen
 
 
-def install_set(seed: str, manifests: dict) -> set:
+def demo_company_countries(repo_root: Path) -> frozenset:
+    """The countries a demo install's companies are in: base's demo writes the main
+    company's partner a country (`data/res_users_demo.xml`), before any other addon
+    installs. Templates install --with-demo (setup/ci/post-start-postgres.sh)."""
+    path = repo_root / "odoo/addons/base/data/res_users_demo.xml"
+    found = re.findall(r"'country_id':\s*ref\('base\.([a-z]{2})'\)", path.read_text(encoding="utf-8"))
+    if not found:
+        raise SystemExit(f"{path}: no main company country found; country addons can't be resolved")
+    return frozenset(found)
+
+
+def installs_automatically(m: dict, countries: frozenset) -> bool:
+    """Whether odoo installs an addon once its triggers are (`ir.module.module.button_install`):
+    an installable auto_install one, and a country-specific one (`countries`) only while a
+    company is in one of its countries (l10n_us_account for the demo's US company, which
+    brings l10n_us)."""
+    return bool(
+        m.get("auto_install")
+        and m.get("installable", True)
+        and (not m.get("countries") or countries & set(m["countries"]))
+    )
+
+
+def install_set(seed: str, manifests: dict, countries: frozenset) -> set:
     """What `odoo-bin -i <seed>` installs (`ir.module.module.button_install`): the dependency
-    closure, then, until none is left, each auto_install addon whose required dependencies
-    are all installed (`auto_install: [...]` names them; `True`, every dependency). A
-    country-specific one (`countries`) is left out: it follows the companies, which data
-    adds."""
+    closure, then, until none is left, each addon installs_automatically() whose required
+    dependencies are all installed (`auto_install: [...]` names them; `True`, every
+    dependency)."""
     installed = dependency_closure([seed], manifests)
     auto = {
         name: (
@@ -725,7 +747,7 @@ def install_set(seed: str, manifests: dict) -> set:
             else manifest_depends(name, m.get("depends", []), manifests)
         )
         for name, m in manifests.items()
-        if m.get("auto_install") and m.get("installable", True) and not m.get("countries")
+        if installs_automatically(m, countries)
     }
     added = True
     while added:
@@ -737,11 +759,11 @@ def install_set(seed: str, manifests: dict) -> set:
     return installed
 
 
-def closure_templates(manifests: dict) -> dict:
+def closure_templates(manifests: dict, countries: frozenset) -> dict:
     """Each addon's template seed (TEMPLATE_SEEDS): the one with the largest install among
     those it depends on whose install doesn't contain it. A fork of it holds exactly what
     installing the addon from base's would have installed first."""
-    seeds = {seed: install_set(seed, manifests) for seed in TEMPLATE_SEEDS if seed in manifests}
+    seeds = {seed: install_set(seed, manifests, countries) for seed in TEMPLATE_SEEDS if seed in manifests}
     chosen = {}
     for name in manifests:
         deps = dependency_closure([name], manifests) - {name}
@@ -751,11 +773,11 @@ def closure_templates(manifests: dict) -> dict:
     return chosen
 
 
-def template_addon_dirs(manifests: dict, seeds) -> dict:
+def template_addon_dirs(manifests: dict, seeds, countries: frozenset) -> dict:
     """Each template's addons (a seed's install set, `base` alone for base's) by their dirs:
     what its init installs, so what its `template_inputs` hash (components.cue)."""
     return {
-        seed: sorted(manifests[name]["dir"] for name in install_set(seed, manifests))
+        seed: sorted(manifests[name]["dir"] for name in install_set(seed, manifests, countries))
         for seed in sorted(seeds)
         if seed in manifests
     }
@@ -768,7 +790,8 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
         "",
         "_addons: {",
     ]
-    templates = closure_templates(manifests)
+    countries = demo_company_countries(repo_root)
+    templates = closure_templates(manifests, countries)
     for name in sorted(manifests.keys()):
         m = manifests[name]
         m_dir = m["dir"]
@@ -796,11 +819,11 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
             lines.append("\t\ttest_depends: []")
         ht_str = "true" if has_tests else "false"
         lines.append(f"\t\thas_tests: {ht_str}")
-        # What install_set() and odoo-scope's sparse closure follow: an auto_install addon
-        # (not a country's) whose triggers a job installs is installed too, so its directory
-        # is in the job's cone.
+        # What install_set() and odoo-scope's sparse closure follow: an addon odoo
+        # installs_automatically() once a job installs its triggers is installed too, so its
+        # directory is in the job's cone.
         auto = m.get("auto_install")
-        if auto and m.get("installable", True) and not m.get("countries"):
+        if installs_automatically(m, countries):
             if isinstance(auto, list) and set(auto) != set(deps):
                 # One line: odoo-scope reads the list where the key is.
                 items = ", ".join(f'"{d}"' for d in sorted(auto))
@@ -825,7 +848,7 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
     lines.append("}")
     lines.append("")
     lines.append("_templates: {")
-    for seed, dirs in template_addon_dirs(manifests, {"base", *templates.values()}).items():
+    for seed, dirs in template_addon_dirs(manifests, {"base", *templates.values()}, countries).items():
         lines.append(f'\t"{seed}": addon_dirs: [')
         for d in dirs:
             lines.append(f'\t\t"{d}",')

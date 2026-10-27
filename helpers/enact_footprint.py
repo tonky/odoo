@@ -37,7 +37,8 @@ the programs it starts:
 * Child processes (a): a Python child loads this module in child mode (a `sitecustomize` on
   `PYTHONPATH`, which then runs the interpreter's own), records everything it runs for the
   target that started it, and leaves a record the parent merges: at exit, at an `exec`, or
-  at SIGTERM (then it dies by the signal still). A forked child records likewise, and so do
+  at SIGTERM (then it dies by the signal still); a parent ending one it just started
+  waits until it records (`_patch_kill`). A forked child records likewise, and so do
   children started below `subprocess` (`_posixsubprocess.fork_exec`: multiprocessing's spawn
   and helpers, loky's workers). When recording ends, multiprocessing's children are ended
   and its helpers (resource trackers, a forkserver) stopped, and running children are
@@ -66,6 +67,14 @@ those its Python children loaded. enact narrows a change outside a module's func
 body, a class body, a decorator, an import) to the targets that loaded it: a
 target that ended before a module's first import never ran its body. Every loaded module is
 among the footprint's files too, so a whole-file change reaches the same targets and more.
+
+A target's own module (the test file a target is, or is in: `own_modules`) is a runner's
+import, every collected file's before any test runs, so it isn't every later target's: it
+belongs to its own targets and to those importing it (`narrow_own_modules`). Each import
+statement is noted as an edge from the module whose body ran it, or from the target whose
+code did (`import_edges`); a module whose importers lead to anything else (start-up, a
+shared extent, another module, code outside the repository, a load no statement explains)
+stays every target's, as do one read whole and one whose functions a shared extent ran.
 """
 
 import _signal
@@ -289,8 +298,14 @@ switched_at: list[float] = []
 switched_to: list[str | None] = []
 # How long recording's end waits for children still running to leave their record.
 CHILD_WAIT = 5.0
+# How long ending a Python child waits for its recording to start (`_patch_kill`).
+CHILD_START_WAIT = 5.0
+# The Python children started whose recording may not have started yet (`_patch_kill`).
+_unstarted: set[int] = set()
 stats: dict[str, int] = {}
-local = _thread._local()  # `busy`: inside the recorder, whose own calls aren't recorded
+# `busy`: inside the recorder, whose own calls aren't recorded; `python`: the start being
+# classified is a Python child's.
+local = _thread._local()
 _rel_cache: dict[str, str | None] = {}
 tracer = ""  # `enact trace exec`'s enact ($ENACT_EXE) on Linux: what runs a program unmodelled
 _popen_pending = False  # `subprocess` not imported yet: Popen is patched once it is
@@ -299,6 +314,15 @@ _popen_pending = False  # `subprocess` not imported yet: Popen is patched once i
 loaded_order: list[str] = []
 loaded_seen: set[str] = set()
 loaded_marks: dict[str, int] = {}
+# Targets' own modules (the adapter's: each collected test file), who imported each repository
+# module (`(importer, module)`: a module whose body ran the statement, `KEY` + the target whose
+# code did, or `EXTERNAL`/SHARED), and the target current at each module's first load.
+own_modules: set[str] = set()
+import_edges: set[tuple[str, str]] = set()
+_imports_seen: set = set()
+first_loaded_by: dict[str, str | None] = {}
+KEY = "key:"
+EXTERNAL = "<external>"
 _modules_seen = None  # `sys.modules`' size and last key when last scanned
 child_from = 0  # in a child, the modules loaded before it (a forked child's parent's)
 _writing = False  # writing this child's record (`write_child`)
@@ -454,11 +478,11 @@ def _module_file(module) -> str | None:
     return path if isinstance(path, str) else None
 
 
-def note_module(module) -> None:
+def note_module(module) -> str | None:
     """`module` is loaded: its repository file joins every target ending from now on."""
     path = _module_file(module)
     if path is None:
-        return
+        return None
     busy = getattr(local, "busy", False)
     local.busy = True
     try:
@@ -468,6 +492,7 @@ def note_module(module) -> None:
     if rel and rel not in loaded_seen:
         loaded_seen.add(rel)
         loaded_order.append(rel)
+    return rel
 
 
 def scan_modules() -> None:
@@ -495,13 +520,16 @@ def _mark_loaded(key: str | None) -> None:
     loaded_marks[key] = len(loaded_order)
 
 
-def _noting(exec_module):
-    """A loader's `exec_module` noting each module before its body runs."""
+def noting(exec_module):
+    """A loader's `exec_module` noting each module, and the target current at its first
+    load, before its body runs."""
     import functools
 
     @functools.wraps(exec_module)
     def exec_module_noting(self, module):
-        note_module(module)
+        rel = note_module(module)
+        if rel and not child:
+            first_loaded_by.setdefault(rel, current_key)
         result = exec_module(self, module)
         if _popen_pending and getattr(module, "__name__", None) == "subprocess":
             _patch_popen_in(module)
@@ -1137,6 +1165,7 @@ def _propagate(fp: Footprint, env, key: str | None) -> None:
     """Tells a Python child its target, and expects its record (`merge_children`)."""
     spawn_id = os.urandom(6).hex()
     fp.spawned.add(spawn_id)
+    local.python = True  # the start being classified (`_python_started`)
     os.environ[ENV_TARGET] = key or ""
     os.environ[ENV_SPAWN] = spawn_id
     if env is None or env is os.environ:
@@ -1520,8 +1549,8 @@ def _patch_imports() -> None:
     import _frozen_importlib as bootstrap
     import _frozen_importlib_external as external
 
-    external._LoaderBasics.exec_module = _noting(external._LoaderBasics.exec_module)
-    external.ExtensionFileLoader.exec_module = _noting(external.ExtensionFileLoader.exec_module)
+    external._LoaderBasics.exec_module = noting(external._LoaderBasics.exec_module)
+    external.ExtensionFileLoader.exec_module = noting(external.ExtensionFileLoader.exec_module)
     if not child:
         external._LoaderBasics.exec_module = extent(external._LoaderBasics.exec_module)
     finder = external.FileFinder
@@ -1675,6 +1704,7 @@ def _patch_fork_exec() -> None:
             return real(*args)  # subprocess.Popen's, classified by `_patch_popen`
         args = list(args)
         local.busy = True
+        _expect_python()
         try:
             rewritten = None
             try:
@@ -1692,6 +1722,7 @@ def _patch_fork_exec() -> None:
             pid = real(*args)
             if rewritten is not None:
                 _traced_started(pid, *rewritten[1:])
+            _python_started(pid)
             return pid
         finally:
             local.busy = False
@@ -1731,6 +1762,7 @@ def _patch_popen_in(subprocess) -> None:
             return real(self, *args, **kwargs)
         call = dict(zip(names, args))
         local.busy = True
+        _expect_python()
         try:
             rewritten = None
             try:
@@ -1753,6 +1785,7 @@ def _patch_popen_in(subprocess) -> None:
             result = real(self, *args)
             if rewritten is not None:
                 _traced_started(self.pid, *rewritten[1:])
+            _python_started(self.pid)
             return result
         finally:
             local.busy = False
@@ -1774,6 +1807,7 @@ def _patch_posix_spawn() -> None:
                     or sink() is None or getattr(local, "busy", False):
                 return _real(path, argv, env, *args, **kwargs)
             local.busy = True
+            _expect_python()
             try:
                 rewritten = None
                 try:
@@ -1787,19 +1821,212 @@ def _patch_posix_spawn() -> None:
                     pid = _real(tracer, rewritten[0], env, *args, **kwargs)
                     _traced_started(pid, *rewritten[1:])
                     return pid
-                return _real(path, argv, env, *args, **kwargs)
+                pid = _real(path, argv, env, *args, **kwargs)
+                _python_started(pid)
+                return pid
             finally:
                 local.busy = False
 
         setattr(os, name, posix_spawn)
 
 
+def _expect_python() -> None:
+    local.python = False
+
+
+def _python_started(pid: int) -> None:
+    """The start just made, as `pid`, was a Python child's (`_propagate`)."""
+    if getattr(local, "python", False):
+        _unstarted.add(pid)
+        local.python = False
+
+
+def _patch_kill() -> None:
+    """A parent may end a Python child it started before the child's recording started
+    (dagster terminates its compute-log watcher as soon as a fast step ends): the child
+    then leaves no record, and its target turns opaque though it ran none of its code.
+    Ending one (`os.kill`, which `Popen.terminate` and multiprocessing call) with a signal
+    it can record by (not 0, not SIGKILL) first waits until its recording has started
+    (`CHILD_START_WAIT` at most): its SIGTERM handler or `atexit` then writes its record.
+    One that never starts recording (no site, `-I`) still turns its target opaque."""
+    real = os.kill
+
+    def kill(pid, sig):
+        if pid in _unstarted and sig not in (0, _signal.SIGKILL):
+            _unstarted.discard(pid)
+            busy, local.busy = getattr(local, "busy", False), True
+            try:
+                _await_start(pid)
+            finally:
+                local.busy = busy
+        return real(pid, sig)
+
+    os.kill = kill
+
+
+def _await_start(pid: int) -> None:
+    """Until child `pid` started recording (its `.started` record), or ended."""
+    records = os.path.join(children_dir, "records")
+    prefix = f"{pid}-"
+    deadline = time.monotonic() + CHILD_START_WAIT
+    waited = False
+    while _running(pid):
+        try:
+            if any(n.startswith(prefix) and n.endswith(".started") for n in os.listdir(records)):
+                break
+        except OSError:
+            break
+        if time.monotonic() >= deadline:
+            count("children_ended_unstarted")
+            break
+        waited = True
+        time.sleep(0.005)
+    if waited:
+        count("children_awaited_start")
+
+
 def _patch_spawners() -> None:
     """Every start this module can rewrite (`_patch_popen`, `_patch_fork_exec`,
-    `_patch_posix_spawn`); `os.exec*` and `os.system` are classified by their audit events."""
+    `_patch_posix_spawn`), and the ending of the Python children they start (`_patch_kill`);
+    `os.exec*` and `os.system` are classified by their audit events."""
     _patch_fork_exec()
     _patch_popen()
     _patch_posix_spawn()
+    _patch_kill()
+
+
+# --- imports and own modules -------------------------------------------------------------
+
+def _importer(frame) -> str:
+    """Who an import statement running in `frame` imports for: the repository module whose
+    body (or class body) runs it, the current target when one of its functions does (SHARED
+    in a shared extent or with no target recording), `EXTERNAL` for code outside it."""
+    code = frame.f_code
+    rel = relative(code.co_filename)
+    if rel is None:
+        return EXTERNAL
+    if not code.co_flags & CO_NEWLOCALS:
+        return rel
+    if depth > 0 or current_key in (None, SHARED):
+        return SHARED
+    return KEY + current_key
+
+
+def _imported(name: str, globals_: dict, fromlist, level: int) -> list[str]:
+    """The modules an import statement binds or loads: the one it names, its packages, and
+    the submodules its `from` list names."""
+    if level:
+        import _frozen_importlib as bootstrap
+
+        name = bootstrap._resolve_name(name, bootstrap._calc___package__(globals_), level)
+    parts = name.split(".")
+    names = [".".join(parts[:i]) for i in range(1, len(parts) + 1)]
+    names += [f"{name}.{item}" for item in fromlist or () if isinstance(item, str) and item != "*"]
+    return names
+
+
+def _note_import(frame, name: str, globals_: dict, fromlist, level: int) -> None:
+    importer = _importer(frame)
+    package = globals_.get("__package__") or globals_.get("__name__") if level else None
+    key = (importer, name, tuple(fromlist or ()), level, package)
+    if key in _imports_seen:
+        return
+    _imports_seen.add(key)
+    modules = sys.modules
+    for imported in _imported(name, globals_, fromlist, level):
+        module = modules.get(imported)
+        path = _module_file(module) if module is not None else None
+        rel = relative(path) if path else None
+        if rel:
+            import_edges.add((importer, rel))
+
+
+def _patch_import_statements() -> None:
+    """`builtins.__import__`: each import statement's edge (`import_edges`), whether it loads
+    the module or finds it loaded (the import system's own loads show only the first)."""
+    import builtins
+
+    original = builtins.__import__
+
+    def __import__(name, globals=None, locals=None, fromlist=(), level=0):
+        module = original(name, globals, locals, fromlist, level)
+        if not getattr(local, "busy", False):
+            local.busy = True
+            try:
+                _note_import(sys._getframe(1), name, globals if isinstance(globals, dict) else {},
+                             fromlist, level)
+            except Exception:
+                count("imports_unnoted")
+                import_edges.add((EXTERNAL, "*"))  # every own module stays every target's
+            finally:
+                local.busy = False
+        return module
+
+    builtins.__import__ = __import__
+
+
+def _own_holders(module: str, owners: dict[str, list[str]], importers: dict[str, set[str]]) -> set[str] | None:
+    """The targets an own `module` belongs to: its own targets, and those whose own modules
+    or code imported it, through own modules only. None: it is every target's."""
+    if module in shared.reads or shared.code.get(module) or (EXTERNAL, "*") in import_edges:
+        return None
+    loader = first_loaded_by.get(module, SHARED)
+    if loader in (None, SHARED):
+        return None
+    modules, keys, todo = {module}, set(), [module]
+    while todo:
+        for importer in importers.get(todo.pop(), ()):
+            if importer.startswith(KEY):
+                keys.add(importer[len(KEY):])
+            elif importer in owners or importer in own_modules:
+                if importer not in modules:
+                    modules.add(importer)
+                    todo.append(importer)
+            else:
+                return None  # start-up, a shared extent, another module, outside code
+    holders = keys | {key for m in modules for key in owners.get(m, ())}
+    if loader not in holders:
+        return None  # loaded by what no import statement shows (a runner's, a registry's)
+    return holders | {key for key, fp in footprints.items() if key != SHARED and module in fp.code}
+
+
+def narrow_own_modules() -> int:
+    """Gives each own module whose holders are known (`_own_holders`) to them alone: out of
+    the shared footprint and the load order, into each holder's code and `loaded`. Returns
+    how many it narrowed."""
+    owners: dict[str, list[str]] = {}
+    for key in footprints:
+        if key != SHARED:
+            owners.setdefault(key.split("::", 1)[0], []).append(key)
+    importers: dict[str, set[str]] = {}
+    for importer, module in import_edges:
+        importers.setdefault(module, set()).add(importer)
+    narrowed = {}
+    for module in sorted((own_modules | set(owners)) & set(shared.code)):
+        holders = _own_holders(module, owners, importers)
+        if holders is not None:
+            narrowed[module] = holders
+    for module, holders in narrowed.items():
+        del shared.code[module]
+        present = module in shared.present
+        shared.present.discard(module)
+        for key in holders:
+            fp = footprints.get(key)
+            if fp is not None:
+                fp.code.setdefault(module, set())
+                fp.loaded.add(module)
+                if present:
+                    fp.present.add(module)
+    if narrowed:
+        kept, before = 0, [0]
+        for rel in loaded_order:
+            kept += rel not in narrowed
+            before.append(kept)
+        for key, mark in loaded_marks.items():
+            loaded_marks[key] = before[mark]
+        loaded_order[:] = [rel for rel in loaded_order if rel not in narrowed]
+    count("own_modules_narrowed", len(narrowed))
+    return len(narrowed)
 
 
 # --- driving -----------------------------------------------------------------------------
@@ -1837,6 +2064,7 @@ def start(repo: str, recorders=(), quiet_programs=(), unlisted_callers=(), reade
     _prepare_children()
     _patch_caches()
     _patch_spawners()
+    _patch_import_statements()
     os.register_at_fork(after_in_child=_after_fork_in_child)
     _note_started_modules(shared)
     current, current_key = shared, SHARED
@@ -1982,6 +2210,8 @@ def finish() -> tuple[dict, dict[str, tuple[dict, list[str]]]]:
     for fp in footprints.values():
         fp.collapse_probes(kinds)
     count("probes_kept", sum(len(fp.probes) for fp in footprints.values()))
+    scan_modules()
+    narrow_own_modules()
     # Loaded by the end of every target: shared. A module whose body no monitoring saw run
     # (an extension module) is read whole, as loaded modules are among the files.
     marks = {key: loaded_marks.get(key, len(loaded_order)) for key in footprints if key != SHARED}
