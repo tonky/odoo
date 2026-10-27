@@ -1,5 +1,0 @@
-package replay
-
-pipeline: {
-	services: {}
-}

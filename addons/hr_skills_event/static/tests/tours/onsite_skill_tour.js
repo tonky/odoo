@@ -1,10 +1,13 @@
 import { registry } from "@web/core/registry";
-import { stepUtils } from "@web_tour/tour_utils";
 
 registry.category("web_tour.tours").add("hr_skills_event_onsite_tour", {
     url: "/odoo",
     steps: () => [
-        ...stepUtils.goToAppSteps("hr.menu_hr_root", "Open Employees app"),
+        {
+            content: "Open Employees app",
+            trigger: ".o_app[data-menu-xmlid='hr.menu_hr_root']",
+            run: "click",
+        },
         {
             content: "Go to test employee",
             trigger: "span:contains('Test Employee')",

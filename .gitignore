@@ -9,15 +9,10 @@ _build/
 !.mailmap
 !.weblate.json
 !.enact
-.enact/runs
-.enact/cache
-.enact/telemetry*
-.enact/*.html
+.enact/state/
 .enact/upstream-baseline.json
 .enact/changed-files.txt
-.enact/dynamic_resources.json
 .enact/pr-changes.patch
-.enact/targets/
 # compiled python files
 *.py[co]
 __pycache__/

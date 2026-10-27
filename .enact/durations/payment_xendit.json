@@ -1,0 +1,18 @@
+{
+ "addons/payment_xendit": {
+  "startup": 17.15,
+  "contention": 0.38
+ },
+ "addons/payment_xendit/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 0.1,
+  "contention": 0.4
+ },
+ "addons/payment_xendit/tests/test_payment_transaction.py::TestPaymentTransaction": {
+  "seconds": 0.1,
+  "contention": 0.4
+ },
+ "addons/payment_xendit/tests/test_processing_flows.py::TestProcessingFlow": {
+  "seconds": 0.21,
+  "contention": 0.4
+ }
+}

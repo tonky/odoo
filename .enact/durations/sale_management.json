@@ -1,0 +1,22 @@
+{
+ "addons/sale_management": {
+  "startup": 21.47,
+  "contention": 0.24
+ },
+ "addons/sale_management/tests/test_sale_order.py::TestSaleOrder": {
+  "seconds": 0.79,
+  "contention": 0.3
+ },
+ "addons/sale_management/tests/test_sale_order_template.py::TestSaleOrderTemplate": {
+  "seconds": 1.13,
+  "contention": 0.32
+ },
+ "addons/sale_management/tests/test_sale_ui.py::TestSaleFlowTourPostInstall": {
+  "seconds": 4.1,
+  "contention": 0.34
+ },
+ "addons/sale_management/tests/test_sale_ui.py::TestUi": {
+  "seconds": 5.44,
+  "contention": 0.32
+ }
+}

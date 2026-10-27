@@ -1,0 +1,83 @@
+{
+ "odoo/addons/test_lint": {
+  "startup": 3.27,
+  "contention": 0.29
+ },
+ "odoo/addons/test_lint/tests/test_checkers.py::TestGetTextLint": {
+  "seconds": 0.82,
+  "contention": 0.12
+ },
+ "odoo/addons/test_lint/tests/test_checkers.py::TestI18nChecks": {
+  "seconds": 2.52,
+  "contention": 0.16
+ },
+ "odoo/addons/test_lint/tests/test_checkers.py::TestSqlLint": {
+  "seconds": 2.34,
+  "contention": 0.14
+ },
+ "odoo/addons/test_lint/tests/test_docstring.py::TestDocstring": {
+  "seconds": 0.48,
+  "contention": 0.26
+ },
+ "odoo/addons/test_lint/tests/test_dunderinit.py::TestDunderinit": {
+  "seconds": 0.07,
+  "contention": 0.16
+ },
+ "odoo/addons/test_lint/tests/test_eslint.py::TestESLint": {
+  "seconds": 8.9,
+  "contention": 0.28
+ },
+ "odoo/addons/test_lint/tests/test_i18n.py::TestI18n": {
+  "seconds": 0.21,
+  "contention": 0.28
+ },
+ "odoo/addons/test_lint/tests/test_index.py::TestIndex": {
+  "seconds": 0.0,
+  "contention": 0.32
+ },
+ "odoo/addons/test_lint/tests/test_jstranslate.py::TestJsTranslations": {
+  "seconds": 0.63,
+  "contention": 0.28
+ },
+ "odoo/addons/test_lint/tests/test_l10n.py::L10nLinter": {
+  "seconds": 0.35,
+  "contention": 0.28
+ },
+ "odoo/addons/test_lint/tests/test_manifests.py::ManifestLinter": {
+  "seconds": 0.06,
+  "contention": 0.28
+ },
+ "odoo/addons/test_lint/tests/test_markers.py::TestConflictMarkers": {
+  "seconds": 0.56,
+  "contention": 0.16
+ },
+ "odoo/addons/test_lint/tests/test_naming.py::TestNaming": {
+  "seconds": 0.1,
+  "contention": 0.32
+ },
+ "odoo/addons/test_lint/tests/test_onchange_domains.py::TestOnchangeDomains": {
+  "seconds": 4.98,
+  "contention": 0.3
+ },
+ "odoo/addons/test_lint/tests/test_orm_import.py::TestDunderinit": {
+  "seconds": 0.72,
+  "contention": 0.21
+ },
+ "odoo/addons/test_lint/tests/test_override_signatures.py::TestLintOverrideSignatures": {
+  "seconds": 0.27,
+  "contention": 0.26
+ },
+ "odoo/addons/test_lint/tests/test_pofile.py::PotLinter": {
+  "seconds": 1.01,
+  "contention": 0.26
+ },
+ "odoo/addons/test_lint/tests/test_pylint.py::TestPyLint": 557.74,
+ "odoo/addons/test_lint/tests/test_routes.py::RoutesLinter": {
+  "seconds": 0.0,
+  "contention": 0.32
+ },
+ "odoo/addons/test_lint/tests/test_test_holes.py::TestTestHoles": {
+  "seconds": 0.13,
+  "contention": 0.32
+ }
+}

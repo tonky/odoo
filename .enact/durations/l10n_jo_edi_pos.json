@@ -1,0 +1,18 @@
+{
+ "addons/l10n_jo_edi_pos": {
+  "startup": 22.46,
+  "contention": 0.41
+ },
+ "addons/l10n_jo_edi_pos/tests/test_jo_edi_pos_precision.py::TestJoEdiPosPrecision": {
+  "seconds": 2.4,
+  "contention": 0.43
+ },
+ "addons/l10n_jo_edi_pos/tests/test_jo_edi_pos_types.py::TestJoEdiPosTypes": {
+  "seconds": 3.59,
+  "contention": 0.45
+ },
+ "addons/l10n_jo_edi_pos/tests/test_l10n_jo_edi_pos_tour.py::TestL10nJoEdiPosTour": {
+  "seconds": 3.79,
+  "contention": 0.46
+ }
+}

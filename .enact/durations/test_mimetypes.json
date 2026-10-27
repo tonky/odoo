@@ -1,0 +1,14 @@
+{
+ "odoo/addons/test_mimetypes": {
+  "startup": 3.96,
+  "contention": 0.15
+ },
+ "odoo/addons/test_mimetypes/tests/test_guess_mimetypes.py::TestMimeGuessingMagic": {
+  "seconds": 0.0,
+  "contention": 0.16
+ },
+ "odoo/addons/test_mimetypes/tests/test_guess_mimetypes.py::TestMimeGuessingOdoo": {
+  "seconds": 0.0,
+  "contention": 0.16
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "addons/payment_nuvei": {
+  "startup": 18.61,
+  "contention": 0.47
+ },
+ "addons/payment_nuvei/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 0.13,
+  "contention": 0.48
+ },
+ "addons/payment_nuvei/tests/test_payment_transaction.py::TestPaymentTransaction": {
+  "seconds": 0.14,
+  "contention": 0.48
+ },
+ "addons/payment_nuvei/tests/test_processing_flows.py::TestProcessingFlows": {
+  "seconds": 0.47,
+  "contention": 0.48
+ }
+}

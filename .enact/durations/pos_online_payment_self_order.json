@@ -1,0 +1,22 @@
+{
+ "addons/pos_online_payment_self_order": {
+  "startup": 21.76,
+  "contention": 0.36
+ },
+ "addons/pos_online_payment_self_order/tests/test_self_order_fake_payment.py::TestSelfOrderFakePayment": {
+  "seconds": 16.44,
+  "contention": 0.39
+ },
+ "addons/pos_online_payment_self_order/tests/test_self_order_fake_payment.py::TestSelfOrderFakePaymentMail": {
+  "seconds": 10.71,
+  "contention": 0.35
+ },
+ "addons/pos_online_payment_self_order/tests/test_self_order_frontend.py::TestSelfOrderOnlinePayment": {
+  "seconds": 3.65,
+  "contention": 0.47
+ },
+ "addons/pos_online_payment_self_order/tests/test_self_order_mobile.py::TestSelfOrderMobile": {
+  "seconds": 9.35,
+  "contention": 0.43
+ }
+}

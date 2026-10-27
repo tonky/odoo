@@ -1,4 +1,4 @@
-module: "github.com/tonky/enve@v0"
+module: "odoo.com/enact@v0"
 language: {
-    version: "v0.16.1"
+	version: "v0.16.1"
 }

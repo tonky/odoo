@@ -1,0 +1,18 @@
+{
+ "addons/account_payment": {
+  "startup": 29.82,
+  "contention": 0.5
+ },
+ "addons/account_payment/tests/test_account_payment.py::TestAccountPayment": {
+  "seconds": 4.21,
+  "contention": 0.53
+ },
+ "addons/account_payment/tests/test_payment_flows.py::TestFlows": {
+  "seconds": 2.52,
+  "contention": 0.56
+ },
+ "addons/account_payment/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 1.03,
+  "contention": 0.56
+ }
+}

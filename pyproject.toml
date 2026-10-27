@@ -37,6 +37,7 @@ dependencies = [
     "PyPDF2==2.12.1",
     "pyserial==3.5",
     "python-dateutil==2.8.2",
+    "python-ldap==3.4.4",
     "python-magic==0.4.27",
     "python-stdnum==1.19",
     "pytz",
@@ -56,11 +57,6 @@ dependencies = [
     "websocket-client>=1.9.0",
 ]
 
-[project.optional-dependencies]
-ldap = [
-    "python-ldap==3.4.4",
-]
-
 [project.scripts]
 odoo-bin = "odoo.cli:main"
 odoo = "odoo.cli:main"
@@ -70,4 +66,26 @@ where = ["."]
 include = ["odoo*"]
 
 [tool.uv]
-package = true
+# odoo runs from the checkout (`python odoo-bin`, as upstream does), so the environment holds the
+# dependencies only. Installed editable, odoo put its finder on `odoo.addons.__path__`
+# ("addons path is not a directory: __editable__.odoo-19.0.0.finder.__path_hook__").
+package = false
+
+# What runbot's Ubuntu Noble image adds for the tests (runbot/data/dockerfile_data.xml), at
+# Noble's versions; uv syncs the `dev` group by default. Without them addons fail to
+# install (account_peppol and its 4 dependents: phonenumbers; cloud_storage_google: google-auth),
+# phone_validation formats numbers without phonenumbers, test_lint's pylint and base's SMTPD
+# tests skip.
+[dependency-groups]
+dev = [
+    "phonenumbers==8.12.57",
+    "google-auth==1.5.1",
+    "pylint==3.0.3",
+    "astroid==3.0.2",
+    "PyJWT==2.7.0",
+    "aiosmtpd==1.4.4.post2",
+    "pdfminer.six==20221105",
+    # docutils highlights test_lint's docstring `code-block`s with it (Noble's python3-docutils
+    # recommends python3-pygments): without it test_docstring fails on 9 docstrings.
+    "Pygments==2.17.2",
+]

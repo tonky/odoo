@@ -1,0 +1,18 @@
+{
+ "addons/phone_validation": {
+  "startup": 7.77,
+  "contention": 0.23
+ },
+ "addons/phone_validation/tests/test_phonenumbers.py::TestPhonenumbers": {
+  "seconds": 0.01,
+  "contention": 0.26
+ },
+ "addons/phone_validation/tests/test_phonenumbers_blacklist.py::TestPhonenumbersBlacklist": {
+  "seconds": 0.05,
+  "contention": 0.26
+ },
+ "addons/phone_validation/tests/test_phonenumbers_patch.py::TestPhonenumbersPatch": {
+  "seconds": 0.01,
+  "contention": 0.26
+ }
+}

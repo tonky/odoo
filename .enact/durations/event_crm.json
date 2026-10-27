@@ -1,0 +1,18 @@
+{
+ "addons/event_crm": {
+  "startup": 21.35,
+  "contention": 0.52
+ },
+ "addons/event_crm/tests/test_crm_lead_merge.py::TestLeadCrmMerge": {
+  "seconds": 1.01,
+  "contention": 0.56
+ },
+ "addons/event_crm/tests/test_event_crm_flow.py::TestEventCrmFlow": {
+  "seconds": 2.49,
+  "contention": 0.55
+ },
+ "addons/event_crm/tests/test_event_crm_http.py::TestEventCrmHttp": {
+  "seconds": 2.0,
+  "contention": 0.54
+ }
+}

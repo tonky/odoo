@@ -1,0 +1,18 @@
+{
+ "addons/resource": {
+  "startup": 3.33,
+  "contention": 0.07
+ },
+ "addons/resource/tests/test_flexible_resource_calendar.py::TestFlexibleResourceCalendar": {
+  "seconds": 0.14,
+  "contention": 0.09
+ },
+ "addons/resource/tests/test_resource_calendar.py::TestResourceCalendar": {
+  "seconds": 0.28,
+  "contention": 0.09
+ },
+ "addons/resource/tests/test_utils.py::TestExpression": {
+  "seconds": 0.04,
+  "contention": 0.09
+ }
+}

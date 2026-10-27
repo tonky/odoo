@@ -1,0 +1,18 @@
+{
+ "addons/l10n_dk_nemhandel": {
+  "startup": 5.92,
+  "contention": 0.55
+ },
+ "addons/l10n_dk_nemhandel/tests/test_nemhandel_messages.py::TestNemhandelMessage": {
+  "seconds": 3.96,
+  "contention": 0.55
+ },
+ "addons/l10n_dk_nemhandel/tests/test_nemhandel_participant.py::TestNemhandelParticipant": {
+  "seconds": 0.35,
+  "contention": 0.55
+ },
+ "addons/l10n_dk_nemhandel/tests/test_xml_oioubl_21.py::TestUBLDKOIOUBL21": {
+  "seconds": 4.25,
+  "contention": 0.55
+ }
+}

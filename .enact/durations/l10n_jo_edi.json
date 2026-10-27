@@ -1,0 +1,18 @@
+{
+ "addons/l10n_jo_edi": {
+  "startup": 5.12,
+  "contention": 0.44
+ },
+ "addons/l10n_jo_edi/tests/test_jo_edi_invoice_codes.py::TestJoEdiInvoiceCodes": {
+  "seconds": 1.2,
+  "contention": 0.43
+ },
+ "addons/l10n_jo_edi/tests/test_jo_edi_precision.py::TestJoEdiPrecision": {
+  "seconds": 2.04,
+  "contention": 0.44
+ },
+ "addons/l10n_jo_edi/tests/test_jo_edi_types.py::TestJoEdiTypes": {
+  "seconds": 2.69,
+  "contention": 0.45
+ }
+}

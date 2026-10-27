@@ -1,0 +1,18 @@
+{
+ "addons/payment_mercado_pago": {
+  "startup": 17.13,
+  "contention": 0.37
+ },
+ "addons/payment_mercado_pago/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 0.15,
+  "contention": 0.39
+ },
+ "addons/payment_mercado_pago/tests/test_payment_transaction.py::TestPaymentTransaction": {
+  "seconds": 0.11,
+  "contention": 0.39
+ },
+ "addons/payment_mercado_pago/tests/test_processing_flows.py::TestProcessingFlows": {
+  "seconds": 0.18,
+  "contention": 0.39
+ }
+}

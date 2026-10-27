@@ -1,0 +1,18 @@
+{
+ "addons/purchase_mrp": {
+  "startup": 11.86,
+  "contention": 0.47
+ },
+ "addons/purchase_mrp/tests/test_anglo_saxon_valuation.py::TestAngloSaxonValuationPurchaseMRP": {
+  "seconds": 6.19,
+  "contention": 0.52
+ },
+ "addons/purchase_mrp/tests/test_purchase_mrp_flow.py::TestPurchaseMrpFlow": {
+  "seconds": 11.37,
+  "contention": 0.46
+ },
+ "addons/purchase_mrp/tests/test_replenishment.py::TestReplenishment": {
+  "seconds": 0.71,
+  "contention": 0.54
+ }
+}

@@ -3,9 +3,9 @@ set positional-arguments
 default:
     @just --list
 
-# Run base tests with loopback Postgres
+# Run base tests with loopback Postgres (the repository's Python, as the pipeline runs them)
 test-base:
-    python3 odoo-bin -d test_odoo -i base --test-enable --stop-after-init
+    enve run -- bash helpers/odoo-runner.sh -d test_odoo -i base --test-enable --stop-after-init
 
 # Run enact affected components
 test-affected:
@@ -13,7 +13,8 @@ test-affected:
 
 # Fast monorepo linting (Ruff + Oxlint)
 lint:
-    enve run -- ruff check
+    # Advisory as in the jobs (helpers/odoo-lint.sh): the tree has ~37k findings under ruff.toml.
+    enve run -- ruff check --exit-zero --quiet
     enve run -- oxlint -c oxlint.json
 
 # Run hermetic pre-commit checks on staged files

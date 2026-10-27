@@ -1,0 +1,14 @@
+{
+ "addons/auth_signup": {
+  "startup": 7.92,
+  "contention": 0.08
+ },
+ "addons/auth_signup/tests/test_auth_signup.py::TestAuthSignupFlow": {
+  "seconds": 0.67,
+  "contention": 0.09
+ },
+ "addons/auth_signup/tests/test_reset_password.py::TestResetPassword": {
+  "seconds": 0.18,
+  "contention": 0.09
+ }
+}

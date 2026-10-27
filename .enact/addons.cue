@@ -14,7 +14,6 @@ _addons: {
 		]
 		test_depends: [
 			"base",
-			"base_vat",
 			"mail",
 			"payment",
 			"test_mail",
@@ -23,6 +22,16 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
+		not_run: [
+			{
+				tests: [
+					"addons/account/tests/test_account_all_l10n.py",
+					"addons/account/tests/test_account_journal_dashboard_common.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"account_add_gln": {
 		dir: "addons/account_add_gln"
@@ -39,6 +48,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"account_debit_note": {
 		dir: "addons/account_debit_note"
@@ -47,6 +57,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"account_edi": {
 		dir: "addons/account_edi"
@@ -57,6 +68,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"account_edi_proxy_client": {
 		dir: "addons/account_edi_proxy_client"
@@ -76,6 +88,7 @@ _addons: {
 			"test_mimetypes",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"account_fleet": {
 		dir: "addons/account_fleet"
@@ -85,6 +98,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"account_payment": {
 		dir: "addons/account_payment"
@@ -98,6 +112,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"account_payment_interco": {
 		dir: "addons/account_payment_interco"
@@ -108,6 +123,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"account_peppol": {
 		dir: "addons/account_peppol"
@@ -121,6 +137,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"account_peppol_advanced_fields": {
 		dir: "addons/account_peppol_advanced_fields"
@@ -138,6 +155,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"account_qr_code_emv": {
 		dir: "addons/account_qr_code_emv"
@@ -155,6 +173,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"account_tax_python": {
 		dir: "addons/account_tax_python"
@@ -165,6 +184,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"account_test": {
 		dir: "addons/account_test"
@@ -181,6 +201,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"analytic": {
 		dir: "addons/analytic"
@@ -193,6 +214,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"api_doc": {
 		dir: "addons/api_doc"
@@ -253,6 +275,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"auth_password_policy": {
 		dir: "addons/auth_password_policy"
@@ -294,6 +317,14 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		not_run: [
+			{
+				tests: [
+					"addons/auth_signup/tests/test_login.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"auth_timeout": {
 		dir: "addons/auth_timeout"
@@ -307,6 +338,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"auth_totp": {
 		dir: "addons/auth_totp"
@@ -343,6 +375,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"barcodes": {
 		dir: "addons/barcodes"
@@ -371,6 +404,20 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		not_run: [
+			{
+				tests: [
+					"odoo/addons/base/tests/test_uninstall.py",
+				]
+				reason: "tests/__init__.py doesn't import it: odoo's test loader never runs it"
+			},
+			{
+				tests: [
+					"odoo/addons/base/tests/test_install.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"base_address_extended": {
 		dir: "addons/base_address_extended"
@@ -380,6 +427,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"base_automation": {
 		dir: "addons/base_automation"
@@ -394,6 +442,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"base_geolocalize": {
 		dir: "addons/base_geolocalize"
@@ -448,6 +497,14 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		not_run: [
+			{
+				tests: [
+					"addons/base_setup/tests/test_res_config_doc_links.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"base_sparse_field": {
 		dir: "addons/base_sparse_field"
@@ -464,6 +521,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"board": {
 		dir: "addons/board"
@@ -497,6 +555,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"calendar_sms": {
 		dir: "addons/calendar_sms"
@@ -506,6 +565,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"certificate": {
 		dir: "addons/certificate"
@@ -525,6 +585,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"cloud_storage_azure": {
 		dir: "addons/cloud_storage_azure"
@@ -536,6 +597,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"cloud_storage_google": {
 		dir: "addons/cloud_storage_google"
@@ -546,6 +608,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"cloud_storage_migration": {
 		dir: "addons/cloud_storage_migration"
@@ -554,6 +617,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"contacts": {
 		dir: "addons/contacts"
@@ -566,6 +630,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"crm": {
 		dir: "addons/crm"
@@ -587,6 +652,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"crm_iap_enrich": {
 		dir: "addons/crm_iap_enrich"
@@ -599,6 +665,7 @@ _addons: {
 			"iap",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"crm_iap_mine": {
 		dir: "addons/crm_iap_mine"
@@ -612,6 +679,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"crm_livechat": {
 		dir: "addons/crm_livechat"
@@ -624,6 +692,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"crm_mail_plugin": {
 		dir: "addons/crm_mail_plugin"
@@ -633,6 +702,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"crm_sms": {
 		dir: "addons/crm_sms"
@@ -642,6 +712,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"data_recycle": {
 		dir: "addons/data_recycle"
@@ -652,6 +723,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"delivery": {
 		dir: "addons/delivery"
@@ -664,6 +736,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"delivery_mondialrelay": {
 		dir: "addons/delivery_mondialrelay"
@@ -683,6 +756,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"digest": {
 		dir: "addons/digest"
@@ -695,6 +769,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"event": {
 		dir: "addons/event"
@@ -712,6 +787,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"event_booth": {
 		dir: "addons/event_booth"
@@ -720,6 +796,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"event_booth_sale": {
 		dir: "addons/event_booth_sale"
@@ -734,6 +811,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"event_crm": {
 		dir: "addons/event_crm"
@@ -747,6 +825,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"event_crm_sale": {
 		dir: "addons/event_crm_sale"
@@ -756,6 +835,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"event_product": {
 		dir: "addons/event_product"
@@ -766,6 +846,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"event_sale": {
 		dir: "addons/event_sale"
@@ -781,6 +862,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"event_sms": {
 		dir: "addons/event_sms"
@@ -792,6 +874,7 @@ _addons: {
 			"phone_validation",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"fleet": {
 		dir: "addons/fleet"
@@ -803,6 +886,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"gamification": {
 		dir: "addons/gamification"
@@ -813,6 +897,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"gamification_sale_crm": {
 		dir: "addons/gamification_sale_crm"
@@ -852,6 +937,15 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
+		not_run: [
+			{
+				tests: [
+					"addons/google_calendar/tests/test_sync_common.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"google_gmail": {
 		dir: "addons/google_gmail"
@@ -886,6 +980,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"hr_attendance": {
 		dir: "addons/hr_attendance"
@@ -899,6 +994,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_calendar": {
 		dir: "addons/hr_calendar"
@@ -911,6 +1007,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_expense": {
 		dir: "addons/hr_expense"
@@ -924,6 +1021,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"hr_fleet": {
 		dir: "addons/hr_fleet"
@@ -935,6 +1033,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_gamification": {
 		dir: "addons/hr_gamification"
@@ -947,6 +1046,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_holidays": {
 		dir: "addons/hr_holidays"
@@ -964,6 +1064,15 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "hr"
+		not_run: [
+			{
+				tests: [
+					"addons/hr_holidays/tests/test_past_accruals.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"hr_holidays_attendance": {
 		dir: "addons/hr_holidays_attendance"
@@ -975,6 +1084,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_holidays_homeworking": {
 		dir: "addons/hr_holidays_homeworking"
@@ -999,6 +1109,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"hr_homeworking_calendar": {
 		dir: "addons/hr_homeworking_calendar"
@@ -1011,6 +1122,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_hourly_cost": {
 		dir: "addons/hr_hourly_cost"
@@ -1049,6 +1161,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"hr_presence": {
 		dir: "addons/hr_presence"
@@ -1077,6 +1190,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_recruitment_skills": {
 		dir: "addons/hr_recruitment_skills"
@@ -1089,6 +1203,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_recruitment_sms": {
 		dir: "addons/hr_recruitment_sms"
@@ -1109,6 +1224,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_skills": {
 		dir: "addons/hr_skills"
@@ -1122,6 +1238,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"hr_skills_event": {
 		dir: "addons/hr_skills_event"
@@ -1131,9 +1248,9 @@ _addons: {
 		]
 		test_depends: [
 			"web",
-			"web_tour",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_skills_slides": {
 		dir: "addons/hr_skills_slides"
@@ -1145,6 +1262,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"hr_skills_survey": {
 		dir: "addons/hr_skills_survey"
@@ -1154,6 +1272,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "hr"
 	}
 	"hr_timesheet": {
 		dir: "addons/hr_timesheet"
@@ -1169,6 +1288,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_timesheet_attendance": {
 		dir: "addons/hr_timesheet_attendance"
@@ -1178,6 +1298,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "hr"
 	}
 	"hr_work_entry": {
 		dir: "addons/hr_work_entry"
@@ -1189,6 +1310,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"hr_work_entry_holidays": {
 		dir: "addons/hr_work_entry_holidays"
@@ -1200,6 +1322,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"html_builder": {
 		dir: "addons/html_builder"
@@ -1212,6 +1335,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"html_editor": {
 		dir: "addons/html_editor"
@@ -1279,6 +1403,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"iot_base": {
 		dir: "addons/iot_base"
@@ -1290,13 +1415,17 @@ _addons: {
 	}
 	"iot_box_image": {
 		dir: "addons/iot_box_image"
-		depends: []
+		depends: [
+			"base",
+		]
 		test_depends: []
 		has_tests: false
 	}
 	"iot_drivers": {
 		dir: "addons/iot_drivers"
-		depends: []
+		depends: [
+			"base",
+		]
 		test_depends: []
 		has_tests: false
 	}
@@ -1314,6 +1443,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_account_withholding_tax": {
 		dir: "addons/l10n_account_withholding_tax"
@@ -1325,6 +1455,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_account_withholding_tax_pos": {
 		dir: "addons/l10n_account_withholding_tax_pos"
@@ -1365,6 +1496,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_ar": {
 		dir: "addons/l10n_ar"
@@ -1375,6 +1507,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_ar_pos": {
 		dir: "addons/l10n_ar_pos"
@@ -1387,6 +1520,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_ar_stock": {
 		dir: "addons/l10n_ar_stock"
@@ -1398,6 +1532,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"l10n_ar_website_sale": {
 		dir: "addons/l10n_ar_website_sale"
@@ -1409,6 +1544,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"l10n_ar_withholding": {
 		dir: "addons/l10n_ar_withholding"
@@ -1418,6 +1554,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_at": {
 		dir: "addons/l10n_at"
@@ -1478,6 +1615,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_bf": {
 		dir: "addons/l10n_bf"
@@ -1545,6 +1683,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_br_sales": {
 		dir: "addons/l10n_br_sales"
@@ -1610,6 +1749,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_ch_pos": {
 		dir: "addons/l10n_ch_pos"
@@ -1621,6 +1761,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_ci": {
 		dir: "addons/l10n_ci"
@@ -1643,6 +1784,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_cm": {
 		dir: "addons/l10n_cm"
@@ -1720,6 +1862,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_de": {
 		dir: "addons/l10n_de"
@@ -1732,6 +1875,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_din5008": {
 		dir: "addons/l10n_din5008"
@@ -1818,6 +1962,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_dk_nemhandel_response": {
 		dir: "addons/l10n_dk_nemhandel_response"
@@ -1838,6 +1983,7 @@ _addons: {
 			"l10n_account_edi_ubl_cii_tests",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_do": {
 		dir: "addons/l10n_do"
@@ -1871,6 +2017,7 @@ _addons: {
 			"account_edi",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_ec_sale": {
 		dir: "addons/l10n_ec_sale"
@@ -1880,6 +2027,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"l10n_ec_stock": {
 		dir: "addons/l10n_ec_stock"
@@ -1917,6 +2065,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_es": {
 		dir: "addons/l10n_es"
@@ -1939,6 +2088,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_es_edi_sii": {
 		dir: "addons/l10n_es_edi_sii"
@@ -1949,6 +2099,15 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
+		not_run: [
+			{
+				tests: [
+					"addons/l10n_es_edi_sii/tests/test_edi_web_services.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"l10n_es_edi_tbai": {
 		dir: "addons/l10n_es_edi_tbai"
@@ -1960,6 +2119,15 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
+		not_run: [
+			{
+				tests: [
+					"addons/l10n_es_edi_tbai/tests/test_edi_web_services.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"l10n_es_edi_tbai_pos": {
 		dir: "addons/l10n_es_edi_tbai_pos"
@@ -1972,6 +2140,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_es_edi_verifactu": {
 		dir: "addons/l10n_es_edi_verifactu"
@@ -1983,6 +2152,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_es_edi_verifactu_pos": {
 		dir: "addons/l10n_es_edi_verifactu_pos"
@@ -1994,6 +2164,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_es_pos": {
 		dir: "addons/l10n_es_pos"
@@ -2006,6 +2177,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_et": {
 		dir: "addons/l10n_et"
@@ -2022,6 +2194,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_fi": {
 		dir: "addons/l10n_fi"
@@ -2033,6 +2206,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_fi_sale": {
 		dir: "addons/l10n_fi_sale"
@@ -2062,6 +2236,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_fr_facturx_chorus_pro": {
 		dir: "addons/l10n_fr_facturx_chorus_pro"
@@ -2072,6 +2247,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_fr_hr_holidays": {
 		dir: "addons/l10n_fr_hr_holidays"
@@ -2080,6 +2256,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "hr"
 	}
 	"l10n_fr_hr_work_entry_holidays": {
 		dir: "addons/l10n_fr_hr_work_entry_holidays"
@@ -2089,6 +2266,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "hr"
 	}
 	"l10n_fr_pdp": {
 		dir: "addons/l10n_fr_pdp"
@@ -2105,6 +2283,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_fr_pdp_pos": {
 		dir: "addons/l10n_fr_pdp_pos"
@@ -2114,6 +2293,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_fr_pos_cert": {
 		dir: "addons/l10n_fr_pos_cert"
@@ -2126,6 +2306,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_ga": {
 		dir: "addons/l10n_ga"
@@ -2164,6 +2345,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_ge": {
 		dir: "addons/l10n_ge"
@@ -2229,6 +2411,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_gr_edi_e_invoo": {
 		dir: "addons/l10n_gr_edi_e_invoo"
@@ -2240,6 +2423,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_gt": {
 		dir: "addons/l10n_gt"
@@ -2267,6 +2451,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_hn": {
 		dir: "addons/l10n_hn"
@@ -2297,6 +2482,21 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
+		not_run: [
+			{
+				tests: [
+					"addons/l10n_hr_edi/tests/test_mer_api.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+			{
+				tests: [
+					"addons/l10n_hr_edi/tests/test_hr_edi_common.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"l10n_hr_kuna": {
 		dir: "addons/l10n_hr_kuna"
@@ -2326,6 +2526,15 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
+		not_run: [
+			{
+				tests: [
+					"addons/l10n_hu_edi/tests/test_flows_live.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"l10n_hu_edi_receive": {
 		dir: "addons/l10n_hu_edi_receive"
@@ -2337,6 +2546,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_id": {
 		dir: "addons/l10n_id"
@@ -2347,6 +2557,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_id_efaktur_coretax": {
 		dir: "addons/l10n_id_efaktur_coretax"
@@ -2357,6 +2568,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_id_pos": {
 		dir: "addons/l10n_id_pos"
@@ -2369,6 +2581,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_ie": {
 		dir: "addons/l10n_ie"
@@ -2402,6 +2615,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_in_edi": {
 		dir: "addons/l10n_in_edi"
@@ -2411,6 +2625,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_in_ewaybill": {
 		dir: "addons/l10n_in_ewaybill"
@@ -2419,6 +2634,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_in_ewaybill_irn": {
 		dir: "addons/l10n_in_ewaybill_irn"
@@ -2430,6 +2646,7 @@ _addons: {
 			"l10n_in",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_in_ewaybill_stock": {
 		dir: "addons/l10n_in_ewaybill_stock"
@@ -2441,6 +2658,7 @@ _addons: {
 			"l10n_in",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"l10n_in_hr_holidays": {
 		dir: "addons/l10n_in_hr_holidays"
@@ -2451,6 +2669,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "hr"
 	}
 	"l10n_in_pos": {
 		dir: "addons/l10n_in_pos"
@@ -2463,6 +2682,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_in_purchase_stock": {
 		dir: "addons/l10n_in_purchase_stock"
@@ -2481,6 +2701,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"l10n_in_sale_stock": {
 		dir: "addons/l10n_in_sale_stock"
@@ -2535,6 +2756,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_it_edi_doi": {
 		dir: "addons/l10n_it_edi_doi"
@@ -2544,6 +2766,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"l10n_it_edi_sale": {
 		dir: "addons/l10n_it_edi_sale"
@@ -2553,6 +2776,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"l10n_it_stock_ddt": {
 		dir: "addons/l10n_it_stock_ddt"
@@ -2565,6 +2789,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"l10n_jo": {
 		dir: "addons/l10n_jo"
@@ -2584,6 +2809,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_jo_edi_pos": {
 		dir: "addons/l10n_jo_edi_pos"
@@ -2596,6 +2822,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_jp": {
 		dir: "addons/l10n_jp"
@@ -2614,6 +2841,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_ke": {
 		dir: "addons/l10n_ke"
@@ -2633,6 +2861,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_kh": {
 		dir: "addons/l10n_kh"
@@ -2696,6 +2925,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_latam_invoice_document": {
 		dir: "addons/l10n_latam_invoice_document"
@@ -2732,6 +2962,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_lt": {
 		dir: "addons/l10n_lt"
@@ -2849,6 +3080,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_my": {
 		dir: "addons/l10n_my"
@@ -2870,6 +3102,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_my_edi_pos": {
 		dir: "addons/l10n_my_edi_pos"
@@ -2881,6 +3114,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_my_ubl_pint": {
 		dir: "addons/l10n_my_ubl_pint"
@@ -2891,6 +3125,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_mz": {
 		dir: "addons/l10n_mz"
@@ -2993,6 +3228,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_ph": {
 		dir: "addons/l10n_ph"
@@ -3003,6 +3239,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_pk": {
 		dir: "addons/l10n_pk"
@@ -3022,6 +3259,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_pl_bank_verification": {
 		dir: "addons/l10n_pl_bank_verification"
@@ -3032,6 +3270,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_pl_edi": {
 		dir: "addons/l10n_pl_edi"
@@ -3044,6 +3283,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_pl_edi_jst": {
 		dir: "addons/l10n_pl_edi_jst"
@@ -3053,6 +3293,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_pt": {
 		dir: "addons/l10n_pt"
@@ -3066,6 +3307,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_qa": {
 		dir: "addons/l10n_qa"
@@ -3102,6 +3344,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_ro_edi": {
 		dir: "addons/l10n_ro_edi"
@@ -3115,6 +3358,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_ro_edi_stock": {
 		dir: "addons/l10n_ro_edi_stock"
@@ -3129,6 +3373,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"l10n_ro_edi_stock_batch": {
 		dir: "addons/l10n_ro_edi_stock_batch"
@@ -3138,6 +3383,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"l10n_rs": {
 		dir: "addons/l10n_rs"
@@ -3158,6 +3404,7 @@ _addons: {
 			"l10n_account_edi_ubl_cii_tests",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_rw": {
 		dir: "addons/l10n_rw"
@@ -3176,6 +3423,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_sa_edi": {
 		dir: "addons/l10n_sa_edi"
@@ -3191,6 +3439,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_sa_edi_pos": {
 		dir: "addons/l10n_sa_edi_pos"
@@ -3204,6 +3453,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_sa_pos": {
 		dir: "addons/l10n_sa_pos"
@@ -3218,6 +3468,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_sa_withholding_tax": {
 		dir: "addons/l10n_sa_withholding_tax"
@@ -3246,6 +3497,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_sg_ubl_pint": {
 		dir: "addons/l10n_sg_ubl_pint"
@@ -3256,6 +3508,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_si": {
 		dir: "addons/l10n_si"
@@ -3266,6 +3519,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_sk": {
 		dir: "addons/l10n_sk"
@@ -3318,6 +3572,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_tg": {
 		dir: "addons/l10n_tg"
@@ -3336,6 +3591,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_tn": {
 		dir: "addons/l10n_tn"
@@ -3354,6 +3610,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_tr_nilvera": {
 		dir: "addons/l10n_tr_nilvera"
@@ -3384,6 +3641,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"l10n_tr_nilvera_einvoice": {
 		dir: "addons/l10n_tr_nilvera_einvoice"
@@ -3395,6 +3653,15 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
+		not_run: [
+			{
+				tests: [
+					"addons/l10n_tr_nilvera_einvoice/tests/test_xml_ubl_tr_common.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"l10n_tr_nilvera_einvoice_extended": {
 		dir: "addons/l10n_tr_nilvera_einvoice_extended"
@@ -3404,6 +3671,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_tw": {
 		dir: "addons/l10n_tw"
@@ -3424,6 +3692,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_tw_edi_ecpay_pos": {
 		dir: "addons/l10n_tw_edi_ecpay_pos"
@@ -3435,6 +3704,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_tw_edi_ecpay_website_sale": {
 		dir: "addons/l10n_tw_edi_ecpay_website_sale"
@@ -3447,6 +3717,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"l10n_tz_account": {
 		dir: "addons/l10n_tz_account"
@@ -3508,6 +3779,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_uy_pos": {
 		dir: "addons/l10n_uy_pos"
@@ -3546,6 +3818,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"l10n_vn_edi_viettel": {
 		dir: "addons/l10n_vn_edi_viettel"
@@ -3556,6 +3829,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"l10n_vn_edi_viettel_pos": {
 		dir: "addons/l10n_vn_edi_viettel_pos"
@@ -3567,6 +3841,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"l10n_yt": {
 		dir: "addons/l10n_yt"
@@ -3602,6 +3877,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"loyalty": {
 		dir: "addons/loyalty"
@@ -3614,6 +3890,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"lunch": {
 		dir: "addons/lunch"
@@ -3625,6 +3902,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mail": {
 		dir: "addons/mail"
@@ -3667,6 +3945,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mail_plugin": {
 		dir: "addons/mail_plugin"
@@ -3679,6 +3958,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"maintenance": {
 		dir: "addons/maintenance"
@@ -3689,6 +3969,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"marketing_card": {
 		dir: "addons/marketing_card"
@@ -3702,6 +3983,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"mass_mailing": {
 		dir: "addons/mass_mailing"
@@ -3721,6 +4003,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mass_mailing_crm": {
 		dir: "addons/mass_mailing_crm"
@@ -3762,6 +4045,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mass_mailing_event_track": {
 		dir: "addons/mass_mailing_event_track"
@@ -3823,6 +4107,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mass_mailing_themes": {
 		dir: "addons/mass_mailing_themes"
@@ -3851,6 +4136,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"microsoft_outlook": {
 		dir: "addons/microsoft_outlook"
@@ -3873,6 +4159,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mrp_account": {
 		dir: "addons/mrp_account"
@@ -3884,6 +4171,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"mrp_landed_costs": {
 		dir: "addons/mrp_landed_costs"
@@ -3895,6 +4183,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"mrp_product_expiry": {
 		dir: "addons/mrp_product_expiry"
@@ -3906,6 +4195,7 @@ _addons: {
 			"stock",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mrp_repair": {
 		dir: "addons/mrp_repair"
@@ -3915,6 +4205,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"mrp_subcontracting": {
 		dir: "addons/mrp_subcontracting"
@@ -3926,6 +4217,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"mrp_subcontracting_account": {
 		dir: "addons/mrp_subcontracting_account"
@@ -3937,6 +4229,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"mrp_subcontracting_dropshipping": {
 		dir: "addons/mrp_subcontracting_dropshipping"
@@ -3948,6 +4241,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"mrp_subcontracting_landed_costs": {
 		dir: "addons/mrp_subcontracting_landed_costs"
@@ -3957,6 +4251,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"mrp_subcontracting_purchase": {
 		dir: "addons/mrp_subcontracting_purchase"
@@ -3968,6 +4263,7 @@ _addons: {
 			"mrp_subcontracting_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"mrp_subcontracting_repair": {
 		dir: "addons/mrp_subcontracting_repair"
@@ -3987,6 +4283,14 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		not_run: [
+			{
+				tests: [
+					"addons/onboarding/tests/test_onboarding_concurrency.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"partner_autocomplete": {
 		dir: "addons/partner_autocomplete"
@@ -4010,6 +4314,7 @@ _addons: {
 			"product",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"payment": {
 		dir: "addons/payment"
@@ -4023,6 +4328,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_adyen": {
 		dir: "addons/payment_adyen"
@@ -4033,6 +4339,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_aps": {
 		dir: "addons/payment_aps"
@@ -4041,6 +4348,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_asiapay": {
 		dir: "addons/payment_asiapay"
@@ -4049,6 +4357,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_authorize": {
 		dir: "addons/payment_authorize"
@@ -4059,6 +4368,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_buckaroo": {
 		dir: "addons/payment_buckaroo"
@@ -4067,6 +4377,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_custom": {
 		dir: "addons/payment_custom"
@@ -4077,6 +4388,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_demo": {
 		dir: "addons/payment_demo"
@@ -4087,6 +4399,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_dpo": {
 		dir: "addons/payment_dpo"
@@ -4095,6 +4408,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_ecpay": {
 		dir: "addons/payment_ecpay"
@@ -4103,6 +4417,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_flutterwave": {
 		dir: "addons/payment_flutterwave"
@@ -4113,6 +4428,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_iyzico": {
 		dir: "addons/payment_iyzico"
@@ -4121,6 +4437,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_mercado_pago": {
 		dir: "addons/payment_mercado_pago"
@@ -4131,6 +4448,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_mollie": {
 		dir: "addons/payment_mollie"
@@ -4139,6 +4457,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_nuvei": {
 		dir: "addons/payment_nuvei"
@@ -4147,6 +4466,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_paymob": {
 		dir: "addons/payment_paymob"
@@ -4155,6 +4475,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_paypal": {
 		dir: "addons/payment_paypal"
@@ -4165,6 +4486,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_payu": {
 		dir: "addons/payment_payu"
@@ -4173,6 +4495,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_razorpay": {
 		dir: "addons/payment_razorpay"
@@ -4183,6 +4506,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_redsys": {
 		dir: "addons/payment_redsys"
@@ -4191,6 +4515,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"payment_stripe": {
 		dir: "addons/payment_stripe"
@@ -4201,6 +4526,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_toss_payments": {
 		dir: "addons/payment_toss_payments"
@@ -4211,6 +4537,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_worldline": {
 		dir: "addons/payment_worldline"
@@ -4221,6 +4548,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"payment_xendit": {
 		dir: "addons/payment_xendit"
@@ -4231,6 +4559,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"phone_validation": {
 		dir: "addons/phone_validation"
@@ -4264,6 +4593,15 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "stock_account"
+		not_run: [
+			{
+				tests: [
+					"addons/point_of_sale/tests/test_performances.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"portal": {
 		dir: "addons/portal"
@@ -4278,6 +4616,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"portal_rating": {
 		dir: "addons/portal_rating"
@@ -4302,6 +4641,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_adyen": {
 		dir: "addons/pos_adyen"
@@ -4312,6 +4652,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_cashdro": {
 		dir: "addons/pos_cashdro"
@@ -4344,6 +4685,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_dpopay": {
 		dir: "addons/pos_dpopay"
@@ -4374,6 +4716,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_event_sale": {
 		dir: "addons/pos_event_sale"
@@ -4383,6 +4726,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_glory_cash": {
 		dir: "addons/pos_glory_cash"
@@ -4405,6 +4749,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_hr_restaurant": {
 		dir: "addons/pos_hr_restaurant"
@@ -4417,6 +4762,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_imin": {
 		dir: "addons/pos_imin"
@@ -4440,6 +4786,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_mercado_pago": {
 		dir: "addons/pos_mercado_pago"
@@ -4461,6 +4808,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_mrp": {
 		dir: "addons/pos_mrp"
@@ -4472,6 +4820,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_online_payment": {
 		dir: "addons/pos_online_payment"
@@ -4486,6 +4835,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"pos_online_payment_self_order": {
 		dir: "addons/pos_online_payment_self_order"
@@ -4501,6 +4851,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_pine_labs": {
 		dir: "addons/pos_pine_labs"
@@ -4521,6 +4872,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_razorpay": {
 		dir: "addons/pos_razorpay"
@@ -4531,6 +4883,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_repair": {
 		dir: "addons/pos_repair"
@@ -4543,6 +4896,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_restaurant": {
 		dir: "addons/pos_restaurant"
@@ -4553,6 +4907,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_restaurant_adyen": {
 		dir: "addons/pos_restaurant_adyen"
@@ -4578,6 +4933,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_restaurant_stripe": {
 		dir: "addons/pos_restaurant_stripe"
@@ -4600,6 +4956,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_sale": {
 		dir: "addons/pos_sale"
@@ -4615,6 +4972,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_sale_loyalty": {
 		dir: "addons/pos_sale_loyalty"
@@ -4627,6 +4985,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_sale_margin": {
 		dir: "addons/pos_sale_margin"
@@ -4638,6 +4997,7 @@ _addons: {
 			"point_of_sale",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_self_order": {
 		dir: "addons/pos_self_order"
@@ -4652,6 +5012,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_self_order_adyen": {
 		dir: "addons/pos_self_order_adyen"
@@ -4685,6 +5046,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_self_order_razorpay": {
 		dir: "addons/pos_self_order_razorpay"
@@ -4716,6 +5078,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_self_order_viva_com": {
 		dir: "addons/pos_self_order_viva_com"
@@ -4738,6 +5101,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"pos_stripe": {
 		dir: "addons/pos_stripe"
@@ -4760,6 +5124,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "point_of_sale"
 	}
 	"privacy_lookup": {
 		dir: "addons/privacy_lookup"
@@ -4780,6 +5145,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"product_email_template": {
 		dir: "addons/product_email_template"
@@ -4788,6 +5154,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"product_expiry": {
 		dir: "addons/product_expiry"
@@ -4799,6 +5166,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"product_margin": {
 		dir: "addons/product_margin"
@@ -4807,6 +5175,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"product_matrix": {
 		dir: "addons/product_matrix"
@@ -4816,7 +5185,7 @@ _addons: {
 		test_depends: [
 			"web",
 		]
-		has_tests: true
+		has_tests: false
 	}
 	"project": {
 		dir: "addons/project"
@@ -4836,6 +5205,7 @@ _addons: {
 			"test_mail",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"project_account": {
 		dir: "addons/project_account"
@@ -4845,6 +5215,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"project_hr_expense": {
 		dir: "addons/project_hr_expense"
@@ -4856,6 +5227,7 @@ _addons: {
 			"project",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"project_hr_skills": {
 		dir: "addons/project_hr_skills"
@@ -4874,6 +5246,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"project_mrp": {
 		dir: "addons/project_mrp"
@@ -4894,6 +5267,7 @@ _addons: {
 			"project",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"project_mrp_sale": {
 		dir: "addons/project_mrp_sale"
@@ -4904,6 +5278,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"project_mrp_stock_landed_costs": {
 		dir: "addons/project_mrp_stock_landed_costs"
@@ -4927,6 +5302,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"project_purchase_stock": {
 		dir: "addons/project_purchase_stock"
@@ -4936,6 +5312,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"project_sale_expense": {
 		dir: "addons/project_sale_expense"
@@ -4949,6 +5326,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"project_sms": {
 		dir: "addons/project_sms"
@@ -4958,6 +5336,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"project_stock": {
 		dir: "addons/project_stock"
@@ -4978,6 +5357,7 @@ _addons: {
 			"stock",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"project_stock_landed_costs": {
 		dir: "addons/project_stock_landed_costs"
@@ -4996,6 +5376,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "hr"
 	}
 	"project_todo": {
 		dir: "addons/project_todo"
@@ -5011,6 +5392,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"purchase": {
 		dir: "addons/purchase"
@@ -5025,6 +5407,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"purchase_edi_ubl_bis3": {
 		dir: "addons/purchase_edi_ubl_bis3"
@@ -5036,6 +5419,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"purchase_mrp": {
 		dir: "addons/purchase_mrp"
@@ -5050,6 +5434,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"purchase_product_matrix": {
 		dir: "addons/purchase_product_matrix"
@@ -5063,6 +5448,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"purchase_repair": {
 		dir: "addons/purchase_repair"
@@ -5072,6 +5458,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"purchase_requisition": {
 		dir: "addons/purchase_requisition"
@@ -5082,6 +5469,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"purchase_requisition_sale": {
 		dir: "addons/purchase_requisition_sale"
@@ -5091,6 +5479,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"purchase_requisition_stock": {
 		dir: "addons/purchase_requisition_stock"
@@ -5100,6 +5489,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"purchase_stock": {
 		dir: "addons/purchase_stock"
@@ -5116,6 +5506,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"rating": {
 		dir: "addons/rating"
@@ -5127,6 +5518,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"repair": {
 		dir: "addons/repair"
@@ -5140,6 +5532,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"resource": {
 		dir: "addons/resource"
@@ -5189,6 +5582,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"sale_crm": {
 		dir: "addons/sale_crm"
@@ -5198,6 +5592,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"sale_edi_ubl": {
 		dir: "addons/sale_edi_ubl"
@@ -5207,6 +5602,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "account"
 	}
 	"sale_expense": {
 		dir: "addons/sale_expense"
@@ -5218,6 +5614,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_expense_margin": {
 		dir: "addons/sale_expense_margin"
@@ -5229,6 +5626,7 @@ _addons: {
 			"hr_expense",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_gelato": {
 		dir: "addons/sale_gelato"
@@ -5238,6 +5636,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"sale_gelato_stock": {
 		dir: "addons/sale_gelato_stock"
@@ -5259,6 +5658,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_loyalty_delivery": {
 		dir: "addons/sale_loyalty_delivery"
@@ -5268,6 +5668,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"sale_management": {
 		dir: "addons/sale_management"
@@ -5283,6 +5684,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_margin": {
 		dir: "addons/sale_margin"
@@ -5293,6 +5695,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_mrp": {
 		dir: "addons/sale_mrp"
@@ -5308,6 +5711,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_mrp_margin": {
 		dir: "addons/sale_mrp_margin"
@@ -5317,6 +5721,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_pdf_quote_builder": {
 		dir: "addons/sale_pdf_quote_builder"
@@ -5330,6 +5735,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_product_matrix": {
 		dir: "addons/sale_product_matrix"
@@ -5357,6 +5763,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_project_stock": {
 		dir: "addons/sale_project_stock"
@@ -5370,6 +5777,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_project_stock_account": {
 		dir: "addons/sale_project_stock_account"
@@ -5379,6 +5787,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_purchase": {
 		dir: "addons/sale_purchase"
@@ -5388,6 +5797,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"sale_purchase_project": {
 		dir: "addons/sale_purchase_project"
@@ -5398,6 +5808,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"sale_purchase_stock": {
 		dir: "addons/sale_purchase_stock"
@@ -5408,6 +5819,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_service": {
 		dir: "addons/sale_service"
@@ -5440,6 +5852,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_stock_margin": {
 		dir: "addons/sale_stock_margin"
@@ -5451,6 +5864,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_stock_product_expiry": {
 		dir: "addons/sale_stock_product_expiry"
@@ -5463,6 +5877,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"sale_timesheet": {
 		dir: "addons/sale_timesheet"
@@ -5479,6 +5894,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"sale_timesheet_margin": {
 		dir: "addons/sale_timesheet_margin"
@@ -5488,6 +5904,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "sale"
 	}
 	"sales_team": {
 		dir: "addons/sales_team"
@@ -5499,6 +5916,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"sms": {
 		dir: "addons/sms"
@@ -5522,6 +5940,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"snailmail": {
 		dir: "addons/snailmail"
@@ -5542,6 +5961,15 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
+		not_run: [
+			{
+				tests: [
+					"addons/snailmail_account/tests/test_pingen_send.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"social_media": {
 		dir: "addons/social_media"
@@ -5562,6 +5990,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"spreadsheet_account": {
 		dir: "addons/spreadsheet_account"
@@ -5573,6 +6002,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"spreadsheet_dashboard": {
 		dir: "addons/spreadsheet_dashboard"
@@ -5583,6 +6013,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"spreadsheet_dashboard_account": {
 		dir: "addons/spreadsheet_dashboard_account"
@@ -5707,6 +6138,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"stock_account": {
 		dir: "addons/stock_account"
@@ -5719,6 +6151,15 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
+		not_run: [
+			{
+				tests: [
+					"addons/stock_account/tests/test_anglo_saxon_valuation_reconciliation_common.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"stock_delivery": {
 		dir: "addons/stock_delivery"
@@ -5731,6 +6172,7 @@ _addons: {
 			"stock",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"stock_dropshipping": {
 		dir: "addons/stock_dropshipping"
@@ -5741,6 +6183,7 @@ _addons: {
 			"stock_account",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"stock_fleet": {
 		dir: "addons/stock_fleet"
@@ -5759,6 +6202,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "stock_account"
 	}
 	"stock_maintenance": {
 		dir: "addons/stock_maintenance"
@@ -5778,6 +6222,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"stock_sms": {
 		dir: "addons/stock_sms"
@@ -5802,6 +6247,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"survey_crm": {
 		dir: "addons/survey_crm"
@@ -5811,18 +6257,21 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"test_access_rights": {
 		dir: "odoo/addons/test_access_rights"
-		depends: []
-		test_depends: [
+		depends: [
 			"base",
 		]
+		test_depends: []
 		has_tests: true
 	}
 	"test_action_bindings": {
 		dir: "odoo/addons/test_action_bindings"
-		depends: []
+		depends: [
+			"base",
+		]
 		test_depends: []
 		has_tests: true
 	}
@@ -5838,7 +6287,9 @@ _addons: {
 	}
 	"test_auth_custom": {
 		dir: "odoo/addons/test_auth_custom"
-		depends: []
+		depends: [
+			"base",
+		]
 		test_depends: []
 		has_tests: true
 	}
@@ -5853,10 +6304,13 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"test_convert": {
 		dir: "odoo/addons/test_convert"
-		depends: []
+		depends: [
+			"base",
+		]
 		test_depends: []
 		has_tests: true
 	}
@@ -5885,11 +6339,13 @@ _addons: {
 		test_depends: [
 			"website",
 		]
-		has_tests: true
+		has_tests: false
 	}
 	"test_data_module": {
 		dir: "odoo/addons/test_data_module"
-		depends: []
+		depends: [
+			"base",
+		]
 		test_depends: []
 		has_tests: false
 	}
@@ -5923,6 +6379,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"test_event_full": {
 		dir: "addons/test_event_full"
@@ -5951,6 +6408,15 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: true
+		template: "website_sale"
+		not_run: [
+			{
+				tests: [
+					"addons/test_event_full/tests/test_performance.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"test_html_field_history": {
 		dir: "addons/test_html_field_history"
@@ -5972,6 +6438,22 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "mail"
+		not_run: [
+			{
+				tests: [
+					"odoo/addons/test_http/tests/test_registry.py",
+					"odoo/addons/test_http/tests/test_web_server.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+			{
+				tests: [
+					"odoo/addons/test_http/tests/test_common.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"test_import_export": {
 		dir: "addons/test_import_export"
@@ -5984,6 +6466,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"test_inherit": {
 		dir: "odoo/addons/test_inherit"
@@ -6039,6 +6522,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"test_mail_full": {
 		dir: "addons/test_mail_full"
@@ -6061,6 +6545,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"test_mail_sms": {
 		dir: "addons/test_mail_sms"
@@ -6077,6 +6562,7 @@ _addons: {
 			"test_mail",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"test_main_flows": {
 		dir: "odoo/addons/test_main_flows"
@@ -6092,6 +6578,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "stock_account"
 	}
 	"test_mass_mailing": {
 		dir: "addons/test_mass_mailing"
@@ -6107,10 +6594,13 @@ _addons: {
 			"phone_validation",
 		]
 		has_tests: true
+		template: "mail"
 	}
 	"test_mimetypes": {
 		dir: "odoo/addons/test_mimetypes"
-		depends: []
+		depends: [
+			"base",
+		]
 		test_depends: []
 		has_tests: true
 	}
@@ -6168,6 +6658,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"test_sale_purchase_edi_ubl": {
 		dir: "addons/test_sale_purchase_edi_ubl"
@@ -6180,6 +6671,7 @@ _addons: {
 			"sale",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"test_search_panel": {
 		dir: "odoo/addons/test_search_panel"
@@ -6196,6 +6688,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "mail"
 	}
 	"test_testing_utilities": {
 		dir: "odoo/addons/test_testing_utilities"
@@ -6215,6 +6708,14 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		not_run: [
+			{
+				tests: [
+					"odoo/addons/test_translation_import/tests/test_export_wizard.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"test_uninstall": {
 		dir: "odoo/addons/test_uninstall"
@@ -6239,6 +6740,15 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "website"
+		not_run: [
+			{
+				tests: [
+					"addons/test_website/tests/test_views_during_module_operation.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"test_website_modules": {
 		dir: "addons/test_website_modules"
@@ -6259,6 +6769,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"test_website_slides_full": {
 		dir: "addons/test_website_slides_full"
@@ -6272,6 +6783,7 @@ _addons: {
 			"website_slides",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"theme_default": {
 		dir: "addons/theme_default"
@@ -6370,6 +6882,21 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "mail"
+		not_run: [
+			{
+				tests: [
+					"addons/website/tests/test_iap.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+			{
+				tests: [
+					"addons/website/tests/test_views_inherit_module_update.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"website_blog": {
 		dir: "addons/website_blog"
@@ -6387,6 +6914,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_cf_turnstile": {
 		dir: "addons/website_cf_turnstile"
@@ -6408,6 +6936,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_crm_iap_reveal": {
 		dir: "addons/website_crm_iap_reveal"
@@ -6422,6 +6951,7 @@ _addons: {
 			"iap",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_crm_livechat": {
 		dir: "addons/website_crm_livechat"
@@ -6454,6 +6984,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"website_crm_sms": {
 		dir: "addons/website_crm_sms"
@@ -6463,6 +6994,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "website"
 	}
 	"website_customer": {
 		dir: "addons/website_customer"
@@ -6478,6 +7010,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"website_event": {
 		dir: "addons/website_event"
@@ -6497,6 +7030,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_event_booth": {
 		dir: "addons/website_event_booth"
@@ -6520,6 +7054,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_event_booth_sale": {
 		dir: "addons/website_event_booth_sale"
@@ -6534,6 +7069,7 @@ _addons: {
 			"website_event_sale",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_event_booth_sale_exhibitor": {
 		dir: "addons/website_event_booth_sale_exhibitor"
@@ -6556,6 +7092,15 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "website"
+		not_run: [
+			{
+				tests: [
+					"addons/website_event_crm/tests/test_visitor_propagation.py",
+				]
+				reason: "defines no test case class of its own (helpers, or @standalone scripts run by their tag alone): odoo's loader finds no test in it"
+			},
+		]
 	}
 	"website_event_exhibitor": {
 		dir: "addons/website_event_exhibitor"
@@ -6568,6 +7113,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_event_sale": {
 		dir: "addons/website_event_sale"
@@ -6582,6 +7128,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_event_track": {
 		dir: "addons/website_event_track"
@@ -6596,6 +7143,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_event_track_live": {
 		dir: "addons/website_event_track_live"
@@ -6647,6 +7195,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_google_map": {
 		dir: "addons/website_google_map"
@@ -6672,6 +7221,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_hr_recruitment_livechat": {
 		dir: "addons/website_hr_recruitment_livechat"
@@ -6694,6 +7244,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_livechat": {
 		dir: "addons/website_livechat"
@@ -6708,6 +7259,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_mail": {
 		dir: "addons/website_mail"
@@ -6733,6 +7285,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_mass_mailing": {
 		dir: "addons/website_mass_mailing"
@@ -6747,6 +7300,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_mass_mailing_sms": {
 		dir: "addons/website_mass_mailing_sms"
@@ -6756,6 +7310,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "website"
 	}
 	"website_partner": {
 		dir: "addons/website_partner"
@@ -6781,6 +7336,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "account"
 	}
 	"website_profile": {
 		dir: "addons/website_profile"
@@ -6795,6 +7351,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_project": {
 		dir: "addons/website_project"
@@ -6808,6 +7365,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_sale": {
 		dir: "addons/website_sale"
@@ -6835,6 +7393,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"website_sale_autocomplete": {
 		dir: "addons/website_sale_autocomplete"
@@ -6846,6 +7405,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_sale_collect": {
 		dir: "addons/website_sale_collect"
@@ -6862,6 +7422,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_sale_collect_wishlist": {
 		dir: "addons/website_sale_collect_wishlist"
@@ -6882,6 +7443,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"website_sale_comparison_wishlist": {
 		dir: "addons/website_sale_comparison_wishlist"
@@ -6902,6 +7464,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_sale_loyalty": {
 		dir: "addons/website_sale_loyalty"
@@ -6919,6 +7482,15 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
+		not_run: [
+			{
+				tests: [
+					"addons/website_sale_loyalty/tests/test_concurrent_promo_code.py",
+				]
+				reason: "every test class is tagged -standard: odoo's default run and a --test-tags /<file> selection leave it out"
+			},
+		]
 	}
 	"website_sale_mass_mailing": {
 		dir: "addons/website_sale_mass_mailing"
@@ -6928,6 +7500,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_sale_mondialrelay": {
 		dir: "addons/website_sale_mondialrelay"
@@ -6953,6 +7526,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_sale_slides": {
 		dir: "addons/website_sale_slides"
@@ -6966,6 +7540,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_sale_stock": {
 		dir: "addons/website_sale_stock"
@@ -6982,6 +7557,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website_sale"
 	}
 	"website_sale_stock_wishlist": {
 		dir: "addons/website_sale_stock_wishlist"
@@ -7006,6 +7582,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "sale"
 	}
 	"website_slides": {
 		dir: "addons/website_slides"
@@ -7025,6 +7602,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_slides_forum": {
 		dir: "addons/website_slides_forum"
@@ -7049,6 +7627,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		template: "website"
 	}
 	"website_sms": {
 		dir: "addons/website_sms"
@@ -7068,4 +7647,431 @@ _addons: {
 		test_depends: []
 		has_tests: false
 	}
+}
+
+_templates: {
+	"account": addon_dirs: [
+		"addons/account",
+		"addons/account_add_gln",
+		"addons/account_edi_ubl_cii",
+		"addons/account_payment",
+		"addons/analytic",
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_passkey_portal",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/auth_totp_portal",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/digest",
+		"addons/google_gmail",
+		"addons/html_editor",
+		"addons/http_routing",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/microsoft_outlook",
+		"addons/onboarding",
+		"addons/partner_autocomplete",
+		"addons/payment",
+		"addons/phone_validation",
+		"addons/portal",
+		"addons/privacy_lookup",
+		"addons/product",
+		"addons/resource",
+		"addons/resource_mail",
+		"addons/rpc",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/snailmail_account",
+		"addons/spreadsheet",
+		"addons/spreadsheet_account",
+		"addons/spreadsheet_dashboard",
+		"addons/spreadsheet_dashboard_account",
+		"addons/uom",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"odoo/addons/base",
+	]
+	"base": addon_dirs: [
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_totp",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/html_editor",
+		"addons/iap",
+		"addons/rpc",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"odoo/addons/base",
+	]
+	"hr": addon_dirs: [
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_passkey_portal",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/auth_totp_portal",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/digest",
+		"addons/google_gmail",
+		"addons/hr",
+		"addons/hr_homeworking",
+		"addons/hr_org_chart",
+		"addons/hr_skills",
+		"addons/html_editor",
+		"addons/http_routing",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/mail_bot_hr",
+		"addons/microsoft_outlook",
+		"addons/partner_autocomplete",
+		"addons/phone_validation",
+		"addons/portal",
+		"addons/privacy_lookup",
+		"addons/resource",
+		"addons/resource_mail",
+		"addons/rpc",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/web",
+		"addons/web_hierarchy",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"odoo/addons/base",
+	]
+	"mail": addon_dirs: [
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/google_gmail",
+		"addons/html_editor",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/microsoft_outlook",
+		"addons/partner_autocomplete",
+		"addons/phone_validation",
+		"addons/privacy_lookup",
+		"addons/rpc",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"odoo/addons/base",
+	]
+	"point_of_sale": addon_dirs: [
+		"addons/account",
+		"addons/account_add_gln",
+		"addons/account_edi_ubl_cii",
+		"addons/account_payment",
+		"addons/analytic",
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_passkey_portal",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/auth_totp_portal",
+		"addons/barcodes",
+		"addons/barcodes_gs1_nomenclature",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/digest",
+		"addons/google_address_autocomplete",
+		"addons/google_gmail",
+		"addons/html_editor",
+		"addons/http_routing",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/iot_base",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/microsoft_outlook",
+		"addons/onboarding",
+		"addons/partner_autocomplete",
+		"addons/payment",
+		"addons/phone_validation",
+		"addons/point_of_sale",
+		"addons/portal",
+		"addons/pos_online_payment",
+		"addons/privacy_lookup",
+		"addons/product",
+		"addons/resource",
+		"addons/resource_mail",
+		"addons/rpc",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/snailmail_account",
+		"addons/spreadsheet",
+		"addons/spreadsheet_account",
+		"addons/spreadsheet_dashboard",
+		"addons/spreadsheet_dashboard_account",
+		"addons/spreadsheet_dashboard_stock_account",
+		"addons/stock",
+		"addons/stock_account",
+		"addons/stock_sms",
+		"addons/uom",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"odoo/addons/base",
+	]
+	"sale": addon_dirs: [
+		"addons/account",
+		"addons/account_add_gln",
+		"addons/account_edi_ubl_cii",
+		"addons/account_payment",
+		"addons/analytic",
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_passkey_portal",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/auth_totp_portal",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/digest",
+		"addons/google_gmail",
+		"addons/html_editor",
+		"addons/http_routing",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/microsoft_outlook",
+		"addons/onboarding",
+		"addons/partner_autocomplete",
+		"addons/payment",
+		"addons/phone_validation",
+		"addons/portal",
+		"addons/privacy_lookup",
+		"addons/product",
+		"addons/resource",
+		"addons/resource_mail",
+		"addons/rpc",
+		"addons/sale",
+		"addons/sale_edi_ubl",
+		"addons/sale_sms",
+		"addons/sales_team",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/snailmail_account",
+		"addons/spreadsheet",
+		"addons/spreadsheet_account",
+		"addons/spreadsheet_dashboard",
+		"addons/spreadsheet_dashboard_account",
+		"addons/spreadsheet_dashboard_sale",
+		"addons/uom",
+		"addons/utm",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"odoo/addons/base",
+	]
+	"stock_account": addon_dirs: [
+		"addons/account",
+		"addons/account_add_gln",
+		"addons/account_edi_ubl_cii",
+		"addons/account_payment",
+		"addons/analytic",
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_passkey_portal",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/auth_totp_portal",
+		"addons/barcodes",
+		"addons/barcodes_gs1_nomenclature",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/digest",
+		"addons/google_gmail",
+		"addons/html_editor",
+		"addons/http_routing",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/microsoft_outlook",
+		"addons/onboarding",
+		"addons/partner_autocomplete",
+		"addons/payment",
+		"addons/phone_validation",
+		"addons/portal",
+		"addons/privacy_lookup",
+		"addons/product",
+		"addons/resource",
+		"addons/resource_mail",
+		"addons/rpc",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/snailmail_account",
+		"addons/spreadsheet",
+		"addons/spreadsheet_account",
+		"addons/spreadsheet_dashboard",
+		"addons/spreadsheet_dashboard_account",
+		"addons/spreadsheet_dashboard_stock_account",
+		"addons/stock",
+		"addons/stock_account",
+		"addons/stock_sms",
+		"addons/uom",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"odoo/addons/base",
+	]
+	"website": addon_dirs: [
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_passkey_portal",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/auth_totp_portal",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/digest",
+		"addons/google_gmail",
+		"addons/google_recaptcha",
+		"addons/html_builder",
+		"addons/html_editor",
+		"addons/http_routing",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/microsoft_outlook",
+		"addons/partner_autocomplete",
+		"addons/phone_validation",
+		"addons/portal",
+		"addons/privacy_lookup",
+		"addons/resource",
+		"addons/resource_mail",
+		"addons/rpc",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/social_media",
+		"addons/utm",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"addons/website",
+		"addons/website_mail",
+		"addons/website_sms",
+		"odoo/addons/base",
+	]
+	"website_sale": addon_dirs: [
+		"addons/account",
+		"addons/account_add_gln",
+		"addons/account_edi_ubl_cii",
+		"addons/account_payment",
+		"addons/analytic",
+		"addons/api_doc",
+		"addons/auth_passkey",
+		"addons/auth_passkey_portal",
+		"addons/auth_signup",
+		"addons/auth_totp",
+		"addons/auth_totp_mail",
+		"addons/auth_totp_portal",
+		"addons/base_import",
+		"addons/base_import_module",
+		"addons/base_install_request",
+		"addons/base_setup",
+		"addons/bus",
+		"addons/delivery",
+		"addons/digest",
+		"addons/google_gmail",
+		"addons/google_recaptcha",
+		"addons/html_builder",
+		"addons/html_editor",
+		"addons/http_routing",
+		"addons/iap",
+		"addons/iap_mail",
+		"addons/mail",
+		"addons/mail_bot",
+		"addons/microsoft_outlook",
+		"addons/onboarding",
+		"addons/partner_autocomplete",
+		"addons/payment",
+		"addons/payment_custom",
+		"addons/phone_validation",
+		"addons/portal",
+		"addons/portal_rating",
+		"addons/privacy_lookup",
+		"addons/product",
+		"addons/rating",
+		"addons/resource",
+		"addons/resource_mail",
+		"addons/rpc",
+		"addons/sale",
+		"addons/sale_edi_ubl",
+		"addons/sale_sms",
+		"addons/sales_team",
+		"addons/sms",
+		"addons/snailmail",
+		"addons/snailmail_account",
+		"addons/social_media",
+		"addons/spreadsheet",
+		"addons/spreadsheet_account",
+		"addons/spreadsheet_dashboard",
+		"addons/spreadsheet_dashboard_account",
+		"addons/spreadsheet_dashboard_sale",
+		"addons/spreadsheet_dashboard_website_sale",
+		"addons/uom",
+		"addons/utm",
+		"addons/web",
+		"addons/web_tour",
+		"addons/web_unsplash",
+		"addons/website",
+		"addons/website_mail",
+		"addons/website_payment",
+		"addons/website_sale",
+		"addons/website_sale_comparison",
+		"addons/website_sale_comparison_wishlist",
+		"addons/website_sale_wishlist",
+		"addons/website_sms",
+		"odoo/addons/base",
+	]
 }

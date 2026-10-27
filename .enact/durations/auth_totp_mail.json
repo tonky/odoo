@@ -1,0 +1,22 @@
+{
+ "addons/auth_totp_mail": {
+  "startup": 21.5,
+  "contention": 0.23
+ },
+ "addons/auth_totp_mail/tests/test_auth_signup.py::TestAuthSignupFlowWith2faEnforced": {
+  "seconds": 0.46,
+  "contention": 0.28
+ },
+ "addons/auth_totp_mail/tests/test_notify_security_update_totp.py::TestNotifySecurityUpdateTotp": {
+  "seconds": 0.35,
+  "contention": 0.28
+ },
+ "addons/auth_totp_mail/tests/test_totp.py::TestTOTPInvite": {
+  "seconds": 3.08,
+  "contention": 0.3
+ },
+ "addons/auth_totp_mail/tests/test_totp.py::TestTOTPMail": {
+  "seconds": 0.08,
+  "contention": 0.28
+ }
+}
