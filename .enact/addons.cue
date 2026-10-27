@@ -22,6 +22,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base", "base_vat", "mail", "web"]
 		template: "mail"
 		not_run: [
 			{
@@ -89,6 +90,7 @@ _addons: {
 			"test_mimetypes",
 		]
 		has_tests: true
+		imports: ["base"]
 		auto_install: true
 		template: "mail"
 	}
@@ -141,6 +143,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account"]
 		template: "account"
 	}
 	"account_peppol_advanced_fields": {
@@ -159,6 +162,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["account_edi_proxy_client"]
 		auto_install: true
 		template: "account"
 	}
@@ -271,6 +275,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		imports: ["base"]
 		auto_install: true
 	}
 	"auth_passkey_portal": {
@@ -328,6 +333,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		imports: ["base"]
 		auto_install: true
 		not_run: [
 			{
@@ -350,6 +356,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["web"]
 		template: "mail"
 	}
 	"auth_totp": {
@@ -362,6 +369,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base"]
 		auto_install: true
 	}
 	"auth_totp_mail": {
@@ -497,6 +505,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		imports: ["base"]
 		auto_install: true
 	}
 	"base_install_request": {
@@ -541,6 +550,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["base"]
 		template: "account"
 	}
 	"board": {
@@ -639,6 +649,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["base"]
 		template: "mail"
 	}
 	"contacts": {
@@ -674,6 +685,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["base", "iap"]
 		template: "mail"
 	}
 	"crm_iap_enrich": {
@@ -687,6 +699,7 @@ _addons: {
 			"iap",
 		]
 		has_tests: true
+		imports: ["iap"]
 		auto_install: true
 		template: "mail"
 	}
@@ -702,6 +715,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["iap"]
 		auto_install: true
 		template: "mail"
 	}
@@ -716,6 +730,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["mail"]
 		auto_install: true
 		template: "mail"
 	}
@@ -763,6 +778,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["payment"]
 		template: "sale"
 	}
 	"delivery_mondialrelay": {
@@ -797,6 +813,7 @@ _addons: {
 			"base",
 		]
 		has_tests: true
+		imports: ["base"]
 		template: "mail"
 	}
 	"event": {
@@ -815,6 +832,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base"]
 		template: "mail"
 	}
 	"event_booth": {
@@ -839,6 +857,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["product"]
 		auto_install: true
 		template: "sale"
 	}
@@ -854,6 +873,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["phone_validation"]
 		auto_install: true
 		template: "mail"
 	}
@@ -894,6 +914,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["sale"]
 		auto_install: true
 		template: "sale"
 	}
@@ -1016,6 +1037,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["html_editor", "mail"]
 		template: "mail"
 	}
 	"hr_attendance": {
@@ -1058,6 +1080,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["web"]
 		template: "account"
 	}
 	"hr_fleet": {
@@ -1103,6 +1126,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base", "mail"]
 		template: "hr"
 		not_run: [
 			{
@@ -1220,6 +1244,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		imports: ["bus"]
 	}
 	"hr_recruitment": {
 		dir: "addons/hr_recruitment"
@@ -1286,6 +1311,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base"]
 		auto_install: true
 		template: "mail"
 	}
@@ -1340,6 +1366,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["portal", "rating"]
 		template: "hr"
 	}
 	"hr_timesheet_attendance": {
@@ -1402,6 +1429,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		imports: ["iap", "mail"]
 		auto_install: true
 	}
 	"http_routing": {
@@ -1411,6 +1439,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["base"]
 	}
 	"iap": {
 		dir: "addons/iap"
@@ -1461,6 +1490,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base", "bus"]
 		template: "mail"
 	}
 	"iot_base": {
@@ -1616,6 +1646,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["account"]
 		template: "account"
 	}
 	"l10n_at": {
@@ -1665,6 +1696,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		imports: ["account"]
 		auto_install: true
 	}
 	"l10n_be_pos_sale": {
@@ -1747,6 +1779,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["mail"]
 		template: "account"
 	}
 	"l10n_br_sales": {
@@ -1815,6 +1848,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["base"]
 		template: "account"
 	}
 	"l10n_ch_pos": {
@@ -2036,6 +2070,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account"]
 		auto_install: ["account_edi_ubl_cii", "l10n_dk"]
 		template: "account"
 	}
@@ -2104,6 +2139,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["l10n_latam_base"]
 		auto_install: true
 		template: "sale"
 	}
@@ -2144,6 +2180,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account"]
 		template: "account"
 	}
 	"l10n_es": {
@@ -2167,6 +2204,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		imports: ["account"]
 		auto_install: ["l10n_es"]
 		template: "account"
 	}
@@ -2233,6 +2271,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		imports: ["account"]
 		template: "account"
 	}
 	"l10n_es_edi_verifactu_pos": {
@@ -2366,6 +2405,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account", "account_edi_proxy_client", "account_edi_ubl_cii", "account_peppol"]
 		auto_install: ["auth_totp_mail", "l10n_fr_account"]
 		template: "account"
 	}
@@ -2570,6 +2610,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		imports: ["account"]
 		template: "account"
 		not_run: [
 			{
@@ -2614,6 +2655,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		imports: ["account"]
 		auto_install: ["l10n_hu"]
 		template: "account"
 		not_run: [
@@ -2854,6 +2896,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account", "base"]
 		auto_install: ["l10n_it"]
 		template: "account"
 	}
@@ -2865,6 +2908,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["account"]
 		template: "sale"
 	}
 	"l10n_it_edi_sale": {
@@ -2923,6 +2967,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account_edi_ubl_cii"]
 		template: "point_of_sale"
 	}
 	"l10n_jp": {
@@ -2972,6 +3017,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		imports: ["account"]
 	}
 	"l10n_km": {
 		dir: "addons/l10n_km"
@@ -3017,6 +3063,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		imports: ["account"]
 	}
 	"l10n_latam_check": {
 		dir: "addons/l10n_latam_check"
@@ -3204,6 +3251,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		imports: ["account"]
 		template: "account"
 	}
 	"l10n_my_edi_pos": {
@@ -3547,6 +3595,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account"]
 		template: "account"
 	}
 	"l10n_sa_edi_pos": {
@@ -3752,6 +3801,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["account_edi_ubl_cii"]
 		template: "stock_account"
 	}
 	"l10n_tr_nilvera_einvoice": {
@@ -3783,6 +3833,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["account"]
 		auto_install: ["l10n_tr_nilvera_einvoice"]
 		template: "account"
 	}
@@ -3805,6 +3856,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		imports: ["portal"]
 		template: "account"
 	}
 	"l10n_tw_edi_ecpay_pos": {
@@ -3831,6 +3883,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["portal"]
 		auto_install: true
 		template: "website_sale"
 	}
@@ -4019,6 +4072,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base"]
 		template: "mail"
 	}
 	"mail": {
@@ -4034,6 +4088,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["web"]
 	}
 	"mail_bot": {
 		dir: "addons/mail_bot"
@@ -4122,6 +4177,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["base_import"]
 		template: "mail"
 	}
 	"mass_mailing_crm": {
@@ -4235,6 +4291,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["link_tracker", "phone_validation"]
 		template: "mail"
 	}
 	"mass_mailing_themes": {
@@ -4274,6 +4331,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["google_gmail"]
 		auto_install: true
 	}
 	"mrp": {
@@ -4289,6 +4347,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["web"]
 		template: "mail"
 	}
 	"mrp_account": {
@@ -4351,6 +4410,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["portal"]
 		template: "mail"
 	}
 	"mrp_subcontracting_account": {
@@ -4442,6 +4502,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["iap"]
 		auto_install: true
 	}
 	"partnership": {
@@ -4468,6 +4529,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["payment_mercado_pago", "payment_stripe"]
 		template: "mail"
 	}
 	"payment_adyen": {
@@ -4734,6 +4796,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["account", "base", "web"]
 		template: "stock_account"
 		not_run: [
 			{
@@ -4848,6 +4911,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: false
+		imports: ["account"]
 	}
 	"pos_event": {
 		dir: "addons/pos_event"
@@ -4984,6 +5048,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["payment"]
 		auto_install: true
 		template: "stock_account"
 	}
@@ -5170,6 +5235,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["web"]
 		auto_install: ["pos_restaurant"]
 		template: "point_of_sale"
 	}
@@ -5372,6 +5438,7 @@ _addons: {
 			"test_mail",
 		]
 		has_tests: true
+		imports: ["html_editor"]
 		template: "mail"
 	}
 	"project_account": {
@@ -5477,6 +5544,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["product"]
 		auto_install: true
 		template: "account"
 	}
@@ -5591,6 +5659,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["portal"]
 		template: "account"
 	}
 	"purchase_edi_ubl_bis3": {
@@ -5603,6 +5672,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		imports: ["account"]
 		auto_install: true
 		template: "account"
 	}
@@ -5695,6 +5765,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["stock"]
 		auto_install: true
 		template: "stock_account"
 	}
@@ -5708,6 +5779,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["portal"]
 		template: "mail"
 	}
 	"repair": {
@@ -5774,6 +5846,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["payment", "portal"]
 		template: "account"
 	}
 	"sale_crm": {
@@ -5795,6 +5868,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["account"]
 		auto_install: true
 		template: "account"
 	}
@@ -5832,6 +5906,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["payment"]
 		template: "sale"
 	}
 	"sale_gelato_stock": {
@@ -5866,6 +5941,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["payment", "website_sale"]
 		auto_install: true
 		template: "sale"
 	}
@@ -5964,6 +6040,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["project"]
 		auto_install: ["project_account", "sale_management"]
 		template: "sale"
 	}
@@ -6105,6 +6182,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["account", "portal", "project", "sale"]
 		auto_install: true
 		template: "sale"
 	}
@@ -6143,6 +6221,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["iap"]
 		auto_install: true
 	}
 	"sms_twilio": {
@@ -6154,6 +6233,7 @@ _addons: {
 			"mail",
 		]
 		has_tests: true
+		imports: ["phone_validation"]
 		template: "mail"
 	}
 	"snailmail": {
@@ -6166,6 +6246,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["iap"]
 		auto_install: true
 	}
 	"snailmail_account": {
@@ -6367,6 +6448,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["web"]
 		template: "mail"
 	}
 	"stock_account": {
@@ -6480,6 +6562,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["base"]
 		template: "mail"
 	}
 	"survey_crm": {
@@ -6974,6 +7057,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["portal"]
 		template: "website"
 		not_run: [
 			{
@@ -7119,6 +7203,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base", "iap"]
 		template: "mail"
 		not_run: [
 			{
@@ -7151,6 +7236,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		imports: ["website"]
 		template: "website"
 	}
 	"website_cf_turnstile": {
@@ -7173,6 +7259,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["phone_validation"]
 		auto_install: true
 		template: "website"
 	}
@@ -7189,6 +7276,7 @@ _addons: {
 			"iap",
 		]
 		has_tests: true
+		imports: ["crm", "iap", "website"]
 		template: "website"
 	}
 	"website_crm_livechat": {
@@ -7250,6 +7338,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		imports: ["website"]
 		template: "sale"
 	}
 	"website_event": {
@@ -7295,6 +7384,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["website_event"]
 		auto_install: true
 		template: "website"
 	}
@@ -7311,6 +7401,7 @@ _addons: {
 			"website_event_sale",
 		]
 		has_tests: true
+		imports: ["website_event"]
 		auto_install: true
 		template: "website_sale"
 	}
@@ -7373,6 +7464,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["portal"]
 		auto_install: true
 		template: "website_sale"
 	}
@@ -7423,6 +7515,7 @@ _addons: {
 			"web",
 		]
 		has_tests: false
+		imports: ["website_event"]
 	}
 	"website_forum": {
 		dir: "addons/website_forum"
@@ -7442,6 +7535,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		imports: ["website"]
 		template: "website"
 	}
 	"website_google_map": {
@@ -7468,6 +7562,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		imports: ["website"]
 		auto_install: true
 		template: "website"
 	}
@@ -7508,6 +7603,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["mail"]
 		auto_install: true
 		template: "website"
 	}
@@ -7563,6 +7659,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		imports: ["mass_mailing"]
 		auto_install: true
 		template: "website"
 	}
@@ -7590,6 +7687,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["payment"]
 		auto_install: true
 		template: "account"
 	}
@@ -7606,6 +7704,7 @@ _addons: {
 			"website",
 		]
 		has_tests: true
+		imports: ["portal"]
 		template: "website"
 	}
 	"website_project": {
@@ -7620,6 +7719,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["base"]
 		auto_install: true
 		template: "website"
 	}
@@ -7649,6 +7749,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base", "html_editor", "mail", "payment"]
 		template: "sale"
 	}
 	"website_sale_autocomplete": {
@@ -7679,6 +7780,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: true
+		imports: ["payment", "website_sale"]
 		template: "website_sale"
 	}
 	"website_sale_collect_wishlist": {
@@ -7743,6 +7845,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["loyalty", "payment"]
 		auto_install: ["sale_loyalty", "website_sale"]
 		template: "website_sale"
 		not_run: [
@@ -7822,6 +7925,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["website"]
 		auto_install: true
 		template: "website_sale"
 	}
@@ -7836,6 +7940,7 @@ _addons: {
 			"website_sale",
 		]
 		has_tests: false
+		imports: ["website_sale"]
 		auto_install: true
 	}
 	"website_sale_wishlist": {
@@ -7870,6 +7975,7 @@ _addons: {
 			"web_tour",
 		]
 		has_tests: true
+		imports: ["base", "mail", "portal"]
 		template: "website"
 	}
 	"website_slides_forum": {
@@ -7896,6 +8002,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		imports: ["website_profile"]
 		auto_install: true
 		template: "website"
 	}
@@ -7939,6 +8046,7 @@ _templates: {
 		"addons/base_import_module",
 		"addons/base_install_request",
 		"addons/base_setup",
+		"addons/base_vat",
 		"addons/bus",
 		"addons/digest",
 		"addons/google_gmail",
@@ -7954,6 +8062,8 @@ _templates: {
 		"addons/onboarding",
 		"addons/partner_autocomplete",
 		"addons/payment",
+		"addons/payment_mercado_pago",
+		"addons/payment_stripe",
 		"addons/phone_validation",
 		"addons/portal",
 		"addons/privacy_lookup",
@@ -7984,6 +8094,7 @@ _templates: {
 		"addons/bus",
 		"addons/html_editor",
 		"addons/iap",
+		"addons/mail",
 		"addons/rpc",
 		"addons/web",
 		"addons/web_tour",
@@ -8080,6 +8191,7 @@ _templates: {
 		"addons/base_import_module",
 		"addons/base_install_request",
 		"addons/base_setup",
+		"addons/base_vat",
 		"addons/bus",
 		"addons/digest",
 		"addons/google_address_autocomplete",
@@ -8097,6 +8209,8 @@ _templates: {
 		"addons/onboarding",
 		"addons/partner_autocomplete",
 		"addons/payment",
+		"addons/payment_mercado_pago",
+		"addons/payment_stripe",
 		"addons/phone_validation",
 		"addons/point_of_sale",
 		"addons/portal",
@@ -8140,6 +8254,7 @@ _templates: {
 		"addons/base_import_module",
 		"addons/base_install_request",
 		"addons/base_setup",
+		"addons/base_vat",
 		"addons/bus",
 		"addons/digest",
 		"addons/google_gmail",
@@ -8155,6 +8270,8 @@ _templates: {
 		"addons/onboarding",
 		"addons/partner_autocomplete",
 		"addons/payment",
+		"addons/payment_mercado_pago",
+		"addons/payment_stripe",
 		"addons/phone_validation",
 		"addons/portal",
 		"addons/privacy_lookup",
@@ -8200,6 +8317,7 @@ _templates: {
 		"addons/base_import_module",
 		"addons/base_install_request",
 		"addons/base_setup",
+		"addons/base_vat",
 		"addons/bus",
 		"addons/digest",
 		"addons/google_gmail",
@@ -8215,6 +8333,8 @@ _templates: {
 		"addons/onboarding",
 		"addons/partner_autocomplete",
 		"addons/payment",
+		"addons/payment_mercado_pago",
+		"addons/payment_stripe",
 		"addons/phone_validation",
 		"addons/portal",
 		"addons/privacy_lookup",
@@ -8299,6 +8419,7 @@ _templates: {
 		"addons/base_import_module",
 		"addons/base_install_request",
 		"addons/base_setup",
+		"addons/base_vat",
 		"addons/bus",
 		"addons/delivery",
 		"addons/digest",
@@ -8318,6 +8439,8 @@ _templates: {
 		"addons/partner_autocomplete",
 		"addons/payment",
 		"addons/payment_custom",
+		"addons/payment_mercado_pago",
+		"addons/payment_stripe",
 		"addons/phone_validation",
 		"addons/portal",
 		"addons/portal_rating",

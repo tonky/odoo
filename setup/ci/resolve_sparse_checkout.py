@@ -429,6 +429,13 @@ def parse_single_manifest(m_path: str, repo_root: Path):
         for js in _walk_files_str(str(static_dir), ".js"):
             test_deps.update(extract_js_imports(js))
     test_deps.discard(addon_name)
+    # What its code imports outside tests (`from odoo.addons.base_vat.models...` in account):
+    # odoo imports those packages when it loads the addon, installed or not.
+    code_imports = set()
+    for py in _walk_files_str(str(p.parent), ".py"):
+        if not Path(py).is_relative_to(tests_dir):
+            code_imports.update(extract_python_imports(Path(py)))
+    code_imports.discard(addon_name)
     raw_not_run = not_run_tests(p.parent, test_py_files)
     not_run = {
         reason: [f.relative_to(repo_root).as_posix() for f in files]
@@ -441,6 +448,7 @@ def parse_single_manifest(m_path: str, repo_root: Path):
         "depends": data.get("depends", []),
         "test_deps": sorted_test_deps,
         "test_depends": sorted_test_deps,
+        "imports": sorted(code_imports),
         "auto_install": data.get("auto_install", False),
         "countries": data.get("countries", []),
         "installable": data.get("installable", True),
@@ -773,11 +781,28 @@ def closure_templates(manifests: dict, countries: frozenset) -> dict:
     return chosen
 
 
+def import_closure(names, manifests: dict) -> set:
+    """`names` and the addons their code imports, transitively: the packages odoo imports
+    loading them, each a directory the checkout must hold."""
+    seen, stack = set(), list(names)
+    while stack:
+        name = stack.pop()
+        if name in seen or name not in manifests:
+            continue
+        seen.add(name)
+        stack.extend(manifests[name].get("imports", []))
+    return seen
+
+
 def template_addon_dirs(manifests: dict, seeds, countries: frozenset) -> dict:
     """Each template's addons (a seed's install set, `base` alone for base's) by their dirs:
-    what its init installs, so what its `template_inputs` hash (components.cue)."""
+    what its init installs and the addons their code imports, so what its `template_inputs`
+    hash (components.cue)."""
     return {
-        seed: sorted(manifests[name]["dir"] for name in install_set(seed, manifests, countries))
+        seed: sorted(
+            manifests[name]["dir"]
+            for name in import_closure(install_set(seed, manifests, countries), manifests)
+        )
         for seed in sorted(seeds)
         if seed in manifests
     }
@@ -819,6 +844,13 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
             lines.append("\t\ttest_depends: []")
         ht_str = "true" if has_tests else "false"
         lines.append(f"\t\thas_tests: {ht_str}")
+        # What odoo-scope's sparse closure follows besides `depends`: one line, as it reads it.
+        imports = sorted(
+            d for d in m.get("imports", []) if d in manifests and d != name and d not in deps
+        )
+        if imports:
+            items = ", ".join(f'"{d}"' for d in imports)
+            lines.append(f"\t\timports: [{items}]")
         # What install_set() and odoo-scope's sparse closure follow: an addon odoo
         # installs_automatically() once a job installs its triggers is installed too, so its
         # directory is in the job's cone.
