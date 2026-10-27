@@ -191,13 +191,20 @@ jobs:
         fi
         # Resolves the diff base, and leaves the planning flags of the `enact` command after this
         # script in "$@": --base, --all or --updated and --files, --no-cache.
+        # Fetches carry commits and trees only, and name their refs: a bare `origin` fetches (or
+        # deepens) every branch of the remote.
+        FETCH="git fetch --no-tags --filter=blob:none origin"
+        # Whether the clone has the revision, never fetching it: `rev-parse --verify` accepts any
+        # full hash, and a partial clone's object lookups (`merge-base` too) fetch a missing commit
+        # with its whole history.
+        has_commit() {
+          [ -n "$(git rev-list -n1 --no-walk --ignore-missing --missing=allow-any "$1" -- 2>/dev/null)" ]
+        }
         BASE_REV=""
         BASE_REF="${ENACT_BASE_REF:-}"
         if [ -n "${ENACT_BASE_SHA:-}" ]; then
-          if ! git rev-parse --verify "$ENACT_BASE_SHA" >/dev/null 2>&1; then
-            git fetch --no-tags --depth=1 origin "$ENACT_BASE_SHA" 2>/dev/null || true
-          fi
-          if git rev-parse --verify "$ENACT_BASE_SHA" >/dev/null 2>&1; then
+          has_commit "$ENACT_BASE_SHA" || $FETCH --depth=1 "$ENACT_BASE_SHA" 2>/dev/null || true
+          if has_commit "$ENACT_BASE_SHA"; then
             BASE_REV="$ENACT_BASE_SHA"
           fi
         fi
@@ -211,10 +218,8 @@ jobs:
           else
             INTEGRATION_BRANCH="${ENACT_INTEGRATION_BRANCH:-}"
             if [ -n "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "${ENACT_DEFAULT_BRANCH:-master}" ]; then
-              if ! git rev-parse --verify "origin/$INTEGRATION_BRANCH" >/dev/null 2>&1; then
-                git fetch --no-tags --depth=50 origin "$INTEGRATION_BRANCH" 2>/dev/null || true
-              fi
-              if git rev-parse --verify "origin/$INTEGRATION_BRANCH" >/dev/null 2>&1; then
+              has_commit "origin/$INTEGRATION_BRANCH" || $FETCH --depth=1 "+refs/heads/$INTEGRATION_BRANCH:refs/remotes/origin/$INTEGRATION_BRANCH" 2>/dev/null || true
+              if has_commit "origin/$INTEGRATION_BRANCH"; then
                 BASE_REF="$INTEGRATION_BRANCH"
               fi
             fi
@@ -224,27 +229,52 @@ jobs:
           fi
         fi
         if [ -z "$BASE_REV" ] && [ -n "$BASE_REF" ]; then
-          if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1 && ! git rev-parse --verify "origin/$BASE_REF" >/dev/null 2>&1; then
-            git fetch --no-tags --depth=50 origin "$BASE_REF" 2>/dev/null || true
+          # The base fetches as a commit (a full hash) or a branch (into its remote-tracking ref),
+          # one deep; a revision of HEAD's own (HEAD~1) is in HEAD's history.
+          BASE_SPEC="+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+          case "$BASE_REF" in
+            HEAD | HEAD[~^]*) BASE_SPEC="" ;;
+            *[!0-9a-f]*) ;;
+            *) if [ ${#BASE_REF} -ge 40 ]; then BASE_SPEC="$BASE_REF"; fi ;;
+          esac
+          if [ -n "$BASE_SPEC" ] && ! has_commit "$BASE_REF" && ! has_commit "origin/$BASE_REF"; then
+            $FETCH --depth=1 "$BASE_SPEC" 2>/dev/null || true
           fi
-          if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
-            git fetch --deepen=100 origin 2>/dev/null || git fetch --unshallow origin 2>/dev/null || true
+          # The base as this clone names it, if it has it.
+          base_at() {
+            if has_commit "$BASE_REF"; then
+              echo "$BASE_REF"
+            elif has_commit "origin/$BASE_REF"; then
+              echo "origin/$BASE_REF"
+            fi
+          }
+          merge_base() {
+            BASE_AT=$(base_at)
+            if [ -n "$BASE_AT" ]; then
+              git merge-base HEAD "$BASE_AT" 2>/dev/null || true
+            fi
+          }
+          # A shallow clone deepens HEAD and the base alone, in growing steps, until they meet;
+          # unshallowing them is the last resort. They are named by commit: fetch skips a ref
+          # that is already up to date, and so leaves it as shallow as it was.
+          DEEPEN=$(git rev-parse HEAD)
+          BASE_AT=$(base_at)
+          if [ -n "$BASE_SPEC" ] && [ -n "$BASE_AT" ]; then
+            DEEPEN="$DEEPEN $(git rev-parse "$BASE_AT")"
           fi
-          MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git merge-base HEAD "origin/$BASE_REF" 2>/dev/null || echo "")
-          if [ -z "$MERGE_BASE" ] && [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
-            git fetch --deepen=500 origin 2>/dev/null || git fetch --unshallow origin 2>/dev/null || true
-            MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || git merge-base HEAD "origin/$BASE_REF" 2>/dev/null || echo "")
-          fi
-          if [ -n "$MERGE_BASE" ]; then
-            BASE_REV="$MERGE_BASE"
-          elif git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
-            BASE_REV="$BASE_REF"
-          elif git rev-parse --verify "origin/$BASE_REF" >/dev/null 2>&1; then
-            BASE_REV="origin/$BASE_REF"
-          fi
+          MERGE_BASE=$(merge_base)
+          for STEP in --deepen=50 --deepen=200 --deepen=1000 --unshallow; do
+            if [ -n "$MERGE_BASE" ] || [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" != "true" ]; then
+              break
+            fi
+            # shellcheck disable=SC2086 # one word per commit
+            $FETCH "$STEP" $DEEPEN 2>/dev/null || true
+            MERGE_BASE=$(merge_base)
+          done
+          BASE_REV="${MERGE_BASE:-$(base_at)}"
         fi
         if [ -z "$BASE_REV" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
-          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+          if has_commit HEAD~1; then
             BASE_REV="HEAD~1"
           fi
         fi
@@ -260,7 +290,7 @@ jobs:
         # trees only: aging diffs trees, and reads the few blobs it compares by function lazily.
         MAP_REVISIONS=$(enact trace revisions --missing 2>/dev/null || true)
         if [ -n "$MAP_REVISIONS" ]; then
-          MAP_FETCH="git fetch --no-tags --depth=1 --filter=blob:none origin"
+          MAP_FETCH="$FETCH --depth=1"
           # shellcheck disable=SC2086 # one word per revision
           $MAP_FETCH $MAP_REVISIONS 2>/dev/null || for rev in $MAP_REVISIONS; do
             $MAP_FETCH "$rev" 2>/dev/null || true
