@@ -41,3 +41,5 @@ fi
 #   (`file://<TMPDIR>/report.body.tmp.<idx>.<rand>.html`) with `split('.', 4)[3]`, so a dot in
 #   $TMPDIR shifts the index and wipes PDF headers and footers (TestReportsRendering.test_layout).
 export TMPDIR=/tmp
+# Every addon's manifest odoo reads, in a sparse checkout (odoo-manifests.sh).
+bash "$(dirname "${BASH_SOURCE[0]}")/odoo-manifests.sh"

@@ -158,6 +158,7 @@ pipeline: schema.#Pipeline & {
 							"odoo-bin",
 							"helpers/odoo-runner.sh",
 							"helpers/odoo-env.sh",
+							"helpers/odoo-manifests.sh",
 							"odoo/**",
 						], _templates[meta.template].addon_dirs])
 						exclude: ["**/tests/**", "odoo/addons/test_*/**"]
