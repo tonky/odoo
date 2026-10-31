@@ -1,8 +1,22 @@
 package replay
 
+let J = pipeline.#jobs
+
+_stages: [
+	{name: "preflight", select: [J.lint], fail_fast: true, services: "disabled"},
+	{name: "tests", matrix: true, select: [J.test], fail_fast: false, services: "on_demand"},
+]
+
 pipeline: {
-	// Postgres template dumps and filestores:
-	// post-start-postgres.sh writes both into .enact/state/templates.
+	analysis: {
+		dependencies: {
+			manifests:       [{file: "__manifest__.py", keys: ["depends", "auto_install"]}]
+			import_prefixes: ["odoo.addons."]
+			asset_prefixes:  ["@"]
+		}
+		durations: [".enact/durations/*.json"]
+		recorders: "enact_footprint.py": "7"
+	}
 	caches: "templates": {
 		name:    "Postgres template dumps"
 		paths:   [".enact/state/templates"]
@@ -10,51 +24,43 @@ pipeline: {
 		used_by: jobs: ["test", "pylint"]
 	}
 	ci: {
-		concurrency: {
-			max_parallel_jobs: 8
-		}
-		// The fork's jobs run on the user's tonky-ci fleet, one fresh container per job (enact's
-		// .enact/workflows.cue workers `tonky-ci`, `tonky-ci-arm64`): stage jobs on the x86_64
-		// slots, matrix rows on the cheapest slot they fit, so small ones take the arm64 slot.
+		concurrency: max_parallel_jobs: 8
+		diagnostic_paths: ["${{ runner.temp }}/odoo_tests/**/*.png", "${{ runner.temp }}/odoo_tests/*/chrome_logs/*"]
 		workers: {
 			"standard": {
 				labels: ["self-hosted", "Linux", "X64", "tonky-ci"]
-				tier:         "dedicated"
-				available:    2
-				cost_per_min: 0.010
-				cpus:         6
-				memory_mb:    13312
+				tier: "dedicated", available: 1, cost_per_min: 0.010
+				pool: {
+					cpus: 14, memory_mb: 28672
+					sizes: {
+						"tonky-ci-s": {cpus: 2, memory_mb: 4096}
+						"tonky-ci-m": {cpus: 4, memory_mb: 8192}
+						"tonky-ci-l": {cpus: 6, memory_mb: 13312}
+					}
+				}
 			}
 			"arm64": {
 				labels: ["self-hosted", "Linux", "ARM64", "tonky-ci"]
-				tier:         "dedicated"
-				available:    1
-				cost_per_min: 0.008
-				cpus:         4
-				memory_mb:    8192
+				tier: "dedicated", available: 1, cost_per_min: 0.008
+				pool: {
+					cpus: 4, memory_mb: 8192
+					sizes: {
+						"tonky-ci-s": {cpus: 2, memory_mb: 4096}
+						"tonky-ci-m": {cpus: 4, memory_mb: 8192}
+					}
+				}
 			}
 		}
 	}
 	workflows: {
-		ci: {
-			layout:   "staged"
-			services: "on_demand"
-			stages:   _stages
-		}
-		// What is too slow for every change: the whole tree's pylint checks (test_lint's
-		// TestPyLint), which a change's lint job runs on its own Python files.
+		ci:    {layout: "staged", services: "on_demand", stages: _stages}
+		local: {layout: "staged", services: "on_demand", stages: _stages}
 		nightly: {
-			layout: "staged"
-			scope:  "all"
-			triggers: {
-				schedule: ["0 3 * * *"]
-				workflow_dispatch: true
-			}
+			layout: "staged", scope: "all"
+			triggers: {schedule: ["0 3 * * *"], workflow_dispatch: true}
 			stages: [{
-				name:   "pylint"
-				matrix: true
+				name: "pylint", matrix: true, services: "on_demand"
 				select: [{component: "test_lint", job: "pylint"}]
-				services: "on_demand"
 			}]
 		}
 	}

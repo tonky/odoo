@@ -722,8 +722,11 @@ def dependency_closure(names, manifests: dict) -> set:
 def demo_company_countries(repo_root: Path) -> frozenset:
     """The countries a demo install's companies are in: base's demo writes the main
     company's partner a country (`data/res_users_demo.xml`), before any other addon
-    installs. Templates install --with-demo (setup/ci/post-start-postgres.sh)."""
+    installs. Templates install --with-demo (setup/ci/post-start-postgres.sh). A tree
+    without base (a test's fixture) has no demo company."""
     path = repo_root / "odoo/addons/base/data/res_users_demo.xml"
+    if not path.is_file():
+        return frozenset()
     found = re.findall(r"'country_id':\s*ref\('base\.([a-z]{2})'\)", path.read_text(encoding="utf-8"))
     if not found:
         raise SystemExit(f"{path}: no main company country found; country addons can't be resolved")

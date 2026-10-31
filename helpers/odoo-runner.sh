@@ -19,7 +19,10 @@ fi
 if [ -n "${ENACT_FOOTPRINT_DIR:-}" ]; then
     recorders+=(helpers/odoo-footprint.py "${ENACT_FOOTPRINT_DIR}")
 fi
-odoo=(uv run --frozen --exact python ${recorders[@]+"${recorders[@]}"} odoo-bin --data-dir="${ODOO_DATA_DIR}" "$@")
+# A failed tour's screenshot and Chrome log go to the CI job's temp dir (the job uploads them,
+# .enact/ci.cue diagnostic_paths), else the data dir: odoo's default is the host's /tmp/odoo_tests.
+odoo=(uv run --frozen --exact python ${recorders[@]+"${recorders[@]}"} odoo-bin --data-dir="${ODOO_DATA_DIR}"
+    --screenshots="${RUNNER_TEMP:-${ODOO_DATA_DIR}}/odoo_tests" "$@")
 case " $* " in
     *" --test-enable "*) ;;
     *) exec "${odoo[@]}" ;;

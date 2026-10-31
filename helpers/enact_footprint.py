@@ -52,7 +52,7 @@ the programs it starts:
   scratch work tree under /tmp), or nothing of the repository when no argument names a
   path in it: host facts (`lscpu`) and the programs the adapter names (`quiet`). git's
   queries of the repository's tree are modelled by their arguments (`_git_tree_query`):
-  `ls-files` probes every path it lists and every directory above them, `--others` reads
+  `ls-files` probes listed paths and models tree enumeration; `--others` reads
   the `.gitignore` files too, and `diff` against the work tree reads every tracked file.
   Any other git over the repository makes its target opaque (incomplete: it runs for any
   change): the tracer misses the `lstat`s git decides by. Any other program (`node`, a
@@ -79,6 +79,8 @@ stays every target's, as do one read whole and one whose functions a shared exte
 
 import _signal
 import _thread
+import contextlib
+import contextvars
 import os
 import sys
 import time
@@ -89,7 +91,7 @@ CO_NEWLOCALS = 0x0002  # inspect.CO_NEWLOCALS, without importing inspect into ev
 SHARED = "<shared>"
 # This recorder and the version of what it writes, in each map (`recorder`): a change to
 # what it records bumps it, re-recording only its footprints (`analysis.recorders`).
-RECORDER = "enact_footprint.py/5"
+RECORDER = "enact_footprint.py/7"
 TARGETS_NAME = "enact-footprint"
 SHARED_NAME = "enact-footprint-shared"
 
@@ -101,6 +103,7 @@ ENV_CORE = "ENACT_FOOTPRINT_CORE"
 ENV_QUIET = "ENACT_FOOTPRINT_QUIET"
 ENV_READERS = "ENACT_FOOTPRINT_READERS"
 ENV_EXE = "ENACT_EXE"
+ENV_OUTER_KERNEL_TRACE = "ENACT_OUTER_KERNEL_TRACE"
 
 # Programs that read no files.
 PURE = {"true", "false", "echo", "printf", "uname", "sleep", "hostname", "whoami", "id",
@@ -161,8 +164,8 @@ class Footprint:
     children it started (until their records are merged), and why it is opaque (empty: it
     isn't)."""
 
-    __slots__ = ("code", "reads", "present", "probes", "dirs", "opaque", "spawned", "loaded")
-    SETS = ("reads", "present", "probes", "dirs", "opaque", "spawned", "loaded")
+    __slots__ = ("code", "reads", "present", "probes", "dirs", "opaque", "spawned", "loaded", "recorders")
+    SETS = ("reads", "present", "probes", "dirs", "opaque", "spawned", "loaded", "recorders")
 
     def __init__(self):
         self.code: dict[str, set[str]] = {}
@@ -173,6 +176,14 @@ class Footprint:
         self.opaque: set[str] = set()
         self.spawned: set[str] = set()
         self.loaded: set[str] = set()  # modules its Python children loaded
+        self.recorders: set[str] = set()  # actual native-child provenance, never inferred
+
+    def copy(self) -> "Footprint":
+        fp = Footprint()
+        fp.code = {file: set(functions) for file, functions in self.code.items()}
+        for name in self.SETS:
+            setattr(fp, name, set(getattr(self, name)))
+        return fp
 
     def update(self, other: "Footprint") -> None:
         for file, functions in other.code.items():
@@ -186,12 +197,15 @@ class Footprint:
         return record
 
     @classmethod
-    def load(cls, record: dict) -> "Footprint":
+    def load(cls, record: dict, *, native: bool = False) -> "Footprint":
         fp = cls()
         for file, functions in record.get("code", {}).items():
             fp.code[file] = set(functions)
         for name in cls.SETS:
             getattr(fp, name).update(record.get(name, ()))
+        if native and not any(name == "enact-trace" and version for name, _, version in
+                              (recorder.rpartition("/") for recorder in fp.recorders)):
+            fp.opaque.add("native child record lacks kernel recorder provenance")
         return fp
 
     def entry(self, through: int, at: dict[str, int], own=(), shared: "Footprint | None" = None) -> dict:
@@ -206,6 +220,7 @@ class Footprint:
         coded = set(self.code) | (self.present & set(shared.code) if shared else set())
         entry = {
             "files": sorted(found),
+            "recorders": sorted(self.recorders | {RECORDER}),
             "functions": {
                 file: sorted(self.code.get(file, ()))
                 for file in sorted(coded)
@@ -289,6 +304,7 @@ footprints: dict[str, Footprint] = {SHARED: Footprint()}
 shared = footprints[SHARED]
 current: Footprint | None = None  # the target recording (the targets tool's sink)
 current_key: str | None = None
+_ctx_target: contextvars.ContextVar[str | None] = contextvars.ContextVar("enact_footprint_target", default=None)
 depth = 0  # nesting of shared extents, every thread's
 children_dir = ""
 child_stem = ""
@@ -308,6 +324,7 @@ stats: dict[str, int] = {}
 local = _thread._local()
 _rel_cache: dict[str, str | None] = {}
 tracer = ""  # `enact trace exec`'s enact ($ENACT_EXE) on Linux: what runs a program unmodelled
+outer_kernel_trace = False  # outer kernel tracer supervises subprocess file/dir/probe opens
 _popen_pending = False  # `subprocess` not imported yet: Popen is patched once it is
 # The repository modules the process loaded, in order, and where each target last ended in
 # that order (`loaded_marks`): a target's modules are those loaded before its mark.
@@ -336,9 +353,41 @@ def count(name: str, n: int = 1) -> None:
     stats[name] = stats.get(name, 0) + n
 
 
+def active_target_key() -> str | None:
+    """The target active in the current context (`request_target`), process (`switch`), or env."""
+    ctx_key = _ctx_target.get()
+    if ctx_key is not None and ctx_key != SHARED:
+        return ctx_key
+    if current_key is not None and current_key != SHARED:
+        return current_key
+    env_target = os.environ.get("ENACT_TRACE_TARGET") or os.environ.get(ENV_TARGET)
+    return env_target if env_target and env_target != SHARED else None
+
+
+@contextlib.contextmanager
+def request_target(key: str | None):
+    """Scopes all function calls, file opens, stats, and outbound HTTP calls in the current
+    thread or async task (`contextvars.ContextVar`) to `key`'s footprint."""
+    if not key:
+        yield
+        return
+    footprints.setdefault(key, Footprint())
+    token = _ctx_target.set(key)
+    try:
+        yield
+    finally:
+        _ctx_target.reset(token)
+        _mark_loaded(key)
+
+
 def sink() -> Footprint | None:
     """Where a file the process uses now is recorded: shared inside an extent."""
-    return shared if depth > 0 else current
+    if depth > 0:
+        return shared
+    ctx_key = _ctx_target.get()
+    if ctx_key is not None:
+        return footprints.setdefault(ctx_key, Footprint())
+    return current
 
 
 def relative(path) -> str | None:
@@ -396,6 +445,10 @@ def _ran(fp: Footprint, code) -> None:
 
 
 def on_start(code, _offset):
+    ctx_key = _ctx_target.get()
+    if ctx_key is not None:
+        _ran(footprints.setdefault(ctx_key, Footprint()), code)
+        return None
     fp = current
     if fp is not None:
         _ran(fp, code)
@@ -896,15 +949,18 @@ def spawn(program, argv: list, env, cwd=None, traceable=False):
     count(f"spawn:{name}")
     if _kind(_absolute(_in(cwd, path)) or path) == "file":
         note(_in(cwd, path), fp=fp)  # a program of the repository's own: what it runs is read
+    if _is_python(path):
+        _propagate(fp, env, key)
+        return None
+    if outer_kernel_trace:
+        count("kernel_delegated_spawns")
+        return None
     words = [a for a in argv[1:] if isinstance(a, str)]
     why = f"{name}: {' '.join(map(str, argv))[:160]}"
     if name in SHELLS and len(words) >= 2 and words[0] == "-c":
         if _shell_is_pure(words[1]):
             return None
         why = f"shell: {words[1][:160]}"
-    elif _is_python(path):
-        _propagate(fp, env, key)
-        return None
     elif name in PURE:
         return None
     elif name in READERS:
@@ -1058,8 +1114,8 @@ def _git_tree_query(git: str, words: list[str], cwd, env, fp: Footprint) -> bool
 
 def _git_ls_files(git: str, args: list[str], work: str, fp: Footprint) -> bool:
     """A names-only `ls-files`: tracked files (`-c`, the default) and untracked ones git
-    doesn't ignore (`-o --exclude-standard`). It probes each path it lists (one deleted
-    changes the listing) and every directory above them (a file added there does)."""
+    doesn't ignore (`-o --exclude-standard`). It probes each listed path and records
+    the query's tree enumeration separately from directory presence."""
     specs, flags = _git_operands(args)
     if specs is None or not flags <= GIT_LS_FILES:
         return False
@@ -1124,9 +1180,9 @@ def _git_operands(args: list[str]):
 def _note_tree(work: str, found: list[str], listed: list[str], specs: list[str], fp: Footprint,
                read: bool, ignores: bool) -> None:
     """A git query in `work` over `found` (paths relative to it): reads (`read`) or probes
-    of the `listed` ones, probes of each directory above them and of each pathspec's
-    directory (a file added below one changes the answer; the root's own files are no
-    directory's), and with `ignores` each such directory's `.gitignore`."""
+    of the `listed` ones, and enumeration of the queried tree's directories. Presence
+    alone cannot represent a new name in an existing directory. With `ignores`, each
+    such directory's `.gitignore` is an input too."""
     base = _repo_dir(work)
     if base is None:
         return
@@ -1137,8 +1193,7 @@ def _note_tree(work: str, found: list[str], listed: list[str], specs: list[str],
         rel = os.path.normpath(prefix + path)
         if rel.startswith("..") or rel == ".git" or rel.startswith(".git/"):
             continue
-        if path in output:
-            (fp.reads if read else fp.probes).add(rel)
+        (fp.reads if read and path in output else fp.probes).add(rel)
         while "/" in rel:
             rel = rel.rpartition("/")[0]
             if rel in dirs:
@@ -1151,9 +1206,9 @@ def _note_tree(work: str, found: list[str], listed: list[str], specs: list[str],
                 break
             literal.append(part)
         scope = _repo_dir(os.path.join(work, *literal)) if literal else base
-        if scope:
-            fp.probes.add(scope)
-    fp.probes.update(dirs)
+        if scope is not None:
+            fp.dirs.add(scope)
+    fp.dirs.update(dirs)
     if ignores:
         for directory in dirs | {""}:
             ignore = f"{directory}/.gitignore" if directory else ".gitignore"
@@ -1178,6 +1233,8 @@ def _propagate(fp: Footprint, env, key: str | None) -> None:
         env[ENV_CORE] = os.environ.get(ENV_CORE, "")
         env[ENV_QUIET] = os.environ.get(ENV_QUIET, "")
         env[ENV_READERS] = os.environ.get(ENV_READERS, "")
+        if outer_kernel_trace:
+            env[ENV_OUTER_KERNEL_TRACE] = "1"
         boot = os.path.join(children_dir, "boot")
         pythonpath = env.get("PYTHONPATH", "")
         if boot not in pythonpath.split(os.pathsep):
@@ -1466,7 +1523,7 @@ def merge_children() -> None:
                 count("children_unrecorded")
             continue
         key = _served(token, start, record.get("ended"))
-        child = Footprint.load(record["footprint"])
+        child = Footprint.load(record["footprint"], native=traced)
         if traced:
             child.opaque = {f"{what}: {why}" for why in child.opaque}
         footprint(key).update(child)
@@ -1601,7 +1658,10 @@ def _probe_lookup(probes: list, directory: str, finder, tail: str, spec) -> None
 
 def _checked(path, call):
     """A `stat` the code under test made: a missing path is a probe, a file a presence
-    predicate found too (`_presence_only`), any other file is found."""
+    predicate found too (`_presence_only`), any other file is found. The recorder's own (this
+    thread busy) is none."""
+    if getattr(local, "busy", False):
+        return call()
     try:
         result = call()
     except (FileNotFoundError, NotADirectoryError):
@@ -1907,9 +1967,10 @@ def _importer(frame) -> str:
         return EXTERNAL
     if not code.co_flags & CO_NEWLOCALS:
         return rel
-    if depth > 0 or current_key in (None, SHARED):
+    active_key = _ctx_target.get() or current_key
+    if depth > 0 or active_key in (None, SHARED):
         return SHARED
-    return KEY + current_key
+    return KEY + active_key
 
 
 def _imported(name: str, globals_: dict, fromlist, level: int) -> list[str]:
@@ -1965,10 +2026,12 @@ def _patch_import_statements() -> None:
     builtins.__import__ = __import__
 
 
-def _own_holders(module: str, owners: dict[str, list[str]], importers: dict[str, set[str]]) -> set[str] | None:
-    """The targets an own `module` belongs to: its own targets, and those whose own modules
-    or code imported it, through own modules only. None: it is every target's."""
-    if module in shared.reads or shared.code.get(module) or (EXTERNAL, "*") in import_edges:
+def _own_holders(module: str, owners: dict[str, list[str]], importers: dict[str, set[str]],
+                 fps: dict[str, Footprint]) -> set[str] | None:
+    """The targets of `fps` an own `module` belongs to: its own targets, and those whose own
+    modules or code imported it, through own modules only. None: it is every target's."""
+    common = fps[SHARED]
+    if module in common.reads or common.code.get(module) or (EXTERNAL, "*") in import_edges:
         return None
     loader = first_loaded_by.get(module, SHARED)
     if loader in (None, SHARED):
@@ -1987,31 +2050,37 @@ def _own_holders(module: str, owners: dict[str, list[str]], importers: dict[str,
     holders = keys | {key for m in modules for key in owners.get(m, ())}
     if loader not in holders:
         return None  # loaded by what no import statement shows (a runner's, a registry's)
-    return holders | {key for key, fp in footprints.items() if key != SHARED and module in fp.code}
+    return holders | {key for key, fp in fps.items() if key != SHARED and module in fp.code}
 
 
-def narrow_own_modules() -> int:
+def narrow_own_modules(fps: dict[str, Footprint] | None = None, order: list[str] | None = None,
+                       marks: dict[str, int] | None = None) -> int:
     """Gives each own module whose holders are known (`_own_holders`) to them alone: out of
     the shared footprint and the load order, into each holder's code and `loaded`. Returns
-    how many it narrowed."""
+    how many it narrowed. `fps`, `order` and `marks` (a checkpoint's copies) default to the
+    recording's own footprints, `loaded_order` and `loaded_marks`."""
+    fps = footprints if fps is None else fps
+    order = loaded_order if order is None else order
+    marks = loaded_marks if marks is None else marks
+    common = fps[SHARED]
     owners: dict[str, list[str]] = {}
-    for key in footprints:
+    for key in fps:
         if key != SHARED:
             owners.setdefault(key.split("::", 1)[0], []).append(key)
     importers: dict[str, set[str]] = {}
     for importer, module in import_edges:
         importers.setdefault(module, set()).add(importer)
     narrowed = {}
-    for module in sorted((own_modules | set(owners)) & set(shared.code)):
-        holders = _own_holders(module, owners, importers)
+    for module in sorted((own_modules | set(owners)) & set(common.code)):
+        holders = _own_holders(module, owners, importers, fps)
         if holders is not None:
             narrowed[module] = holders
     for module, holders in narrowed.items():
-        del shared.code[module]
-        present = module in shared.present
-        shared.present.discard(module)
+        del common.code[module]
+        present = module in common.present
+        common.present.discard(module)
         for key in holders:
-            fp = footprints.get(key)
+            fp = fps.get(key)
             if fp is not None:
                 fp.code.setdefault(module, set())
                 fp.loaded.add(module)
@@ -2019,29 +2088,135 @@ def narrow_own_modules() -> int:
                     fp.present.add(module)
     if narrowed:
         kept, before = 0, [0]
-        for rel in loaded_order:
+        for rel in order:
             kept += rel not in narrowed
             before.append(kept)
-        for key, mark in loaded_marks.items():
-            loaded_marks[key] = before[mark]
-        loaded_order[:] = [rel for rel in loaded_order if rel not in narrowed]
+        for key, mark in marks.items():
+            marks[key] = before[mark]
+        order[:] = [rel for rel in order if rel not in narrowed]
     count("own_modules_narrowed", len(narrowed))
     return len(narrowed)
 
 
 # --- driving -----------------------------------------------------------------------------
 
+def wsgi_middleware(app):
+    """WSGI middleware extracting `X-Enact-Target` into `request_target`."""
+    def wrapped(environ, start_response):
+        target = environ.get("HTTP_X_ENACT_TARGET")
+        if target:
+            with request_target(target.strip()):
+                return list(app(environ, start_response))
+        return app(environ, start_response)
+    return wrapped
+
+
+def asgi_middleware(app):
+    """ASGI middleware extracting `x-enact-target` into `request_target`."""
+    async def wrapped(scope, receive, send):
+        target = None
+        for k, v in scope.get("headers") or ():
+            if k.lower() == b"x-enact-target":
+                target = v.decode("latin1").strip()
+                break
+        if target:
+            with request_target(target):
+                return await app(scope, receive, send)
+        return await app(scope, receive, send)
+    return wrapped
+
+
+def _patch_http_context() -> None:
+    """Propagates `X-Enact-Target` on outbound `http.client` calls and scopes inbound
+    `http.server` / `wsgiref` requests to `request_target`."""
+    try:
+        import http.client
+        orig_putrequest = http.client.HTTPConnection.putrequest
+        orig_endheaders = http.client.HTTPConnection.endheaders
+
+        def putrequest(self, method, url, *args, **kwargs):
+            self._enact_has_target_hdr = False
+            return orig_putrequest(self, method, url, *args, **kwargs)
+
+        orig_putheader = http.client.HTTPConnection.putheader
+
+        def putheader(self, header, *values):
+            if isinstance(header, str) and header.lower() == "x-enact-target":
+                self._enact_has_target_hdr = True
+            elif isinstance(header, bytes) and header.lower() == b"x-enact-target":
+                self._enact_has_target_hdr = True
+            return orig_putheader(self, header, *values)
+
+        def endheaders(self, message_body=None, *, encode_chunked=False):
+            target = active_target_key()
+            if target and not getattr(self, "_enact_has_target_hdr", False):
+                orig_putheader(self, "X-Enact-Target", target)
+                self._enact_has_target_hdr = True
+            return orig_endheaders(self, message_body, encode_chunked=encode_chunked)
+
+        http.client.HTTPConnection.putrequest = putrequest
+        http.client.HTTPConnection.putheader = putheader
+        http.client.HTTPConnection.endheaders = endheaders
+    except Exception:
+        pass
+    try:
+        import http.server
+        orig_parse = http.server.BaseHTTPRequestHandler.parse_request
+
+        def parse_request(self):
+            ok = orig_parse(self)
+            if ok and hasattr(self, "headers") and self.headers is not None:
+                target = self.headers.get("X-Enact-Target")
+                if target:
+                    self._enact_ctx = request_target(target.strip())
+                    self._enact_ctx.__enter__()
+            return ok
+
+        orig_handle_one = http.server.BaseHTTPRequestHandler.handle_one_request
+
+        def handle_one_request(self):
+            self._enact_ctx = None
+            try:
+                return orig_handle_one(self)
+            finally:
+                ctx = getattr(self, "_enact_ctx", None)
+                if ctx is not None:
+                    self._enact_ctx = None
+                    ctx.__exit__(None, None, None)
+
+        http.server.BaseHTTPRequestHandler.parse_request = parse_request
+        http.server.BaseHTTPRequestHandler.handle_one_request = handle_one_request
+    except Exception:
+        pass
+    try:
+        import wsgiref.handlers
+        orig_run = wsgiref.handlers.BaseHandler.run
+
+        def run(self, application):
+            target = self.environ.get("HTTP_X_ENACT_TARGET") if hasattr(self, "environ") and self.environ else None
+            if target:
+                with request_target(target.strip()):
+                    return orig_run(self, application)
+            return orig_run(self, application)
+
+        wsgiref.handlers.BaseHandler.run = run
+    except Exception:
+        pass
+
+
 def _install(repo: str, recorders) -> None:
-    global root, own, tracer
+    global root, own, tracer, outer_kernel_trace
     root = os.path.realpath(repo) + os.sep
+    outer_kernel_trace = os.environ.get(ENV_OUTER_KERNEL_TRACE, "").lower() in ("1", "true", "yes")
     exe = os.environ.get(ENV_EXE, "")
-    tracer = exe if sys.platform == "linux" and exe and os.access(exe, os.X_OK) else ""
+    tracer = "" if outer_kernel_trace else (exe if sys.platform == "linux" and exe and os.access(exe, os.X_OK) else "")
     own = tuple(os.path.realpath(r) for r in recorders) + (os.path.realpath(__file__),)
     monitoring.use_tool_id(TARGETS_TOOL, TARGETS_NAME)
     monitoring.register_callback(TARGETS_TOOL, PY_START, on_start)
     sys.addaudithook(on_audit)
     _patch_imports()
     _patch_stat()
+    _patch_http_context()
 
 
 def start(repo: str, recorders=(), quiet_programs=(), unlisted_callers=(), readers=None) -> None:
@@ -2228,30 +2403,124 @@ def finish() -> tuple[dict, dict[str, tuple[dict, list[str]]]]:
     return shared.entry(common, at), out
 
 
-def write_map(out_dir: str, prefix: str, shared_entry: dict, targets: dict) -> str:
+def checkpoint(keys) -> tuple[dict, dict[str, tuple[dict, list[str]]], list[str]] | None:
+    """What `finish` would give for the targets in `keys`, each ended (none of its code runs
+    again), while recording goes on: from copies, for the map a process killed before its
+    end leaves. The adapter publishes each completed target once. The children's
+    records written so far are merged into the copies, and a child spawned without a
+    record, or ended without one, makes its target opaque, as at the end. A target left out
+    is one a child still running may record for (it started before the target ended): what
+    it does there is unknown yet; one serving every target (a helper running since start-up)
+    leaves none. Also returns the load order its entries name. None: no target to write.
+    Shared teardown not run yet (session fixtures') is in no checkpoint: a killed process
+    never runs it either."""
+    if child:
+        return None
+    busy = getattr(local, "busy", False)
+    local.busy = True  # what it opens and stats is the recorder's own
+    try:
+        return _checkpoint(keys)
+    finally:
+        local.busy = busy
+
+
+def _checkpoint(keys):
+    import json
+    from bisect import bisect_right
+
+    _mark_loaded(current_key)
+    scan_modules()
+    fps = {SHARED: shared.copy()}
+    fps.update((key, footprints[key].copy()) for key in keys if key in footprints and key != SHARED)
+    records = os.path.join(children_dir, "records")
+    started = _started_children(records)
+    unknown: set[str] = set()
+    for stem, (token, spawn_id, start) in started.items():
+        traced = spawn_id.startswith("exec:")
+        what = f"a traced {spawn_id[len('exec:'):]}" if traced else "a Python child process"
+        try:
+            with open(os.path.join(records, _record_of(stem))) as f:
+                record = json.load(f)
+        except (OSError, ValueError):
+            if _running(int(stem.partition("-")[0])):
+                first = 0 if start is None else max(bisect_right(switched_at, start) - 1, 0)
+                unknown.update(key for key in switched_to[first:] if key)
+            else:
+                fp = fps.get(_served(token, start, None))
+                if fp is not None:
+                    fp.opaque.add(f"{what} ended without its record")
+            continue
+        fp = fps.get(_served(token, start, record.get("ended")))
+        if fp is not None:
+            child_fp = Footprint.load(record["footprint"], native=traced)
+            if traced:
+                child_fp.opaque = {f"{what}: {why}" for why in child_fp.opaque}
+            fp.update(child_fp)
+    if SHARED in unknown:
+        count("checkpoints_held")
+        return None  # a child serving every target still runs
+    for key in unknown:
+        fps.pop(key, None)
+    if len(fps) == 1:
+        return None
+    spawned = {spawn_id for _, spawn_id, _ in started.values()}
+    for fp in fps.values():
+        if fp.spawned - spawned:
+            fp.opaque.add(f"{len(fp.spawned - spawned)} Python child process(es) left no record (no site, or never ran)")
+        fp.spawned.clear()
+    kinds: dict[str, str | None] = {}
+    for fp in fps.values():
+        fp.collapse_probes(kinds)
+    order, marks = list(loaded_order), {key: loaded_marks.get(key, len(loaded_order)) for key in fps}
+    marks.pop(SHARED, None)
+    narrow_own_modules(fps, order, marks)
+    common = min(marks.values())
+    ran = set(shared.code).union(*(fp.code for fp in footprints.values()), *(fp.code for fp in fps.values()))
+    fps[SHARED].reads.update(rel for rel in order if rel not in ran)
+    at = {rel: i for i, rel in enumerate(order)}
+    out = {}
+    for key, fp in fps.items():
+        if key != SHARED:
+            own = (f for f in fp.code if f.endswith(".py"))
+            out[key] = (fp.entry(marks[key], at, own, fps[SHARED]), sorted(fp.opaque | fps[SHARED].opaque))
+    count("checkpoints")
+    return fps[SHARED].entry(common, at), out, order
+
+
+def write_map(out_dir: str, prefix: str, shared_entry: dict, targets: dict, path: str | None = None,
+              order: list[str] | None = None) -> str:
     """Writes the map: `shared` once, which enact lays over every target (each holds it),
     the targets' own entries, and the order the process loaded its modules in
-    (`load_order`), whose prefixes they name (`loaded_through`). Returns its path, unique in `out_dir` (shards run side by
-    side, in sandboxes where pids repeat)."""
+    (`load_order`, a checkpoint's `order`), whose prefixes they name (`loaded_through`).
+    Returns its path, unique in `out_dir` (shards run side by side, in sandboxes where pids
+    repeat), or `path` (a checkpoint's), which it replaces whole: a reader, or a kill while
+    it writes, finds the last one complete."""
     import json
     import tempfile
 
     os.makedirs(out_dir, exist_ok=True)
-    fd, out = tempfile.mkstemp(suffix=".json", prefix=prefix, dir=out_dir)
-    with os.fdopen(fd, "w") as f:
-        json.dump(
-            {
-                "version": 1,
-                "recorder": RECORDER,
-                "outcomes": True,
-                "load_order": loaded_order,
-                "shared": shared_entry,
-                "targets": targets,
-            },
-            f,
-            separators=(",", ":"),
-        )
-    return out
+    fd, temp = tempfile.mkstemp(suffix=".partial", prefix=prefix, dir=out_dir)
+    if path is None:
+        path = temp.removesuffix(".partial") + ".json"
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(
+                {
+                    "version": 1,
+                    "recorder": RECORDER,
+                    "outcomes": True,
+                    "load_order": loaded_order if order is None else order,
+                    "shared": shared_entry,
+                    "targets": targets,
+                },
+                f,
+                separators=(",", ":"),
+            )
+        os.replace(temp, path)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+    return path
 
 
 def write_stats(map_path: str, targets: int, opaque: dict) -> None:

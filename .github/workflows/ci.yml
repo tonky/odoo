@@ -46,7 +46,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   GOCACHE: /tmp/go-build
   GOPATH: /tmp/go
-  UV_CACHE_DIR: ${{ vars.ENACT_UV_CACHE_DIR || '/tmp/.cache/uv' }}
+  UV_CACHE_DIR: /tmp/.cache/uv
   XDG_CACHE_HOME: /tmp/.cache
 jobs:
   detect:
@@ -56,11 +56,185 @@ jobs:
     - Linux
     - X64
     - tonky-ci
+    - tonky-ci-s
     timeout-minutes: 5
     outputs:
       matrix: ${{ steps.diff.outputs.matrix }}
     steps:
+    - name: Probe Runner Caches
+      id: runner_caches
+      run: |
+        #!/usr/bin/env bash
+        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
+        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
+        # seen by every repository the host serves, holds only signature-verified content: the enve
+        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
+        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
+        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
+        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
+        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
+        set -euo pipefail
+        host="${ENACT_HOST_CACHE:-}"
+        if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
+            echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
+            host=""
+        fi
+        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
+        # without a word: from `/` down, each component owned by root or the user and writable by
+        # no one else, a root-owned sticky ancestor excepted.
+        trusted_store() {
+            local path="" part owner mode uid
+            uid=$(id -u)
+            IFS=/ read -ra parts <<<"${1#/}"
+            for part in "${parts[@]}"; do
+                path="$path/$part"
+                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
+                mode=$((8#$mode))
+                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
+                if (( mode & 8#22 )); then
+                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
+                fi
+            done
+        }
+        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
+        # names a repository, every other path a directory.
+        layout() {
+            cat <<LAYOUT
+        ENVE_STORE_DIR repo/enve-store .
+        UV_CACHE_DIR repo/uv .
+        PIP_CACHE_DIR repo/pip .
+        ENACT_PNPM_STORE repo/pnpm .
+        npm_config_cache repo/npm .
+        YARN_CACHE_FOLDER repo/yarn .
+        BUN_INSTALL_CACHE_DIR repo/bun .
+        GOMODCACHE repo/go mod
+        GOCACHE repo/go build
+        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENVE_MIRROR shared/enve-nar .
+        LAYOUT
+        }
+        if [ -n "$host" ]; then
+            # The repository's stores are writable by no one else: enve trusts no other store.
+            # `shared/` stays as the host made it, writable by the jobs of every repository.
+            umask 022
+            chmod go-w "$host/repo" 2>/dev/null || true
+            # The enve store check reads what enve wrote since.
+            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
+            while read -r var entry path; do
+                # The host provides `shared/`; without it the NAR mirror is skipped.
+                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
+                mkdir -p "$host/$entry"
+                touch "$host/$entry"
+                dir="$host/$entry/$path"
+                case "$var" in
+                    ENACT_GIT_MIRROR) ;;
+                    *) mkdir -p "$dir" ;;
+                esac
+                dir="${dir%/.}"
+                if [ "${entry%%/*}" = repo ]; then
+                    chmod 755 "$host/$entry" 2>/dev/null || true
+                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
+                fi
+                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
+                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
+                    exit 1
+                fi
+                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
+                echo "$var=$dir" >> "$GITHUB_ENV"
+            done < <(layout)
+        fi
+        echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
+        printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
+        printf 'Host cache: %s\n' "${host:-none}"
+    - name: Checkout Repository (sparse) from the Host Mirror
+      id: host_checkout
+      if: ${{ steps.runner_caches.outputs.host != '' }}
+      continue-on-error: true
+      run: |
+        #!/usr/bin/env bash
+        # Checks the commit out through the host cache's mirror of the repository
+        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
+        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
+        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
+        # one per line; none checks the whole tree out.
+        set -euo pipefail
+        git config --global --add safe.directory "*"
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        mirror="$ENACT_GIT_MIRROR"
+        header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$ENACT_GIT_TOKEN" | base64 | tr -d '\n')"
+        refs=("+refs/heads/*:refs/heads/*")
+        case "$GITHUB_REF" in
+            refs/pull/*) refs+=("+$GITHUB_REF:$GITHUB_REF") ;;
+        esac
+        (
+            flock 9
+            if [ ! -f "$mirror/HEAD" ]; then
+                git init -q --bare "$mirror"
+                git -C "$mirror" config uploadpack.allowAnySHA1InWant true
+                git -C "$mirror" config gc.auto 0
+            fi
+            git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags --prune "$url" "${refs[@]}"
+            if ! git -C "$mirror" cat-file -e "$GITHUB_SHA^{commit}" 2>/dev/null; then
+                git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags "$url" "$GITHUB_SHA"
+            fi
+        ) 9>"$mirror.lock"
+        cd "$GITHUB_WORKSPACE"
+        # A half-made repository would mislead the fallback checkout into reusing it.
+        trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
+        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
+        find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        git init -q .
+        echo "$mirror/objects" > .git/objects/info/alternates
+        git remote add origin "$url"
+        git config --local "http.$GITHUB_SERVER_URL/.extraheader" "$header"
+        git config --local gc.auto 0
+        git fetch -q --no-tags "$mirror" "+refs/heads/*:refs/remotes/origin/*"
+        if [ -n "${ENACT_SPARSE_CONE:-}" ]; then
+            mapfile -t cone < <(printf '%s\n' "$ENACT_SPARSE_CONE" | sed '/^[[:space:]]*$/d')
+            git sparse-checkout set --cone "${cone[@]}"
+        fi
+        case "$GITHUB_REF" in
+            refs/heads/*) git checkout -q --force -B "${GITHUB_REF#refs/heads/}" "$GITHUB_SHA" ;;
+            *) git checkout -q --force --detach "$GITHUB_SHA" ;;
+        esac
+        git log -1 --format='Checked out %H through the host mirror'
+      env:
+        ENACT_GIT_TOKEN: ${{ github.token }}
+        ENACT_SPARSE_CONE: |-
+          .enact
+          cue.mod
+          .github
+          bin
+          enve.cue
+          enve.lock
+          odoo-bin
+          requirements.txt
+          setup.py
+          setup.cfg
+          pyproject.toml
+          Justfile
+          oxlint.json
+          ruff.toml
+          uv.lock
+          helpers
+          odoo
+          setup
+          addons/api_doc
+          addons/auth_passkey
+          addons/auth_totp
+          addons/base_import
+          addons/base_import_module
+          addons/base_setup
+          addons/bus
+          addons/html_editor
+          addons/http_routing
+          addons/iap
+          addons/rpc
+          addons/web
+          addons/web_tour
+          addons/web_unsplash
     - name: Checkout Repository (sparse)
+      if: ${{ steps.runner_caches.outputs.host == '' || steps.host_checkout.outcome == 'failure' }}
       uses: actions/checkout@v7
       with:
         fetch-depth: "1"
@@ -115,10 +289,10 @@ jobs:
       continue-on-error: true
       uses: actions/cache/restore@v6
       with:
-        key: enact-reach-${{ github.ref_name }}-${{ github.sha }}
+        key: enact-reach-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
         path: .git/enact/reach
         restore-keys: |-
-          enact-reach-${{ github.ref_name }}-
+          enact-reach-${{ github.head_ref || github.ref_name }}-
           enact-reach-${{ github.base_ref || github.event.repository.default_branch }}-
     - name: Install committed enact & enve builds
       run: |
@@ -164,17 +338,19 @@ jobs:
     - name: Ensure enve & enact CLI on PATH
       run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
-        mkdir -p "$HOME/.local/share/enve/store"
+        # The store the runner cache probe chose (a host cache's), else the user store.
+        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
+        mkdir -p "$store"
         if command -v sudo >/dev/null 2>&1; then
           sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
         fi
         if [ -d "/nix" ]; then
           if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            cp -rn /nix/store/* "$store/" 2>/dev/null || true
             rm -rf /nix/store 2>/dev/null || true
           fi
-          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+          ln -sfn "$store" /nix/store 2>/dev/null || true
         fi
         # The previous step's $GITHUB_PATH entries apply from the next step on.
         export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
@@ -219,6 +395,9 @@ jobs:
           if has_commit "$ENACT_BASE_SHA"; then
             BASE_REV="$ENACT_BASE_SHA"
           fi
+        fi
+        if [ -n "${GITHUB_HEAD_SHA:-}" ]; then
+          has_commit "$GITHUB_HEAD_SHA" || $FETCH --depth=1 "$GITHUB_HEAD_SHA" 2>/dev/null || true
         fi
         if [ -z "$BASE_REV" ] && [ -z "$BASE_REF" ]; then
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
@@ -308,10 +487,14 @@ jobs:
             $MAP_FETCH "$rev" 2>/dev/null || true
           done
         fi
-        # Pushes to the default branch record the footprints of the tests they run untraced or
-        # stale (`enact run`'s recording, off elsewhere on CI).
-        if [ -z "${ENACT_RECORD:-}" ] && [ "$GITHUB_EVENT_NAME" = "push" ] && [ "${GITHUB_REF_NAME:-}" = "${ENACT_DEFAULT_BRANCH:-master}" ]; then
-          export ENACT_RECORD=auto
+        # Pushes to the default branch and same-repo pull requests record the footprints of the
+        # tests they run untraced or stale (`enact run`'s recording, off elsewhere on CI).
+        if [ -z "${ENACT_RECORD:-}" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "${GITHUB_REF_NAME:-}" = "${ENACT_DEFAULT_BRANCH:-master}" ]; then
+            export ENACT_RECORD=auto
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "${GITHUB_HEAD_REF:-}" ] && [ "${GITHUB_HEAD_REF:-}" != "${ENACT_DEFAULT_BRANCH:-master}" ] && [ "${ENACT_SAME_REPO_PR:-true}" != "false" ]; then
+            export ENACT_RECORD=auto
+          fi
         fi
         # A warm-up (dispatched with warm_reach on the default branch) runs every suite and records
         # every test without a fresh footprint.
@@ -354,13 +537,9 @@ jobs:
         if [ "${ENACT_FORCE_NO_CACHE:-}" = "true" ]; then
           set -- "$@" --no-cache
         fi
-        MATRIX=$(enact affected --pipeline .enact --workflow ci "$@" --format json)
+        MATRIX=$(enact affected --pipeline .enact --workflow ci --reach-hand-off "$RUNNER_TEMP/enact-reach" "$@" --format json)
         echo "$MATRIX"
         echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-        REACH_MAP=$(enact trace store where --path 2>/dev/null || true)
-        if [ -n "$REACH_MAP" ] && [ -f "$REACH_MAP" ]; then
-          mkdir -p "$RUNNER_TEMP/enact-reach" && cp "$REACH_MAP" "$RUNNER_TEMP/enact-reach/map.bin"
-        fi
       env:
         ENACT_BASE_REF: ${{ inputs.base_ref || github.base_ref || github.event.pull_request.base.ref }}
         ENACT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -372,6 +551,9 @@ jobs:
         ENACT_INPUT_UPDATED: ${{ inputs.updated }}
         ENACT_INPUT_WARM_REACH: ${{ inputs.warm_reach }}
         ENACT_INTEGRATION_BRANCH: ${{ vars.ENACT_INTEGRATION_BRANCH }}
+        ENACT_SAME_REPO_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        GITHUB_HEAD_REF: ${{ github.head_ref }}
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     - name: Hand the Reach Map to the Jobs
       if: always()
       continue-on-error: true
@@ -379,7 +561,7 @@ jobs:
       with:
         if-no-files-found: ignore
         name: enact-reach-map
-        path: ${{ runner.temp }}/enact-reach/map.bin
+        path: ${{ runner.temp }}/enact-reach
         retention-days: "1"
   preflight:
     name: "Stage: Preflight"
@@ -388,9 +570,840 @@ jobs:
     - Linux
     - X64
     - tonky-ci
+    - tonky-ci-s
     timeout-minutes: 15
     steps:
+    - name: Probe Runner Caches
+      id: runner_caches
+      run: |
+        #!/usr/bin/env bash
+        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
+        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
+        # seen by every repository the host serves, holds only signature-verified content: the enve
+        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
+        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
+        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
+        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
+        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
+        set -euo pipefail
+        host="${ENACT_HOST_CACHE:-}"
+        if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
+            echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
+            host=""
+        fi
+        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
+        # without a word: from `/` down, each component owned by root or the user and writable by
+        # no one else, a root-owned sticky ancestor excepted.
+        trusted_store() {
+            local path="" part owner mode uid
+            uid=$(id -u)
+            IFS=/ read -ra parts <<<"${1#/}"
+            for part in "${parts[@]}"; do
+                path="$path/$part"
+                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
+                mode=$((8#$mode))
+                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
+                if (( mode & 8#22 )); then
+                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
+                fi
+            done
+        }
+        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
+        # names a repository, every other path a directory.
+        layout() {
+            cat <<LAYOUT
+        ENVE_STORE_DIR repo/enve-store .
+        UV_CACHE_DIR repo/uv .
+        PIP_CACHE_DIR repo/pip .
+        ENACT_PNPM_STORE repo/pnpm .
+        npm_config_cache repo/npm .
+        YARN_CACHE_FOLDER repo/yarn .
+        BUN_INSTALL_CACHE_DIR repo/bun .
+        GOMODCACHE repo/go mod
+        GOCACHE repo/go build
+        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENVE_MIRROR shared/enve-nar .
+        LAYOUT
+        }
+        if [ -n "$host" ]; then
+            # The repository's stores are writable by no one else: enve trusts no other store.
+            # `shared/` stays as the host made it, writable by the jobs of every repository.
+            umask 022
+            chmod go-w "$host/repo" 2>/dev/null || true
+            # The enve store check reads what enve wrote since.
+            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
+            while read -r var entry path; do
+                # The host provides `shared/`; without it the NAR mirror is skipped.
+                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
+                mkdir -p "$host/$entry"
+                touch "$host/$entry"
+                dir="$host/$entry/$path"
+                case "$var" in
+                    ENACT_GIT_MIRROR) ;;
+                    *) mkdir -p "$dir" ;;
+                esac
+                dir="${dir%/.}"
+                if [ "${entry%%/*}" = repo ]; then
+                    chmod 755 "$host/$entry" 2>/dev/null || true
+                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
+                fi
+                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
+                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
+                    exit 1
+                fi
+                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
+                echo "$var=$dir" >> "$GITHUB_ENV"
+            done < <(layout)
+        fi
+        echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
+        printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
+        printf 'Host cache: %s\n' "${host:-none}"
+    - name: Checkout Repository (sparse) from the Host Mirror
+      id: host_checkout
+      if: ${{ steps.runner_caches.outputs.host != '' }}
+      continue-on-error: true
+      run: |
+        #!/usr/bin/env bash
+        # Checks the commit out through the host cache's mirror of the repository
+        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
+        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
+        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
+        # one per line; none checks the whole tree out.
+        set -euo pipefail
+        git config --global --add safe.directory "*"
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        mirror="$ENACT_GIT_MIRROR"
+        header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$ENACT_GIT_TOKEN" | base64 | tr -d '\n')"
+        refs=("+refs/heads/*:refs/heads/*")
+        case "$GITHUB_REF" in
+            refs/pull/*) refs+=("+$GITHUB_REF:$GITHUB_REF") ;;
+        esac
+        (
+            flock 9
+            if [ ! -f "$mirror/HEAD" ]; then
+                git init -q --bare "$mirror"
+                git -C "$mirror" config uploadpack.allowAnySHA1InWant true
+                git -C "$mirror" config gc.auto 0
+            fi
+            git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags --prune "$url" "${refs[@]}"
+            if ! git -C "$mirror" cat-file -e "$GITHUB_SHA^{commit}" 2>/dev/null; then
+                git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags "$url" "$GITHUB_SHA"
+            fi
+        ) 9>"$mirror.lock"
+        cd "$GITHUB_WORKSPACE"
+        # A half-made repository would mislead the fallback checkout into reusing it.
+        trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
+        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
+        find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        git init -q .
+        echo "$mirror/objects" > .git/objects/info/alternates
+        git remote add origin "$url"
+        git config --local "http.$GITHUB_SERVER_URL/.extraheader" "$header"
+        git config --local gc.auto 0
+        git fetch -q --no-tags "$mirror" "+refs/heads/*:refs/remotes/origin/*"
+        if [ -n "${ENACT_SPARSE_CONE:-}" ]; then
+            mapfile -t cone < <(printf '%s\n' "$ENACT_SPARSE_CONE" | sed '/^[[:space:]]*$/d')
+            git sparse-checkout set --cone "${cone[@]}"
+        fi
+        case "$GITHUB_REF" in
+            refs/heads/*) git checkout -q --force -B "${GITHUB_REF#refs/heads/}" "$GITHUB_SHA" ;;
+            *) git checkout -q --force --detach "$GITHUB_SHA" ;;
+        esac
+        git log -1 --format='Checked out %H through the host mirror'
+      env:
+        ENACT_GIT_TOKEN: ${{ github.token }}
+        ENACT_SPARSE_CONE: |-
+          .enact
+          cue.mod
+          .github
+          bin
+          enve.cue
+          enve.lock
+          odoo-bin
+          requirements.txt
+          setup.py
+          setup.cfg
+          pyproject.toml
+          Justfile
+          oxlint.json
+          ruff.toml
+          uv.lock
+          helpers
+          odoo
+          setup
+          addons/api_doc
+          addons/auth_passkey
+          addons/auth_totp
+          addons/base_import
+          addons/base_import_module
+          addons/base_setup
+          addons/bus
+          addons/html_editor
+          addons/http_routing
+          addons/iap
+          addons/rpc
+          addons/web
+          addons/web_tour
+          addons/web_unsplash
+          addons/account
+          addons/analytic
+          addons/auth_signup
+          addons/digest
+          addons/mail
+          addons/onboarding
+          addons/portal
+          addons/product
+          addons/resource
+          addons/uom
+          odoo/addons/base
+          addons/account_add_gln
+          addons/account_check_printing
+          addons/account_debit_note
+          addons/account_edi
+          addons/account_edi_proxy_client
+          addons/certificate
+          addons/account_edi_ubl_cii
+          addons/account_fleet
+          addons/fleet
+          addons/account_payment
+          addons/payment
+          addons/account_payment_interco
+          addons/account_peppol
+          addons/account_peppol_advanced_fields
+          addons/account_peppol_response
+          addons/account_qr_code_emv
+          addons/account_qr_code_sepa
+          addons/base_iban
+          addons/account_tax_python
+          addons/account_test
+          addons/account_update_tax_tags
+          addons/attachment_indexation
+          addons/auth_ldap
+          addons/auth_oauth
+          addons/auth_passkey_portal
+          addons/auth_password_policy
+          addons/auth_password_policy_portal
+          addons/auth_password_policy_signup
+          addons/auth_timeout
+          addons/auth_totp_mail
+          addons/auth_totp_portal
+          addons/barcodes
+          addons/barcodes_gs1_nomenclature
+          addons/base_address_extended
+          addons/contacts
+          addons/base_automation
+          addons/iap_mail
+          addons/phone_validation
+          addons/sms
+          addons/base_geolocalize
+          addons/base_install_request
+          addons/base_sparse_field
+          addons/base_vat
+          addons/board
+          addons/spreadsheet
+          addons/spreadsheet_dashboard
+          addons/calendar
+          addons/calendar_sms
+          addons/cloud_storage
+          addons/cloud_storage_azure
+          addons/cloud_storage_google
+          addons/cloud_storage_migration
+          addons/crm
+          addons/sales_team
+          addons/utm
+          addons/crm_iap_enrich
+          addons/iap_crm
+          addons/crm_iap_mine
+          addons/crm_livechat
+          addons/im_livechat
+          addons/rating
+          addons/crm_mail_plugin
+          addons/mail_plugin
+          addons/crm_sms
+          addons/data_recycle
+          addons/delivery
+          addons/payment_custom
+          addons/sale
+          addons/delivery_mondialrelay
+          addons/sale_stock
+          addons/stock
+          addons/stock_account
+          addons/stock_delivery
+          addons/delivery_stock_picking_batch
+          addons/stock_picking_batch
+          addons/event
+          addons/event_booth
+          addons/event_booth_sale
+          addons/event_product
+          addons/event_sale
+          addons/sale_management
+          addons/event_crm
+          addons/event_crm_sale
+          addons/event_sms
+          addons/gamification
+          addons/gamification_sale_crm
+          addons/sale_crm
+          addons/google_account
+          addons/google_address_autocomplete
+          addons/google_calendar
+          addons/google_gmail
+          addons/google_recaptcha
+          addons/hr
+          addons/resource_mail
+          addons/hr_attendance
+          addons/hr_calendar
+          addons/hr_expense
+          addons/hr_fleet
+          addons/hr_gamification
+          addons/hr_holidays
+          addons/hr_holidays_attendance
+          addons/hr_holidays_homeworking
+          addons/hr_homeworking
+          addons/hr_homeworking_calendar
+          addons/hr_hourly_cost
+          addons/hr_livechat
+          addons/hr_maintenance
+          addons/maintenance
+          addons/hr_org_chart
+          addons/web_hierarchy
+          addons/hr_presence
+          addons/hr_recruitment
+          addons/hr_recruitment_skills
+          addons/hr_skills
+          addons/hr_recruitment_sms
+          addons/hr_recruitment_survey
+          addons/survey
+          addons/hr_skills_event
+          addons/hr_skills_slides
+          addons/html_builder
+          addons/portal_rating
+          addons/social_media
+          addons/website
+          addons/website_mail
+          addons/website_partner
+          addons/website_profile
+          addons/website_slides
+          addons/hr_skills_survey
+          addons/hr_timesheet
+          addons/project
+          addons/hr_timesheet_attendance
+          addons/hr_work_entry
+          addons/hr_work_entry_holidays
+          addons/iot_base
+          addons/iot_box_image
+          addons/iot_drivers
+          addons/l10n_account_edi_ubl_cii_tests
+          addons/l10n_au
+          addons/l10n_be
+          addons/l10n_de
+          addons/l10n_din5008
+          addons/l10n_fr
+          addons/l10n_fr_account
+          addons/l10n_nl
+          addons/l10n_account_withholding_tax
+          addons/l10n_account_withholding_tax_pos
+          addons/partner_autocomplete
+          addons/point_of_sale
+          addons/l10n_ae
+          addons/l10n_gcc_invoice
+          addons/l10n_ae_pos
+          addons/l10n_gcc_pos
+          addons/l10n_anz_ubl_pint
+          addons/l10n_ar
+          addons/l10n_latam_base
+          addons/l10n_latam_invoice_document
+          addons/l10n_ar_pos
+          addons/l10n_ar_stock
+          addons/l10n_ar_website_sale
+          addons/website_payment
+          addons/website_sale
+          addons/l10n_ar_withholding
+          addons/l10n_latam_check
+          addons/l10n_at
+          addons/l10n_bd
+          addons/l10n_be_pos_restaurant
+          addons/pos_restaurant
+          addons/l10n_be_pos_sale
+          addons/pos_sale
+          addons/l10n_bf
+          addons/l10n_syscohada
+          addons/l10n_bg
+          addons/l10n_bg_ledger
+          addons/l10n_bh
+          addons/l10n_bj
+          addons/l10n_bo
+          addons/l10n_br
+          addons/l10n_br_sales
+          addons/l10n_br_website_sale
+          addons/l10n_ca
+          addons/l10n_cd
+          addons/l10n_cf
+          addons/l10n_cg
+          addons/l10n_ch
+          addons/l10n_ch_pos
+          addons/l10n_ci
+          addons/l10n_cl
+          addons/l10n_cm
+          addons/l10n_cn
+          addons/l10n_cn_city
+          addons/l10n_co
+          addons/l10n_co_pos
+          addons/l10n_cr
+          addons/l10n_cy
+          addons/l10n_cz
+          addons/l10n_din5008_expense
+          addons/l10n_din5008_purchase
+          addons/purchase
+          addons/l10n_din5008_repair
+          addons/repair
+          addons/l10n_din5008_sale
+          addons/l10n_din5008_stock
+          addons/l10n_dk
+          addons/l10n_dk_fik
+          addons/l10n_dk_nemhandel
+          addons/l10n_dk_nemhandel_response
+          addons/l10n_dk_oioubl
+          addons/l10n_do
+          addons/l10n_dz
+          addons/l10n_ec
+          addons/l10n_ec_sale
+          addons/l10n_ec_stock
+          addons/l10n_ee
+          addons/l10n_eg
+          addons/l10n_eg_edi_eta
+          addons/l10n_es
+          addons/l10n_es_edi_facturae
+          addons/l10n_es_edi_sii
+          addons/l10n_es_edi_tbai
+          addons/l10n_es_edi_tbai_pos
+          addons/l10n_es_edi_verifactu
+          addons/l10n_es_edi_verifactu_pos
+          addons/l10n_es_pos
+          addons/l10n_et
+          addons/l10n_eu_oss
+          addons/l10n_fi
+          addons/l10n_fi_sale
+          addons/l10n_fr_facturx_chorus_pro
+          addons/l10n_fr_hr_holidays
+          addons/l10n_fr_hr_work_entry_holidays
+          addons/l10n_fr_pdp
+          addons/l10n_fr_pdp_pos
+          addons/l10n_fr_pos_cert
+          addons/l10n_ga
+          addons/l10n_gcc_invoice_stock_account
+          addons/l10n_ge
+          addons/l10n_gf
+          addons/l10n_gn
+          addons/l10n_gp
+          addons/l10n_gq
+          addons/l10n_gr
+          addons/l10n_gr_edi
+          addons/l10n_gr_edi_e_invoo
+          addons/l10n_gt
+          addons/l10n_gw
+          addons/l10n_hk
+          addons/l10n_hn
+          addons/l10n_hr
+          addons/l10n_hr_edi
+          addons/l10n_hr_kuna
+          addons/l10n_hu
+          addons/l10n_hu_edi
+          addons/l10n_hu_edi_receive
+          addons/l10n_id
+          addons/l10n_id_efaktur_coretax
+          addons/l10n_id_pos
+          addons/l10n_ie
+          addons/l10n_il
+          addons/l10n_in
+          addons/l10n_in_edi
+          addons/l10n_in_ewaybill
+          addons/l10n_in_ewaybill_irn
+          addons/l10n_in_ewaybill_stock
+          addons/l10n_in_stock
+          addons/l10n_in_hr_holidays
+          addons/l10n_in_pos
+          addons/l10n_in_purchase_stock
+          addons/purchase_stock
+          addons/l10n_in_sale
+          addons/l10n_in_sale_stock
+          addons/l10n_iq
+          addons/l10n_it
+          addons/l10n_it_edi
+          addons/l10n_it_edi_doi
+          addons/l10n_it_edi_sale
+          addons/l10n_it_stock_ddt
+          addons/l10n_jo
+          addons/l10n_jo_edi
+          addons/l10n_jo_edi_pos
+          addons/pos_edi_ubl
+          addons/l10n_jp
+          addons/l10n_jp_ubl_pint
+          addons/l10n_ke
+          addons/l10n_ke_edi_tremol
+          addons/l10n_kh
+          addons/l10n_km
+          addons/l10n_kr
+          addons/l10n_kw
+          addons/l10n_kz
+          addons/l10n_lb_account
+          addons/l10n_lk
+          addons/l10n_lk_invoice
+          addons/l10n_lt
+          addons/l10n_lu
+          addons/l10n_lv
+          addons/l10n_ma
+          addons/l10n_mc
+          addons/l10n_ml
+          addons/l10n_mn
+          addons/l10n_mq
+          addons/l10n_mr
+          addons/l10n_mt
+          addons/l10n_mt_pos
+          addons/l10n_mu_account
+          addons/l10n_mx
+          addons/l10n_my
+          addons/l10n_my_edi
+          addons/l10n_my_ubl_pint
+          addons/l10n_my_edi_pos
+          addons/l10n_mz
+          addons/l10n_ne
+          addons/l10n_ng
+          addons/l10n_no
+          addons/l10n_nz
+          addons/l10n_om
+          addons/l10n_pa
+          addons/l10n_pe
+          addons/l10n_pe_pos
+          addons/l10n_ph
+          addons/l10n_pk
+          addons/l10n_pl
+          addons/l10n_pl_bank_verification
+          addons/l10n_pl_edi
+          addons/l10n_pl_edi_jst
+          addons/l10n_pt
+          addons/l10n_qa
+          addons/l10n_re
+          addons/l10n_ro
+          addons/l10n_ro_cpv_code
+          addons/l10n_ro_edi
+          addons/l10n_ro_edi_stock
+          addons/l10n_ro_edi_stock_batch
+          addons/l10n_rs
+          addons/l10n_rs_edi
+          addons/l10n_rw
+          addons/l10n_sa
+          addons/l10n_sa_edi
+          addons/l10n_sa_edi_pos
+          addons/l10n_sa_pos
+          addons/l10n_sa_withholding_tax
+          addons/l10n_se
+          addons/l10n_sg
+          addons/l10n_sg_ubl_pint
+          addons/l10n_si
+          addons/l10n_sk
+          addons/l10n_sn
+          addons/l10n_td
+          addons/l10n_test_pos_qr_payment
+          addons/l10n_tg
+          addons/l10n_th
+          addons/l10n_tn
+          addons/l10n_tr
+          addons/l10n_tr_nilvera
+          addons/l10n_tr_nilvera_base_vat
+          addons/l10n_tr_nilvera_edispatch
+          addons/l10n_tr_nilvera_einvoice
+          addons/l10n_tr_nilvera_einvoice_extended
+          addons/l10n_tw
+          addons/l10n_tw_edi_ecpay
+          addons/l10n_tw_edi_ecpay_pos
+          addons/l10n_tw_edi_ecpay_website_sale
+          addons/l10n_tz_account
+          addons/l10n_ua
+          addons/l10n_ug
+          addons/l10n_uk
+          addons/l10n_us
+          addons/l10n_us_account
+          addons/l10n_uy
+          addons/l10n_uy_pos
+          addons/l10n_uz
+          addons/l10n_ve
+          addons/l10n_vn
+          addons/l10n_vn_edi_viettel
+          addons/l10n_vn_edi_viettel_pos
+          addons/l10n_yt
+          addons/l10n_za
+          addons/l10n_zm_account
+          addons/link_tracker
+          addons/loyalty
+          addons/lunch
+          addons/mail_bot
+          addons/mail_bot_hr
+          addons/mail_group
+          addons/marketing_card
+          addons/mass_mailing
+          addons/mass_mailing_crm
+          addons/mass_mailing_crm_sms
+          addons/mass_mailing_sms
+          addons/mass_mailing_event
+          addons/mass_mailing_event_sms
+          addons/mass_mailing_event_track
+          addons/website_event
+          addons/website_event_track
+          addons/mass_mailing_event_track_sms
+          addons/mass_mailing_sale
+          addons/mass_mailing_sale_sms
+          addons/mass_mailing_slides
+          addons/mass_mailing_themes
+          addons/microsoft_account
+          addons/microsoft_calendar
+          addons/microsoft_outlook
+          addons/mrp
+          addons/mrp_account
+          addons/mrp_landed_costs
+          addons/stock_landed_costs
+          addons/mrp_product_expiry
+          addons/product_expiry
+          addons/mrp_repair
+          addons/mrp_subcontracting
+          addons/mrp_subcontracting_account
+          addons/mrp_subcontracting_dropshipping
+          addons/sale_purchase
+          addons/sale_purchase_stock
+          addons/stock_dropshipping
+          addons/mrp_subcontracting_landed_costs
+          addons/mrp_subcontracting_purchase
+          addons/purchase_mrp
+          addons/mrp_subcontracting_repair
+          addons/partnership
+          addons/payment_adyen
+          addons/payment_aps
+          addons/payment_asiapay
+          addons/payment_authorize
+          addons/payment_buckaroo
+          addons/payment_demo
+          addons/payment_dpo
+          addons/payment_ecpay
+          addons/payment_flutterwave
+          addons/payment_iyzico
+          addons/payment_mercado_pago
+          addons/payment_mollie
+          addons/payment_nuvei
+          addons/payment_paymob
+          addons/payment_paypal
+          addons/payment_payu
+          addons/payment_razorpay
+          addons/payment_redsys
+          addons/payment_stripe
+          addons/payment_toss_payments
+          addons/payment_worldline
+          addons/payment_xendit
+          addons/pos_account_tax_python
+          addons/pos_adyen
+          addons/pos_cashdro
+          addons/pos_cashmatic
+          addons/pos_discount
+          addons/pos_dpopay
+          addons/pos_event
+          addons/pos_event_sale
+          addons/pos_glory_cash
+          addons/pos_hr
+          addons/pos_hr_restaurant
+          addons/pos_imin
+          addons/pos_loyalty
+          addons/pos_mercado_pago
+          addons/pos_mollie
+          addons/pos_mrp
+          addons/pos_online_payment
+          addons/pos_online_payment_self_order
+          addons/pos_self_order
+          addons/pos_pine_labs
+          addons/pos_qfpay
+          addons/pos_razorpay
+          addons/pos_repair
+          addons/pos_restaurant_adyen
+          addons/pos_restaurant_loyalty
+          addons/pos_restaurant_stripe
+          addons/pos_stripe
+          addons/pos_safaricom
+          addons/pos_sale_loyalty
+          addons/pos_sale_margin
+          addons/sale_margin
+          addons/pos_self_order_adyen
+          addons/pos_self_order_pine_labs
+          addons/pos_self_order_qfpay
+          addons/pos_self_order_razorpay
+          addons/pos_self_order_sale
+          addons/pos_self_order_stripe
+          addons/pos_self_order_viva_com
+          addons/pos_viva_com
+          addons/pos_sms
+          addons/privacy_lookup
+          addons/product_email_template
+          addons/product_margin
+          addons/product_matrix
+          addons/project_account
+          addons/project_hr_expense
+          addons/project_hr_skills
+          addons/project_mail_plugin
+          addons/project_mrp
+          addons/project_mrp_account
+          addons/project_mrp_sale
+          addons/sale_mrp
+          addons/sale_project
+          addons/sale_service
+          addons/project_mrp_stock_landed_costs
+          addons/project_purchase
+          addons/project_purchase_stock
+          addons/project_stock
+          addons/project_sale_expense
+          addons/sale_expense
+          addons/project_sms
+          addons/project_stock_account
+          addons/project_stock_landed_costs
+          addons/project_timesheet_holidays
+          addons/project_todo
+          addons/purchase_edi_ubl_bis3
+          addons/purchase_product_matrix
+          addons/purchase_repair
+          addons/purchase_requisition
+          addons/purchase_requisition_sale
+          addons/purchase_requisition_stock
+          .gitignore
+          .weblate.json
+          CONTRIBUTING.md
+          COPYRIGHT
+          LICENSE
+          MANIFEST.in
+          README.md
+          SECURITY.md
+          debian
+          addons/sale_edi_ubl
+          addons/sale_expense_margin
+          addons/sale_gelato
+          addons/sale_gelato_stock
+          addons/sale_loyalty
+          addons/sale_loyalty_delivery
+          addons/sale_mrp_margin
+          addons/sale_stock_margin
+          addons/sale_pdf_quote_builder
+          addons/sale_product_matrix
+          addons/sale_project_stock
+          addons/sale_project_stock_account
+          addons/sale_purchase_project
+          addons/sale_sms
+          addons/sale_stock_product_expiry
+          addons/sale_timesheet
+          addons/sale_timesheet_margin
+          addons/sms_twilio
+          addons/snailmail
+          addons/snailmail_account
+          addons/spreadsheet_account
+          addons/spreadsheet_dashboard_account
+          addons/spreadsheet_dashboard_event_sale
+          addons/spreadsheet_dashboard_hr_expense
+          addons/spreadsheet_dashboard_hr_timesheet
+          addons/spreadsheet_dashboard_im_livechat
+          addons/spreadsheet_dashboard_pos_hr
+          addons/spreadsheet_dashboard_pos_restaurant
+          addons/spreadsheet_dashboard_sale
+          addons/spreadsheet_dashboard_sale_timesheet
+          addons/spreadsheet_dashboard_stock_account
+          addons/spreadsheet_dashboard_website_sale
+          addons/spreadsheet_dashboard_website_sale_slides
+          addons/website_sale_slides
+          addons/stock_fleet
+          addons/stock_maintenance
+          addons/stock_sms
+          addons/survey_crm
+          odoo/addons/test_access_rights
+          odoo/addons/test_action_bindings
+          odoo/addons/test_assetsbundle
+          odoo/addons/test_auth_custom
+          addons/test_base_automation
+          odoo/addons/test_convert
+          odoo/addons/test_converter
+          addons/test_crm_full
+          addons/website_crm
+          addons/website_crm_iap_reveal
+          addons/website_crm_livechat
+          addons/website_crm_partner_assign
+          addons/website_google_map
+          addons/website_livechat
+          odoo/addons/test_data_module
+          odoo/addons/test_data_module_install
+          addons/test_discuss_full
+          addons/test_event_full
+          addons/website_event_booth
+          addons/website_event_booth_sale
+          addons/website_event_booth_sale_exhibitor
+          addons/website_event_exhibitor
+          addons/website_event_sale
+          addons/website_event_track_live
+          addons/website_event_track_quiz
+          addons/test_html_field_history
+          odoo/addons/test_http
+          addons/test_import_export
+          odoo/addons/test_inherit
+          odoo/addons/test_orm
+          odoo/addons/test_inherit_depends
+          odoo/addons/test_inherits
+          odoo/addons/test_inherits_depends
+          odoo/addons/test_lint
+          addons/test_mail
+          addons/test_mail_full
+          addons/test_mail_sms
+          addons/test_mass_mailing
+          odoo/addons/test_main_flows
+          odoo/addons/test_mimetypes
+          odoo/addons/test_read_group
+          addons/test_resource
+          odoo/addons/test_rpc
+          addons/test_sale_product_configurators
+          addons/test_sale_purchase_edi_ubl
+          odoo/addons/test_search_panel
+          addons/test_spreadsheet
+          odoo/addons/test_testing_utilities
+          odoo/addons/test_translation_import
+          odoo/addons/test_uninstall
+          addons/test_website
+          addons/theme_default
+          addons/test_website_modules
+          addons/website_blog
+          addons/website_sale_comparison
+          addons/website_sale_wishlist
+          addons/test_website_slides_full
+          addons/website_forum
+          addons/website_slides_forum
+          addons/website_slides_survey
+          addons/transifex
+          addons/website_cf_turnstile
+          addons/website_crm_sms
+          addons/website_sms
+          addons/website_customer
+          addons/website_event_booth_exhibitor
+          addons/website_event_crm
+          addons/website_event_track_live_quiz
+          addons/website_hr_recruitment
+          addons/website_hr_recruitment_livechat
+          addons/website_links
+          addons/website_mail_group
+          addons/website_mass_mailing
+          addons/website_mass_mailing_sms
+          addons/website_project
+          addons/website_sale_autocomplete
+          addons/website_sale_collect
+          addons/website_sale_stock
+          addons/website_sale_collect_wishlist
+          addons/website_sale_comparison_wishlist
+          addons/website_sale_gelato
+          addons/website_sale_loyalty
+          addons/website_sale_mass_mailing
+          addons/website_sale_mondialrelay
+          addons/website_sale_mrp
+          addons/website_sale_stock_wishlist
+          addons/website_timesheet
     - name: Checkout Repository (sparse)
+      if: ${{ steps.runner_caches.outputs.host == '' || steps.host_checkout.outcome == 'failure' }}
       uses: actions/checkout@v7
       with:
         fetch-depth: "1"
@@ -1133,17 +2146,19 @@ jobs:
     - name: Ensure enve & enact CLI on PATH
       run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
-        mkdir -p "$HOME/.local/share/enve/store"
+        # The store the runner cache probe chose (a host cache's), else the user store.
+        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
+        mkdir -p "$store"
         if command -v sudo >/dev/null 2>&1; then
           sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
         fi
         if [ -d "/nix" ]; then
           if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            cp -rn /nix/store/* "$store/" 2>/dev/null || true
             rm -rf /nix/store 2>/dev/null || true
           fi
-          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+          ln -sfn "$store" /nix/store 2>/dev/null || true
         fi
         # The previous step's $GITHUB_PATH entries apply from the next step on.
         export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
@@ -1163,47 +2178,6 @@ jobs:
             | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
             | sudo tee -a /etc/hosts >/dev/null || true
         fi
-    - name: Probe existing locked enve store
-      id: enve_store_ready
-      run: |
-        #!/usr/bin/env bash
-        # Readiness is an offline locked runtime check, never a fabricated archive hit.
-        set -euo pipefail
-        ready=false
-        probe() {
-            ENVE_OFFLINE=1 timeout --kill-after=2s 8s enve run --locked -- true >/dev/null 2>&1
-        }
-        if [ -f enve.lock ] && command -v timeout >/dev/null && command -v enve >/dev/null && probe; then
-            ready=true
-            component="${ENACT_COMPONENT_DIR:-.}"
-            if [ "$component" != . ] && [ -n "$component" ]; then
-                if [ ! -d "$component" ]; then
-                    ready=false
-                elif [ -f "$component/enve.lock" ] && ! (cd -- "$component" && probe); then
-                    ready=false
-                fi
-            fi
-        fi
-        printf 'ready=%s\n' "$ready" >> "$GITHUB_OUTPUT"
-        printf 'Existing locked enve environment ready: %s\n' "$ready"
-    - parallel:
-      - name: Restore enact Task CAS Cache
-        id: enact-tasks-cache
-        continue-on-error: true
-        uses: actions/cache/restore@v6
-        with:
-          key: ${{ runner.os }}-enact-tasks-${{ github.sha }}
-          path: .enact/state/cache
-          restore-keys: ${{ runner.os }}-enact-tasks-
-      - name: Restore enve Store (L1 GHA Cache)
-        id: nix_l1_cache
-        continue-on-error: true
-        uses: actions/cache/restore@v6
-        with:
-          key: ${{ runner.os }}-${{ runner.arch }}-enve-store-v2-${{ hashFiles('**/enve.lock') }}
-          lookup-only: ${{ steps.enve_store_ready.outputs.ready == 'true' }}
-          path: ~/.local/share/enve/store
-          restore-keys: ${{ runner.os }}-${{ runner.arch }}-enve-store-v2-
     - name: Download the Reach Map
       continue-on-error: true
       uses: actions/download-artifact@v8
@@ -1212,34 +2186,16 @@ jobs:
         path: ${{ runner.temp }}/enact-reach
     - name: Plan with the Detected Reach Map
       run: |-
+        if [ -n "${GITHUB_HEAD_SHA:-}" ] && [ -z "$(git rev-list -n1 --no-walk --ignore-missing --missing=allow-any "$GITHUB_HEAD_SHA" -- 2>/dev/null)" ]; then
+          git fetch --no-tags --depth=1 --filter=blob:none origin "$GITHUB_HEAD_SHA" 2>/dev/null || true
+        fi
         if [ -f "$RUNNER_TEMP/enact-reach/map.bin" ]; then
           echo "ENACT_REACH_FILE=$RUNNER_TEMP/enact-reach/map.bin" >> "$GITHUB_ENV"
         fi
-    - name: Pull Dependencies via enve
-      run: |-
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
-        fi
-        if [ -f "enve.lock" ]; then
-          enve run --locked -- true
-        fi
-    - name: Verify Pipeline Contracts & Sparse Cones (enact ci-verify)
-      run: |-
-        ENACT_BIN=""
-        if command -v enact >/dev/null 2>&1; then
-          ENACT_BIN="enact"
-        elif [ -x "bin/enact" ]; then
-          ENACT_BIN="bin/enact"
-        fi
-        if [ -n "$ENACT_BIN" ]; then
-          echo "🔬 Running enact ci-verify..."
-          $ENACT_BIN ci-verify --pipeline .enact --workflow ci
-        fi
-    - name: Execute Stage [Preflight]
+      env:
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    - name: Plan Stage [Preflight]
+      id: stage_plan
       run: |-
         # Resolves the diff base, and leaves the planning flags of the `enact` command after this
         # script in "$@": --base, --all or --updated and --files, --no-cache.
@@ -1259,6 +2215,9 @@ jobs:
           if has_commit "$ENACT_BASE_SHA"; then
             BASE_REV="$ENACT_BASE_SHA"
           fi
+        fi
+        if [ -n "${GITHUB_HEAD_SHA:-}" ]; then
+          has_commit "$GITHUB_HEAD_SHA" || $FETCH --depth=1 "$GITHUB_HEAD_SHA" 2>/dev/null || true
         fi
         if [ -z "$BASE_REV" ] && [ -z "$BASE_REF" ]; then
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
@@ -1348,10 +2307,14 @@ jobs:
             $MAP_FETCH "$rev" 2>/dev/null || true
           done
         fi
-        # Pushes to the default branch record the footprints of the tests they run untraced or
-        # stale (`enact run`'s recording, off elsewhere on CI).
-        if [ -z "${ENACT_RECORD:-}" ] && [ "$GITHUB_EVENT_NAME" = "push" ] && [ "${GITHUB_REF_NAME:-}" = "${ENACT_DEFAULT_BRANCH:-master}" ]; then
-          export ENACT_RECORD=auto
+        # Pushes to the default branch and same-repo pull requests record the footprints of the
+        # tests they run untraced or stale (`enact run`'s recording, off elsewhere on CI).
+        if [ -z "${ENACT_RECORD:-}" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "${GITHUB_REF_NAME:-}" = "${ENACT_DEFAULT_BRANCH:-master}" ]; then
+            export ENACT_RECORD=auto
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "${GITHUB_HEAD_REF:-}" ] && [ "${GITHUB_HEAD_REF:-}" != "${ENACT_DEFAULT_BRANCH:-master}" ] && [ "${ENACT_SAME_REPO_PR:-true}" != "false" ]; then
+            export ENACT_RECORD=auto
+          fi
         fi
         # A warm-up (dispatched with warm_reach on the default branch) runs every suite and records
         # every test without a fresh footprint.
@@ -1394,7 +2357,12 @@ jobs:
         if [ "${ENACT_FORCE_NO_CACHE:-}" = "true" ]; then
           set -- "$@" --no-cache
         fi
-        enact run --pipeline .enact --workflow ci "$@" preflight
+        PLAN_ARGS=()
+        for arg in "$@"; do
+          if [ "$arg" != --no-cache ]; then PLAN_ARGS+=("$arg"); fi
+        done
+        set -- "${PLAN_ARGS[@]}"
+        enact dry-run --pipeline .enact --workflow ci "$@" --stage preflight --github-output "$GITHUB_OUTPUT"
       env:
         ENACT_BASE_REF: ${{ inputs.base_ref || github.base_ref || github.event.pull_request.base.ref }}
         ENACT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -1406,14 +2374,241 @@ jobs:
         ENACT_INPUT_UPDATED: ${{ inputs.updated }}
         ENACT_INPUT_WARM_REACH: ${{ inputs.warm_reach }}
         ENACT_INTEGRATION_BRANCH: ${{ vars.ENACT_INTEGRATION_BRANCH }}
+        ENACT_SAME_REPO_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        GITHUB_HEAD_REF: ${{ github.head_ref }}
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     - parallel:
-      - name: Save enve Store (L1 GHA Cache)
-        if: (steps.enve_store_ready.outputs.ready != 'true' && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')) && steps.nix_l1_cache.outputs.cache-hit != 'true'
+      - name: Restore enact Task CAS Cache
+        id: enact-tasks-cache
+        if: ${{ steps.stage_plan.outputs.stage_has_work == 'true' }}
         continue-on-error: true
-        uses: actions/cache/save@v6
+        uses: actions/cache/restore@v6
         with:
-          key: ${{ steps.nix_l1_cache.outputs.cache-primary-key }}
-          path: ~/.local/share/enve/store
+          key: ${{ runner.os }}-enact-tasks-${{ github.sha }}
+          path: .enact/state/cache
+          restore-keys: ${{ runner.os }}-enact-tasks-
+    - name: Pull Dependencies via enve
+      if: ${{ steps.stage_plan.outputs.stage_has_work == 'true' }}
+      run: |-
+        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
+        if [ -d "/nix" ]; then
+          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
+            cp -rn /nix/store/* "$store/" 2>/dev/null || true
+            rm -rf /nix/store 2>/dev/null || true
+          fi
+          ln -sfn "$store" /nix/store 2>/dev/null || true
+        fi
+        if [ -f "enve.lock" ]; then
+          enve run --locked -- true
+        fi
+    - name: Check enve Stores into the Host Cache
+      if: ${{ (steps.runner_caches.outputs.host != '') && steps.stage_plan.outputs.stage_has_work == 'true' }}
+      run: |
+        #!/usr/bin/env bash
+        # enve materializes into `ENVE_STORE_DIR` only while it trusts the directory, and otherwise
+        # falls back to its user store or `/tmp/enve-<uid>/store` without failing: on a runner with
+        # a host cache that throws the persistent store away on every run. Fails when the job's enve
+        # calls wrote into a fallback since the runner cache probe.
+        set -euo pipefail
+        stamp="${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
+        for fallback in "${XDG_DATA_HOME:-$HOME/.local/share}/enve/store" "/tmp/enve-$(id -u)/store"; do
+            { [ "$fallback" != "$ENVE_STORE_DIR" ] && [ -d "$fallback" ]; } || continue
+            if [ -n "$(find "$fallback" -mindepth 1 -maxdepth 1 -newer "$stamp" -print -quit 2>/dev/null)" ]; then
+                echo "::error::enve stored into $fallback, not the host cache's $ENVE_STORE_DIR, which it doesn't trust (an owner other than $(id -un) or root, or writable by others)"
+                exit 1
+            fi
+        done
+        echo "enve stores into the host cache: $ENVE_STORE_DIR"
+    - name: Verify Pipeline Contracts & Sparse Cones (enact ci-verify)
+      run: |-
+        ENACT_BIN=""
+        if command -v enact >/dev/null 2>&1; then
+          ENACT_BIN="enact"
+        elif [ -x "bin/enact" ]; then
+          ENACT_BIN="bin/enact"
+        fi
+        if [ -n "$ENACT_BIN" ]; then
+          echo "🔬 Running enact ci-verify..."
+          $ENACT_BIN ci-verify --pipeline .enact --workflow ci
+        fi
+    - name: Execute Stage [Preflight]
+      if: ${{ steps.stage_plan.outputs.stage_has_work == 'true' }}
+      run: |-
+        # Resolves the diff base, and leaves the planning flags of the `enact` command after this
+        # script in "$@": --base, --all or --updated and --files, --no-cache.
+        # Fetches carry commits and trees only, and name their refs: a bare `origin` fetches (or
+        # deepens) every branch of the remote.
+        FETCH="git fetch --no-tags --filter=blob:none origin"
+        # Whether the clone has the revision, never fetching it: `rev-parse --verify` accepts any
+        # full hash, and a partial clone's object lookups (`merge-base` too) fetch a missing commit
+        # with its whole history.
+        has_commit() {
+          [ -n "$(git rev-list -n1 --no-walk --ignore-missing --missing=allow-any "$1" -- 2>/dev/null)" ]
+        }
+        BASE_REV=""
+        BASE_REF="${ENACT_BASE_REF:-}"
+        if [ -n "${ENACT_BASE_SHA:-}" ]; then
+          has_commit "$ENACT_BASE_SHA" || $FETCH --depth=1 "$ENACT_BASE_SHA" 2>/dev/null || true
+          if has_commit "$ENACT_BASE_SHA"; then
+            BASE_REV="$ENACT_BASE_SHA"
+          fi
+        fi
+        if [ -n "${GITHUB_HEAD_SHA:-}" ]; then
+          has_commit "$GITHUB_HEAD_SHA" || $FETCH --depth=1 "$GITHUB_HEAD_SHA" 2>/dev/null || true
+        fi
+        if [ -z "$BASE_REV" ] && [ -z "$BASE_REF" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            if [ -n "${ENACT_EVENT_BEFORE:-}" ] && [ "${ENACT_EVENT_BEFORE:-}" != "0000000000000000000000000000000000000000" ]; then
+              BASE_REF="${ENACT_EVENT_BEFORE:-}"
+            else
+              BASE_REF="HEAD~1"
+            fi
+          else
+            INTEGRATION_BRANCH="${ENACT_INTEGRATION_BRANCH:-}"
+            if [ -n "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "$INTEGRATION_BRANCH" ] && [ "$GITHUB_REF_NAME" != "${ENACT_DEFAULT_BRANCH:-master}" ]; then
+              has_commit "origin/$INTEGRATION_BRANCH" || $FETCH --depth=1 "+refs/heads/$INTEGRATION_BRANCH:refs/remotes/origin/$INTEGRATION_BRANCH" 2>/dev/null || true
+              if has_commit "origin/$INTEGRATION_BRANCH"; then
+                BASE_REF="$INTEGRATION_BRANCH"
+              fi
+            fi
+            if [ -z "$BASE_REF" ]; then
+              BASE_REF="${ENACT_DEFAULT_BRANCH:-master}"
+            fi
+          fi
+        fi
+        if [ -z "$BASE_REV" ] && [ -n "$BASE_REF" ]; then
+          # The base fetches as a commit (a full hash) or a branch (into its remote-tracking ref),
+          # one deep; a revision of HEAD's own (HEAD~1) is in HEAD's history.
+          BASE_SPEC="+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+          case "$BASE_REF" in
+            HEAD | HEAD[~^]*) BASE_SPEC="" ;;
+            *[!0-9a-f]*) ;;
+            *) if [ ${#BASE_REF} -ge 40 ]; then BASE_SPEC="$BASE_REF"; fi ;;
+          esac
+          if [ -n "$BASE_SPEC" ] && ! has_commit "$BASE_REF" && ! has_commit "origin/$BASE_REF"; then
+            $FETCH --depth=1 "$BASE_SPEC" 2>/dev/null || true
+          fi
+          # The base as this clone names it, if it has it.
+          base_at() {
+            if has_commit "$BASE_REF"; then
+              echo "$BASE_REF"
+            elif has_commit "origin/$BASE_REF"; then
+              echo "origin/$BASE_REF"
+            fi
+          }
+          merge_base() {
+            BASE_AT=$(base_at)
+            if [ -n "$BASE_AT" ]; then
+              git merge-base HEAD "$BASE_AT" 2>/dev/null || true
+            fi
+          }
+          # A shallow clone deepens HEAD and the base alone, in growing steps, until they meet;
+          # unshallowing them is the last resort. They are named by commit: fetch skips a ref
+          # that is already up to date, and so leaves it as shallow as it was.
+          DEEPEN=$(git rev-parse HEAD)
+          BASE_AT=$(base_at)
+          if [ -n "$BASE_SPEC" ] && [ -n "$BASE_AT" ]; then
+            DEEPEN="$DEEPEN $(git rev-parse "$BASE_AT")"
+          fi
+          MERGE_BASE=$(merge_base)
+          for STEP in --deepen=50 --deepen=200 --deepen=1000 --unshallow; do
+            if [ -n "$MERGE_BASE" ] || [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" != "true" ]; then
+              break
+            fi
+            # shellcheck disable=SC2086 # one word per commit
+            $FETCH "$STEP" $DEEPEN 2>/dev/null || true
+            MERGE_BASE=$(merge_base)
+          done
+          BASE_REV="${MERGE_BASE:-$(base_at)}"
+        fi
+        if [ -z "$BASE_REV" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
+          if has_commit HEAD~1; then
+            BASE_REV="HEAD~1"
+          fi
+        fi
+        # The reach map planning reads is the reach store's newest at an ancestor of HEAD: a
+        # shallow clone sees too little history to find it, so the pull deepens it (commits only)
+        # back to the stored maps' commits, and downloads from the remote tier when there is one.
+        # A job handed detect's map (ENACT_REACH_FILE) plans with that one.
+        if [ -z "${ENACT_REACH_FILE:-}" ]; then
+          enact trace store pull || true
+        fi
+        # The reach map's footprints are aged by what changed since the revisions they were
+        # traced at: fetch those the shallow clone lacks, else each ages whole. Their
+        # trees only: aging diffs trees, and reads the few blobs it compares by function lazily.
+        MAP_REVISIONS=$(enact trace revisions --missing 2>/dev/null || true)
+        if [ -n "$MAP_REVISIONS" ]; then
+          MAP_FETCH="$FETCH --depth=1"
+          # shellcheck disable=SC2086 # one word per revision
+          $MAP_FETCH $MAP_REVISIONS 2>/dev/null || for rev in $MAP_REVISIONS; do
+            $MAP_FETCH "$rev" 2>/dev/null || true
+          done
+        fi
+        # Pushes to the default branch and same-repo pull requests record the footprints of the
+        # tests they run untraced or stale (`enact run`'s recording, off elsewhere on CI).
+        if [ -z "${ENACT_RECORD:-}" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "${GITHUB_REF_NAME:-}" = "${ENACT_DEFAULT_BRANCH:-master}" ]; then
+            export ENACT_RECORD=auto
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "${GITHUB_HEAD_REF:-}" ] && [ "${GITHUB_HEAD_REF:-}" != "${ENACT_DEFAULT_BRANCH:-master}" ] && [ "${ENACT_SAME_REPO_PR:-true}" != "false" ]; then
+            export ENACT_RECORD=auto
+          fi
+        fi
+        # A warm-up (dispatched with warm_reach on the default branch) runs every suite and records
+        # every test without a fresh footprint.
+        WARM_REACH=""
+        if [ "${ENACT_INPUT_WARM_REACH:-}" = "true" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${GITHUB_REF_NAME:-}" = "${ENACT_DEFAULT_BRANCH:-master}" ]; then
+          export ENACT_RECORD=every
+          WARM_REACH=1
+        fi
+        set --
+        if [ -n "$BASE_REV" ]; then
+          set -- "$@" --base "$BASE_REV"
+        fi
+        if [ "${ENACT_INPUT_ALL:-}" = "true" ] || [ -n "$WARM_REACH" ]; then
+          set -- "$@" --all
+        else
+          if [ -n "${ENACT_INPUT_UPDATED:-}" ]; then
+            set -- "$@" --updated "$ENACT_INPUT_UPDATED"
+          fi
+          # A dispatch's files plan as the change. Each must be a file of HEAD's tree (read from
+          # its trees, so a sparse or blobless checkout answers too), or a typo plans nothing and
+          # the run passes.
+          if [ -n "${ENACT_INPUT_FILES:-}" ]; then
+            OLD_IFS=$IFS
+            IFS=,
+            set -f
+            for path in $ENACT_INPUT_FILES; do
+              case "$(git ls-tree HEAD -- "$path" 2>/dev/null)" in
+                *" blob "*) ;;
+                *)
+                  echo "::error::files input: '$path' is no file at HEAD (comma-separated paths from the repository root)"
+                  exit 1
+                  ;;
+              esac
+            done
+            set +f
+            IFS=$OLD_IFS
+            set -- "$@" --files "$ENACT_INPUT_FILES"
+          fi
+        fi
+        if [ "${ENACT_FORCE_NO_CACHE:-}" = "true" ]; then
+          set -- "$@" --no-cache
+        fi
+        enact run --pipeline .enact --workflow ci "$@" --stage preflight
+      env:
+        ENACT_BASE_REF: ${{ inputs.base_ref || github.base_ref || github.event.pull_request.base.ref }}
+        ENACT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        ENACT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'master' }}
+        ENACT_EVENT_BEFORE: ${{ github.event.before }}
+        ENACT_FORCE_NO_CACHE: ${{ inputs.no_cache == 'true' || vars.ENACT_NO_CACHE == 'true' || contains(github.event.pull_request.title, '[no-cache]') || contains(github.event.pull_request.body, '[no-cache]') || contains(github.event.pull_request.labels.*.name, 'no-cache') }}
+        ENACT_INPUT_ALL: ${{ inputs.all }}
+        ENACT_INPUT_FILES: ${{ inputs.files }}
+        ENACT_INPUT_UPDATED: ${{ inputs.updated }}
+        ENACT_INPUT_WARM_REACH: ${{ inputs.warm_reach }}
+        ENACT_INTEGRATION_BRANCH: ${{ vars.ENACT_INTEGRATION_BRANCH }}
+        ENACT_SAME_REPO_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        GITHUB_HEAD_REF: ${{ github.head_ref }}
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     - name: Upload Telemetry for [preflight]
       if: always()
       continue-on-error: true
@@ -1425,9 +2620,11 @@ jobs:
           .enact/state/telemetry.json
           .enact/state/summary.html
           .enact/state/runs/*/services/*.log
+          ${{ runner.temp }}/odoo_tests/**/*.png
+          ${{ runner.temp }}/odoo_tests/*/chrome_logs/*
         retention-days: "1"
     - name: Upload Recorded Footprints
-      if: ${{ always() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
+      if: ${{ always() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
       continue-on-error: true
       uses: actions/upload-artifact@v7
       with:
@@ -1441,18 +2638,164 @@ jobs:
     - detect
     - preflight
     - test
-    if: ${{ !cancelled() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
+    if: ${{ !cancelled() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
     runs-on:
     - self-hosted
     - Linux
     - X64
     - tonky-ci
+    - tonky-ci-s
     timeout-minutes: 10
     concurrency:
-      group: enact-reach-${{ github.ref_name }}
+      group: enact-reach-${{ github.head_ref || github.ref_name }}
       cancel-in-progress: false
     steps:
+    - name: Probe Runner Caches
+      id: runner_caches
+      run: |
+        #!/usr/bin/env bash
+        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
+        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
+        # seen by every repository the host serves, holds only signature-verified content: the enve
+        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
+        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
+        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
+        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
+        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
+        set -euo pipefail
+        host="${ENACT_HOST_CACHE:-}"
+        if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
+            echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
+            host=""
+        fi
+        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
+        # without a word: from `/` down, each component owned by root or the user and writable by
+        # no one else, a root-owned sticky ancestor excepted.
+        trusted_store() {
+            local path="" part owner mode uid
+            uid=$(id -u)
+            IFS=/ read -ra parts <<<"${1#/}"
+            for part in "${parts[@]}"; do
+                path="$path/$part"
+                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
+                mode=$((8#$mode))
+                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
+                if (( mode & 8#22 )); then
+                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
+                fi
+            done
+        }
+        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
+        # names a repository, every other path a directory.
+        layout() {
+            cat <<LAYOUT
+        ENVE_STORE_DIR repo/enve-store .
+        UV_CACHE_DIR repo/uv .
+        PIP_CACHE_DIR repo/pip .
+        ENACT_PNPM_STORE repo/pnpm .
+        npm_config_cache repo/npm .
+        YARN_CACHE_FOLDER repo/yarn .
+        BUN_INSTALL_CACHE_DIR repo/bun .
+        GOMODCACHE repo/go mod
+        GOCACHE repo/go build
+        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENVE_MIRROR shared/enve-nar .
+        LAYOUT
+        }
+        if [ -n "$host" ]; then
+            # The repository's stores are writable by no one else: enve trusts no other store.
+            # `shared/` stays as the host made it, writable by the jobs of every repository.
+            umask 022
+            chmod go-w "$host/repo" 2>/dev/null || true
+            # The enve store check reads what enve wrote since.
+            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
+            while read -r var entry path; do
+                # The host provides `shared/`; without it the NAR mirror is skipped.
+                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
+                mkdir -p "$host/$entry"
+                touch "$host/$entry"
+                dir="$host/$entry/$path"
+                case "$var" in
+                    ENACT_GIT_MIRROR) ;;
+                    *) mkdir -p "$dir" ;;
+                esac
+                dir="${dir%/.}"
+                if [ "${entry%%/*}" = repo ]; then
+                    chmod 755 "$host/$entry" 2>/dev/null || true
+                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
+                fi
+                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
+                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
+                    exit 1
+                fi
+                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
+                echo "$var=$dir" >> "$GITHUB_ENV"
+            done < <(layout)
+        fi
+        echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
+        printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
+        printf 'Host cache: %s\n' "${host:-none}"
+    - name: Checkout Repository (sparse) from the Host Mirror
+      id: host_checkout
+      if: ${{ steps.runner_caches.outputs.host != '' }}
+      continue-on-error: true
+      run: |
+        #!/usr/bin/env bash
+        # Checks the commit out through the host cache's mirror of the repository
+        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
+        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
+        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
+        # one per line; none checks the whole tree out.
+        set -euo pipefail
+        git config --global --add safe.directory "*"
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        mirror="$ENACT_GIT_MIRROR"
+        header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$ENACT_GIT_TOKEN" | base64 | tr -d '\n')"
+        refs=("+refs/heads/*:refs/heads/*")
+        case "$GITHUB_REF" in
+            refs/pull/*) refs+=("+$GITHUB_REF:$GITHUB_REF") ;;
+        esac
+        (
+            flock 9
+            if [ ! -f "$mirror/HEAD" ]; then
+                git init -q --bare "$mirror"
+                git -C "$mirror" config uploadpack.allowAnySHA1InWant true
+                git -C "$mirror" config gc.auto 0
+            fi
+            git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags --prune "$url" "${refs[@]}"
+            if ! git -C "$mirror" cat-file -e "$GITHUB_SHA^{commit}" 2>/dev/null; then
+                git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags "$url" "$GITHUB_SHA"
+            fi
+        ) 9>"$mirror.lock"
+        cd "$GITHUB_WORKSPACE"
+        # A half-made repository would mislead the fallback checkout into reusing it.
+        trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
+        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
+        find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        git init -q .
+        echo "$mirror/objects" > .git/objects/info/alternates
+        git remote add origin "$url"
+        git config --local "http.$GITHUB_SERVER_URL/.extraheader" "$header"
+        git config --local gc.auto 0
+        git fetch -q --no-tags "$mirror" "+refs/heads/*:refs/remotes/origin/*"
+        if [ -n "${ENACT_SPARSE_CONE:-}" ]; then
+            mapfile -t cone < <(printf '%s\n' "$ENACT_SPARSE_CONE" | sed '/^[[:space:]]*$/d')
+            git sparse-checkout set --cone "${cone[@]}"
+        fi
+        case "$GITHUB_REF" in
+            refs/heads/*) git checkout -q --force -B "${GITHUB_REF#refs/heads/}" "$GITHUB_SHA" ;;
+            *) git checkout -q --force --detach "$GITHUB_SHA" ;;
+        esac
+        git log -1 --format='Checked out %H through the host mirror'
+      env:
+        ENACT_GIT_TOKEN: ${{ github.token }}
+        ENACT_SPARSE_CONE: |-
+          .enact
+          cue.mod
+          .github
+          bin
     - name: Checkout Repository (sparse)
+      if: ${{ steps.runner_caches.outputs.host == '' || steps.host_checkout.outcome == 'failure' }}
       uses: actions/checkout@v7
       with:
         fetch-depth: "1"
@@ -1510,17 +2853,19 @@ jobs:
     - name: Ensure enve & enact CLI on PATH
       run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
-        mkdir -p "$HOME/.local/share/enve/store"
+        # The store the runner cache probe chose (a host cache's), else the user store.
+        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
+        mkdir -p "$store"
         if command -v sudo >/dev/null 2>&1; then
           sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
         fi
         if [ -d "/nix" ]; then
           if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            cp -rn /nix/store/* "$store/" 2>/dev/null || true
             rm -rf /nix/store 2>/dev/null || true
           fi
-          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+          ln -sfn "$store" /nix/store 2>/dev/null || true
         fi
         # The previous step's $GITHUB_PATH entries apply from the next step on.
         export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
@@ -1545,10 +2890,10 @@ jobs:
       continue-on-error: true
       uses: actions/cache/restore@v6
       with:
-        key: enact-reach-${{ github.ref_name }}-${{ github.sha }}
+        key: enact-reach-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
         path: .git/enact/reach
         restore-keys: |-
-          enact-reach-${{ github.ref_name }}-
+          enact-reach-${{ github.head_ref || github.ref_name }}-
           enact-reach-${{ github.base_ref || github.event.repository.default_branch }}-
     - name: Download Recorded Footprints
       continue-on-error: true
@@ -1563,12 +2908,15 @@ jobs:
         enact trace store push --deltas "$RUNNER_TEMP/enact-footprints"
       env:
         ENACT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        ENACT_SAME_REPO_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        GITHUB_HEAD_REF: ${{ github.head_ref }}
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     - name: Save Reach Store
-      if: ${{ always() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
+      if: ${{ always() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
       continue-on-error: true
       uses: actions/cache/save@v6
       with:
-        key: enact-reach-${{ github.ref_name }}-${{ github.sha }}
+        key: enact-reach-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
         path: .git/enact/reach
   summary:
     name: Telemetry & Summary
@@ -1582,9 +2930,155 @@ jobs:
     - Linux
     - X64
     - tonky-ci
+    - tonky-ci-s
     timeout-minutes: 5
     steps:
+    - name: Probe Runner Caches
+      id: runner_caches
+      run: |
+        #!/usr/bin/env bash
+        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
+        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
+        # seen by every repository the host serves, holds only signature-verified content: the enve
+        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
+        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
+        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
+        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
+        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
+        set -euo pipefail
+        host="${ENACT_HOST_CACHE:-}"
+        if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
+            echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
+            host=""
+        fi
+        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
+        # without a word: from `/` down, each component owned by root or the user and writable by
+        # no one else, a root-owned sticky ancestor excepted.
+        trusted_store() {
+            local path="" part owner mode uid
+            uid=$(id -u)
+            IFS=/ read -ra parts <<<"${1#/}"
+            for part in "${parts[@]}"; do
+                path="$path/$part"
+                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
+                mode=$((8#$mode))
+                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
+                if (( mode & 8#22 )); then
+                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
+                fi
+            done
+        }
+        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
+        # names a repository, every other path a directory.
+        layout() {
+            cat <<LAYOUT
+        ENVE_STORE_DIR repo/enve-store .
+        UV_CACHE_DIR repo/uv .
+        PIP_CACHE_DIR repo/pip .
+        ENACT_PNPM_STORE repo/pnpm .
+        npm_config_cache repo/npm .
+        YARN_CACHE_FOLDER repo/yarn .
+        BUN_INSTALL_CACHE_DIR repo/bun .
+        GOMODCACHE repo/go mod
+        GOCACHE repo/go build
+        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENVE_MIRROR shared/enve-nar .
+        LAYOUT
+        }
+        if [ -n "$host" ]; then
+            # The repository's stores are writable by no one else: enve trusts no other store.
+            # `shared/` stays as the host made it, writable by the jobs of every repository.
+            umask 022
+            chmod go-w "$host/repo" 2>/dev/null || true
+            # The enve store check reads what enve wrote since.
+            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
+            while read -r var entry path; do
+                # The host provides `shared/`; without it the NAR mirror is skipped.
+                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
+                mkdir -p "$host/$entry"
+                touch "$host/$entry"
+                dir="$host/$entry/$path"
+                case "$var" in
+                    ENACT_GIT_MIRROR) ;;
+                    *) mkdir -p "$dir" ;;
+                esac
+                dir="${dir%/.}"
+                if [ "${entry%%/*}" = repo ]; then
+                    chmod 755 "$host/$entry" 2>/dev/null || true
+                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
+                fi
+                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
+                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
+                    exit 1
+                fi
+                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
+                echo "$var=$dir" >> "$GITHUB_ENV"
+            done < <(layout)
+        fi
+        echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
+        printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
+        printf 'Host cache: %s\n' "${host:-none}"
+    - name: Checkout Repository (sparse) from the Host Mirror
+      id: host_checkout
+      if: ${{ steps.runner_caches.outputs.host != '' }}
+      continue-on-error: true
+      run: |
+        #!/usr/bin/env bash
+        # Checks the commit out through the host cache's mirror of the repository
+        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
+        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
+        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
+        # one per line; none checks the whole tree out.
+        set -euo pipefail
+        git config --global --add safe.directory "*"
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        mirror="$ENACT_GIT_MIRROR"
+        header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$ENACT_GIT_TOKEN" | base64 | tr -d '\n')"
+        refs=("+refs/heads/*:refs/heads/*")
+        case "$GITHUB_REF" in
+            refs/pull/*) refs+=("+$GITHUB_REF:$GITHUB_REF") ;;
+        esac
+        (
+            flock 9
+            if [ ! -f "$mirror/HEAD" ]; then
+                git init -q --bare "$mirror"
+                git -C "$mirror" config uploadpack.allowAnySHA1InWant true
+                git -C "$mirror" config gc.auto 0
+            fi
+            git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags --prune "$url" "${refs[@]}"
+            if ! git -C "$mirror" cat-file -e "$GITHUB_SHA^{commit}" 2>/dev/null; then
+                git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags "$url" "$GITHUB_SHA"
+            fi
+        ) 9>"$mirror.lock"
+        cd "$GITHUB_WORKSPACE"
+        # A half-made repository would mislead the fallback checkout into reusing it.
+        trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
+        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
+        find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        git init -q .
+        echo "$mirror/objects" > .git/objects/info/alternates
+        git remote add origin "$url"
+        git config --local "http.$GITHUB_SERVER_URL/.extraheader" "$header"
+        git config --local gc.auto 0
+        git fetch -q --no-tags "$mirror" "+refs/heads/*:refs/remotes/origin/*"
+        if [ -n "${ENACT_SPARSE_CONE:-}" ]; then
+            mapfile -t cone < <(printf '%s\n' "$ENACT_SPARSE_CONE" | sed '/^[[:space:]]*$/d')
+            git sparse-checkout set --cone "${cone[@]}"
+        fi
+        case "$GITHUB_REF" in
+            refs/heads/*) git checkout -q --force -B "${GITHUB_REF#refs/heads/}" "$GITHUB_SHA" ;;
+            *) git checkout -q --force --detach "$GITHUB_SHA" ;;
+        esac
+        git log -1 --format='Checked out %H through the host mirror'
+      env:
+        ENACT_GIT_TOKEN: ${{ github.token }}
+        ENACT_SPARSE_CONE: |-
+          .enact
+          cue.mod
+          .github
+          bin
     - name: Checkout Repository (sparse)
+      if: ${{ steps.runner_caches.outputs.host == '' || steps.host_checkout.outcome == 'failure' }}
       uses: actions/checkout@v7
       with:
         fetch-depth: "1"
@@ -1642,17 +3136,19 @@ jobs:
     - name: Ensure enve & enact CLI on PATH
       run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
-        mkdir -p "$HOME/.local/share/enve/store"
+        # The store the runner cache probe chose (a host cache's), else the user store.
+        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
+        mkdir -p "$store"
         if command -v sudo >/dev/null 2>&1; then
           sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
         fi
         if [ -d "/nix" ]; then
           if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            cp -rn /nix/store/* "$store/" 2>/dev/null || true
             rm -rf /nix/store 2>/dev/null || true
           fi
-          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+          ln -sfn "$store" /nix/store 2>/dev/null || true
         fi
         # The previous step's $GITHUB_PATH entries apply from the next step on.
         export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
@@ -1702,8 +3198,148 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     timeout-minutes: 15
     steps:
+    - name: Probe Runner Caches
+      id: runner_caches
+      run: |
+        #!/usr/bin/env bash
+        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
+        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
+        # seen by every repository the host serves, holds only signature-verified content: the enve
+        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
+        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
+        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
+        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
+        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
+        set -euo pipefail
+        host="${ENACT_HOST_CACHE:-}"
+        if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
+            echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
+            host=""
+        fi
+        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
+        # without a word: from `/` down, each component owned by root or the user and writable by
+        # no one else, a root-owned sticky ancestor excepted.
+        trusted_store() {
+            local path="" part owner mode uid
+            uid=$(id -u)
+            IFS=/ read -ra parts <<<"${1#/}"
+            for part in "${parts[@]}"; do
+                path="$path/$part"
+                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
+                mode=$((8#$mode))
+                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
+                if (( mode & 8#22 )); then
+                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
+                fi
+            done
+        }
+        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
+        # names a repository, every other path a directory.
+        layout() {
+            cat <<LAYOUT
+        ENVE_STORE_DIR repo/enve-store .
+        UV_CACHE_DIR repo/uv .
+        PIP_CACHE_DIR repo/pip .
+        ENACT_PNPM_STORE repo/pnpm .
+        npm_config_cache repo/npm .
+        YARN_CACHE_FOLDER repo/yarn .
+        BUN_INSTALL_CACHE_DIR repo/bun .
+        GOMODCACHE repo/go mod
+        GOCACHE repo/go build
+        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENVE_MIRROR shared/enve-nar .
+        LAYOUT
+        }
+        if [ -n "$host" ]; then
+            # The repository's stores are writable by no one else: enve trusts no other store.
+            # `shared/` stays as the host made it, writable by the jobs of every repository.
+            umask 022
+            chmod go-w "$host/repo" 2>/dev/null || true
+            # The enve store check reads what enve wrote since.
+            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
+            while read -r var entry path; do
+                # The host provides `shared/`; without it the NAR mirror is skipped.
+                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
+                mkdir -p "$host/$entry"
+                touch "$host/$entry"
+                dir="$host/$entry/$path"
+                case "$var" in
+                    ENACT_GIT_MIRROR) ;;
+                    *) mkdir -p "$dir" ;;
+                esac
+                dir="${dir%/.}"
+                if [ "${entry%%/*}" = repo ]; then
+                    chmod 755 "$host/$entry" 2>/dev/null || true
+                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
+                fi
+                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
+                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
+                    exit 1
+                fi
+                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
+                echo "$var=$dir" >> "$GITHUB_ENV"
+            done < <(layout)
+        fi
+        echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
+        printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
+        printf 'Host cache: %s\n' "${host:-none}"
+    - name: Checkout Repository (sparse) from the Host Mirror
+      id: host_checkout
+      if: ${{ steps.runner_caches.outputs.host != '' }}
+      continue-on-error: true
+      run: |
+        #!/usr/bin/env bash
+        # Checks the commit out through the host cache's mirror of the repository
+        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
+        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
+        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
+        # one per line; none checks the whole tree out.
+        set -euo pipefail
+        git config --global --add safe.directory "*"
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        mirror="$ENACT_GIT_MIRROR"
+        header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$ENACT_GIT_TOKEN" | base64 | tr -d '\n')"
+        refs=("+refs/heads/*:refs/heads/*")
+        case "$GITHUB_REF" in
+            refs/pull/*) refs+=("+$GITHUB_REF:$GITHUB_REF") ;;
+        esac
+        (
+            flock 9
+            if [ ! -f "$mirror/HEAD" ]; then
+                git init -q --bare "$mirror"
+                git -C "$mirror" config uploadpack.allowAnySHA1InWant true
+                git -C "$mirror" config gc.auto 0
+            fi
+            git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags --prune "$url" "${refs[@]}"
+            if ! git -C "$mirror" cat-file -e "$GITHUB_SHA^{commit}" 2>/dev/null; then
+                git -C "$mirror" -c "http.extraheader=$header" fetch -q --no-tags "$url" "$GITHUB_SHA"
+            fi
+        ) 9>"$mirror.lock"
+        cd "$GITHUB_WORKSPACE"
+        # A half-made repository would mislead the fallback checkout into reusing it.
+        trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
+        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
+        find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        git init -q .
+        echo "$mirror/objects" > .git/objects/info/alternates
+        git remote add origin "$url"
+        git config --local "http.$GITHUB_SERVER_URL/.extraheader" "$header"
+        git config --local gc.auto 0
+        git fetch -q --no-tags "$mirror" "+refs/heads/*:refs/remotes/origin/*"
+        if [ -n "${ENACT_SPARSE_CONE:-}" ]; then
+            mapfile -t cone < <(printf '%s\n' "$ENACT_SPARSE_CONE" | sed '/^[[:space:]]*$/d')
+            git sparse-checkout set --cone "${cone[@]}"
+        fi
+        case "$GITHUB_REF" in
+            refs/heads/*) git checkout -q --force -B "${GITHUB_REF#refs/heads/}" "$GITHUB_SHA" ;;
+            *) git checkout -q --force --detach "$GITHUB_SHA" ;;
+        esac
+        git log -1 --format='Checked out %H through the host mirror'
+      env:
+        ENACT_GIT_TOKEN: ${{ github.token }}
+        ENACT_SPARSE_CONE: ${{ matrix.sparse_checkout }}
     - name: Checkout Repository (sparse)
-      if: ${{ matrix.sparse_checkout != '' }}
+      if: ${{ matrix.sparse_checkout != '' && (steps.runner_caches.outputs.host == '' || steps.host_checkout.outcome == 'failure') }}
       uses: actions/checkout@v7
       with:
         fetch-depth: "1"
@@ -1714,7 +3350,7 @@ jobs:
         sparse-checkout-cone-mode: "true"
         submodules: "false"
     - name: Checkout Repository (full)
-      if: ${{ matrix.sparse_checkout == '' }}
+      if: ${{ matrix.sparse_checkout == '' && (steps.runner_caches.outputs.host == '' || steps.host_checkout.outcome == 'failure') }}
       uses: actions/checkout@v7
       with:
         fetch-depth: "1"
@@ -1766,17 +3402,19 @@ jobs:
     - name: Ensure enve & enact CLI on PATH
       run: |
         git config --global --add safe.directory "*" 2>/dev/null || true
-        mkdir -p "$HOME/.local/share/enve/store"
+        # The store the runner cache probe chose (a host cache's), else the user store.
+        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
+        mkdir -p "$store"
         if command -v sudo >/dev/null 2>&1; then
           sudo mkdir -p -m 0755 /nix 2>/dev/null || true
           sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
         fi
         if [ -d "/nix" ]; then
           if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            cp -rn /nix/store/* "$store/" 2>/dev/null || true
             rm -rf /nix/store 2>/dev/null || true
           fi
-          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+          ln -sfn "$store" /nix/store 2>/dev/null || true
         fi
         # The previous step's $GITHUB_PATH entries apply from the next step on.
         export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
@@ -1796,31 +3434,6 @@ jobs:
             | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
             | sudo tee -a /etc/hosts >/dev/null || true
         fi
-    - name: Probe existing locked enve store
-      id: enve_store_ready
-      run: |
-        #!/usr/bin/env bash
-        # Readiness is an offline locked runtime check, never a fabricated archive hit.
-        set -euo pipefail
-        ready=false
-        probe() {
-            ENVE_OFFLINE=1 timeout --kill-after=2s 8s enve run --locked -- true >/dev/null 2>&1
-        }
-        if [ -f enve.lock ] && command -v timeout >/dev/null && command -v enve >/dev/null && probe; then
-            ready=true
-            component="${ENACT_COMPONENT_DIR:-.}"
-            if [ "$component" != . ] && [ -n "$component" ]; then
-                if [ ! -d "$component" ]; then
-                    ready=false
-                elif [ -f "$component/enve.lock" ] && ! (cd -- "$component" && probe); then
-                    ready=false
-                fi
-            fi
-        fi
-        printf 'ready=%s\n' "$ready" >> "$GITHUB_OUTPUT"
-        printf 'Existing locked enve environment ready: %s\n' "$ready"
-      env:
-        ENACT_COMPONENT_DIR: ${{ matrix.component_dir }}
     - parallel:
       - name: Restore enact Task CAS Cache
         id: enact-tasks-cache
@@ -1832,18 +3445,18 @@ jobs:
           restore-keys: ${{ runner.os }}-enact-tasks-
       - name: Restore Python build & venv cache
         id: python_l1_cache
-        if: hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') != '' && contains(matrix.technology, 'python') && vars.ENACT_UV_CACHE_DIR == ''
+        if: hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') != '' && contains(matrix.technology, 'python') && steps.runner_caches.outputs.host == ''
         continue-on-error: true
         uses: actions/cache/restore@v6
         with:
           key: ${{ runner.os }}-python-${{ hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') }}
           path: |-
-            ${{ env.UV_CACHE_DIR }}
+            /tmp/.cache/uv
             /tmp/.cache/pip
           restore-keys: ${{ runner.os }}-python-
       - name: Restore Go build cache
         id: go_l1_cache
-        if: hashFiles('**/go.mod', '**/go.sum') != '' && contains(matrix.technology, 'go')
+        if: hashFiles('**/go.mod', '**/go.sum') != '' && contains(matrix.technology, 'go') && steps.runner_caches.outputs.host == ''
         continue-on-error: true
         uses: actions/cache/restore@v6
         with:
@@ -1863,15 +3476,33 @@ jobs:
           key: templates-1-${{ runner.os }}-${{ github.sha }}
           path: .enact/state/templates
           restore-keys: templates-1-${{ runner.os }}-
-      - name: Restore enve Store (L1 GHA Cache)
-        id: nix_l1_cache
-        continue-on-error: true
-        uses: actions/cache/restore@v6
-        with:
-          key: ${{ runner.os }}-${{ runner.arch }}-enve-store-v2-${{ hashFiles('**/enve.lock') }}
-          lookup-only: ${{ steps.enve_store_ready.outputs.ready == 'true' }}
-          path: ~/.local/share/enve/store
-          restore-keys: ${{ runner.os }}-${{ runner.arch }}-enve-store-v2-
+    - name: Record Restored Package Caches
+      if: ${{ steps.runner_caches.outputs.host == '' }}
+      continue-on-error: true
+      run: |
+        # ENACT_CACHE_DELTA: one `<cache id> <path>` line per cached path.
+        delta_dir="${RUNNER_TEMP:-/tmp}/enact-cache-delta"
+        delta_ids() { awk 'NF { print $1 }' <<<"$ENACT_CACHE_DELTA" | sort -u; }
+        # The entries under the cache's paths (dot entries pruned: locks and temporaries), sorted.
+        delta_list() {
+            local want="$1" id path
+            while read -r id path; do
+                [ "$id" = "$want" ] || continue
+                path="${path/#\~/$HOME}"
+                [ -d "$path" ] || continue
+                find "$path" -mindepth 1 -name '.*' -prune -o -print 2>/dev/null || true
+            done <<<"$ENACT_CACHE_DELTA" | LC_ALL=C sort -u
+        }
+        set -euo pipefail
+        mkdir -p "$delta_dir"
+        for id in $(delta_ids); do
+            delta_list "$id" > "$delta_dir/$id.restored"
+            printf '%s: %s entries after the restore\n' "$id" "$(wc -l < "$delta_dir/$id.restored")"
+        done
+      env:
+        ENACT_CACHE_DELTA: |-
+          python_l1_cache /tmp/.cache/uv
+          python_l1_cache /tmp/.cache/pip
     - name: Download the Reach Map
       continue-on-error: true
       uses: actions/download-artifact@v8
@@ -1880,17 +3511,37 @@ jobs:
         path: ${{ runner.temp }}/enact-reach
     - name: Plan with the Detected Reach Map
       run: |-
+        if [ -n "${GITHUB_HEAD_SHA:-}" ] && [ -z "$(git rev-list -n1 --no-walk --ignore-missing --missing=allow-any "$GITHUB_HEAD_SHA" -- 2>/dev/null)" ]; then
+          git fetch --no-tags --depth=1 --filter=blob:none origin "$GITHUB_HEAD_SHA" 2>/dev/null || true
+        fi
         if [ -f "$RUNNER_TEMP/enact-reach/map.bin" ]; then
           echo "ENACT_REACH_FILE=$RUNNER_TEMP/enact-reach/map.bin" >> "$GITHUB_ENV"
         fi
+      env:
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    - name: Fetch the Revisions Selection Ages By
+      if: ${{ matrix.selects_in_job }}
+      continue-on-error: true
+      run: |-
+        FETCH="git fetch --no-tags --depth=1 --filter=blob:none origin"
+        # shellcheck disable=SC2046,SC2086 # one word per revision
+        set -- $(enact trace revisions --missing 2>/dev/null || true) $ENACT_SELECT_BASE
+        if [ "$#" -gt 0 ]; then
+          $FETCH "$@" 2>/dev/null || for rev in "$@"; do
+            $FETCH "$rev" 2>/dev/null || true
+          done
+        fi
+      env:
+        ENACT_SELECT_BASE: ${{ matrix.select_base }}
     - name: Pull Dependencies via enve
       run: |-
+        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
         if [ -d "/nix" ]; then
           if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$HOME/.local/share/enve/store/" 2>/dev/null || true
+            cp -rn /nix/store/* "$store/" 2>/dev/null || true
             rm -rf /nix/store 2>/dev/null || true
           fi
-          ln -sfn "$HOME/.local/share/enve/store" /nix/store 2>/dev/null || true
+          ln -sfn "$store" /nix/store 2>/dev/null || true
         fi
         if [ -f "enve.lock" ]; then
           enve run --locked -- true
@@ -1900,6 +3551,24 @@ jobs:
         fi
       env:
         ENACT_COMPONENT_DIR: ${{ matrix.component_dir }}
+    - name: Check enve Stores into the Host Cache
+      if: ${{ steps.runner_caches.outputs.host != '' }}
+      run: |
+        #!/usr/bin/env bash
+        # enve materializes into `ENVE_STORE_DIR` only while it trusts the directory, and otherwise
+        # falls back to its user store or `/tmp/enve-<uid>/store` without failing: on a runner with
+        # a host cache that throws the persistent store away on every run. Fails when the job's enve
+        # calls wrote into a fallback since the runner cache probe.
+        set -euo pipefail
+        stamp="${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
+        for fallback in "${XDG_DATA_HOME:-$HOME/.local/share}/enve/store" "/tmp/enve-$(id -u)/store"; do
+            { [ "$fallback" != "$ENVE_STORE_DIR" ] && [ -d "$fallback" ]; } || continue
+            if [ -n "$(find "$fallback" -mindepth 1 -maxdepth 1 -newer "$stamp" -print -quit 2>/dev/null)" ]; then
+                echo "::error::enve stored into $fallback, not the host cache's $ENVE_STORE_DIR, which it doesn't trust (an owner other than $(id -un) or root, or writable by others)"
+                exit 1
+            fi
+        done
+        echo "enve stores into the host cache: $ENVE_STORE_DIR"
     - name: Execute Component Task
       run: eval "$ENACT_MATRIX_COMMAND"
       env:
@@ -1907,7 +3576,7 @@ jobs:
         ENACT_MATRIX_COMMAND: ${{ matrix.command }}
         ENACT_MAX_PARALLEL: ${{ matrix.max_parallel }}
         ENACT_PREEMPTION_NOTICE_SEC: ${{ matrix.preemption_notice_sec }}
-        ENACT_RECORD: ${{ (github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) && 'every' || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) && 'auto' || 'off' }}
+        ENACT_RECORD: ${{ (github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) && 'every' || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch) && 'auto' || 'off' }}
         ENACT_RUNNER_TIER: ${{ matrix.runner_tier }}
         ENACT_TOPOLOGY: ${{ matrix.topology }}
     - name: Upload Execution Telemetry & Workflow Dashboard
@@ -1921,9 +3590,11 @@ jobs:
           .enact/state/telemetry.json
           .enact/state/summary.html
           .enact/state/runs/*/services/*.log
+          ${{ runner.temp }}/odoo_tests/**/*.png
+          ${{ runner.temp }}/odoo_tests/*/chrome_logs/*
         retention-days: "1"
     - name: Upload Recorded Footprints
-      if: ${{ always() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
+      if: ${{ always() && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) }}
       continue-on-error: true
       uses: actions/upload-artifact@v7
       with:
@@ -1931,18 +3602,67 @@ jobs:
         name: enact-footprints-${{ matrix.task_id }}
         path: .enact/state/cache/trace-reach.d/
         retention-days: "1"
+    - name: Check Package Caches for New Entries
+      id: cache_delta
+      if: ${{ !cancelled() && steps.runner_caches.outputs.host == '' && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') }}
+      continue-on-error: true
+      run: |
+        # ENACT_CACHE_DELTA: one `<cache id> <path>` line per cached path.
+        delta_dir="${RUNNER_TEMP:-/tmp}/enact-cache-delta"
+        delta_ids() { awk 'NF { print $1 }' <<<"$ENACT_CACHE_DELTA" | sort -u; }
+        # The entries under the cache's paths (dot entries pruned: locks and temporaries), sorted.
+        delta_list() {
+            local want="$1" id path
+            while read -r id path; do
+                [ "$id" = "$want" ] || continue
+                path="${path/#\~/$HOME}"
+                [ -d "$path" ] || continue
+                find "$path" -mindepth 1 -name '.*' -prune -o -print 2>/dev/null || true
+            done <<<"$ENACT_CACHE_DELTA" | LC_ALL=C sort -u
+        }
+        RUN_PREFIX=""
+        if command -v enve >/dev/null 2>&1 && [ -f "enve.lock" ]; then
+          RUN_PREFIX="enve run --locked -- "
+        fi
+        set -uo pipefail
+        mkdir -p "$delta_dir"
+        # uv's CI prune drops the wheels PyPI serves again and keeps the ones built from source.
+        if [ "${ENACT_UV_PRUNE:-}" = true ] && [ -d "${UV_CACHE_DIR:-}" ]; then
+            # shellcheck disable=SC2086 # the prefix is a command line
+            ${RUN_PREFIX}uv cache prune --ci || echo "uv cache prune skipped"
+        fi
+        for id in $(delta_ids); do
+            now="$delta_dir/$id.now"
+            delta_list "$id" > "$now"
+            if [ ! -s "$now" ]; then
+                changed=false why="nothing to save"
+            elif [ ! -f "$delta_dir/$id.restored" ]; then
+                changed=true why="no record of its restore"
+            else
+                added=$(LC_ALL=C comm -13 "$delta_dir/$id.restored" "$now" | wc -l | tr -d ' ')
+                if [ "$added" -gt 0 ]; then changed=true; else changed=false; fi
+                why="$added entries the restore lacked"
+            fi
+            printf '%s=%s\n' "$id" "$changed" >> "$GITHUB_OUTPUT"
+            printf '%s: save %s (%s)\n' "$id" "$changed" "$why"
+        done
+      env:
+        ENACT_CACHE_DELTA: |-
+          python_l1_cache /tmp/.cache/uv
+          python_l1_cache /tmp/.cache/pip
+        ENACT_UV_PRUNE: "true"
     - name: Save Python build & venv cache
-      if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') != '' && contains(matrix.technology, 'python') && vars.ENACT_UV_CACHE_DIR == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1')) && steps.python_l1_cache.outputs.cache-hit != 'true'
+      if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') != '' && contains(matrix.technology, 'python') && steps.runner_caches.outputs.host == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') && steps.cache_delta.outputs.python_l1_cache == 'true') && steps.python_l1_cache.outputs.cache-hit != 'true'
       continue-on-error: true
       uses: actions/cache/save@v6
       with:
         key: ${{ steps.python_l1_cache.outputs.cache-primary-key }}
         path: |-
-          ${{ env.UV_CACHE_DIR }}
+          /tmp/.cache/uv
           /tmp/.cache/pip
     - parallel:
       - name: Save Go build cache
-        if: (((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && hashFiles('**/go.mod', '**/go.sum') != '' && contains(matrix.technology, 'go') && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1')) && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.go_l1_cache.outputs.cache-matched-key, format('{0}-go-{1}-', runner.os, hashFiles('**/go.mod', '**/go.sum'))))) && steps.go_l1_cache.outputs.cache-hit != 'true'
+        if: (((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && hashFiles('**/go.mod', '**/go.sum') != '' && contains(matrix.technology, 'go') && steps.runner_caches.outputs.host == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1')) && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.go_l1_cache.outputs.cache-matched-key, format('{0}-go-{1}-', runner.os, hashFiles('**/go.mod', '**/go.sum'))))) && steps.go_l1_cache.outputs.cache-hit != 'true'
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
@@ -1950,13 +3670,6 @@ jobs:
           path: |-
             /tmp/go-build
             /tmp/go/pkg/mod
-      - name: Save enve Store (L1 GHA Cache)
-        if: (steps.enve_store_ready.outputs.ready != 'true' && ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1'))) && steps.nix_l1_cache.outputs.cache-hit != 'true'
-        continue-on-error: true
-        uses: actions/cache/save@v6
-        with:
-          key: ${{ steps.nix_l1_cache.outputs.cache-primary-key }}
-          path: ~/.local/share/enve/store
       - name: Save Cache [Postgres template dumps]
         if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && contains(format(',{0},', matrix.caches), ',templates,') && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.cache_templates.outputs.cache-matched-key, format('templates-1-{0}-', runner.os)))) && steps.cache_templates.outputs.cache-hit != 'true'
         continue-on-error: true

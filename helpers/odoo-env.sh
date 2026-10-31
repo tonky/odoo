@@ -18,20 +18,18 @@ if [ "$(uname -s)" = Darwin ] && [ -n "${LIBRARY_PATH:-}" ]; then
     export DYLD_FALLBACK_LIBRARY_PATH="${LIBRARY_PATH}:/usr/lib"
 fi
 # The browser HttpCase tours drive: odoo tries google-chrome before chromium on Linux and
-# looks only in /Applications on macOS, so point ODOO_BROWSER_BIN at the env's browser.
-if [ -z "${ODOO_BROWSER_BIN:-}" ]; then
-    if [ "$(uname -s)" = Darwin ] && [ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]; then
-        for _bin in "${PLAYWRIGHT_BROWSERS_PATH}"/chromium_headless_shell-*/chrome-headless-shell-mac-*/chrome-headless-shell; do
-            if [ -x "${_bin}" ]; then
-                export ODOO_BROWSER_BIN="${_bin}"
-                break
-            fi
-        done
-        unset _bin
-    elif [ "$(uname -s)" = Linux ] && command -v chromium >/dev/null 2>&1; then
-        ODOO_BROWSER_BIN="$(command -v chromium)"
-        export ODOO_BROWSER_BIN
-    fi
+# looks only in /Applications on macOS, so point ODOO_BROWSER_BIN at the env's headless
+# shell (chrome-headless-shell-<platform>/chrome-headless-shell; Playwright's own Linux arm64
+# build: chrome-linux/headless_shell).
+if [ -z "${ODOO_BROWSER_BIN:-}" ] && [ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]; then
+    for _bin in "${PLAYWRIGHT_BROWSERS_PATH}"/chromium_headless_shell-*/*/chrome-headless-shell \
+        "${PLAYWRIGHT_BROWSERS_PATH}"/chromium_headless_shell-*/chrome-linux/headless_shell; do
+        if [ -x "${_bin}" ]; then
+            export ODOO_BROWSER_BIN="${_bin}"
+            break
+        fi
+    done
+    unset _bin
 fi
 # odoo's tests expect TMPDIR=/tmp:
 # - base's TestConfigManager asserts `screenshots == '/tmp/odoo_tests'` after clearing
