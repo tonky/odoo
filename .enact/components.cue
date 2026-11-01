@@ -56,7 +56,7 @@ pipeline: schema.#Pipeline & {
 		hooks: post: ["bin/odoo-scope sparse -c {component_root}"]
 	}
 	triggers: {
-		pull_request: {branches: ["master", "19.0", "saas-19.4"], paths: []}
+		pull_request: {branches: ["master", "19.0", "saas-19.4", "perf/ci-showcase"], paths: []}
 		push: {branches: ["master", "19.0", "saas-19.4", "perf/ci-showcase"], paths: ["**/*"]}
 		schedule: []
 	}
