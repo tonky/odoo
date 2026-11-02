@@ -164,8 +164,12 @@ class Footprint:
     children it started (until their records are merged), and why it is opaque (empty: it
     isn't)."""
 
-    __slots__ = ("code", "reads", "present", "probes", "dirs", "opaque", "spawned", "loaded", "recorders")
-    SETS = ("reads", "present", "probes", "dirs", "opaque", "spawned", "loaded", "recorders")
+    __slots__ = (
+        "code", "reads", "present", "probes", "dirs", "opaque", "spawned", "loaded", "recorders",
+        "services", "duration_sec",
+        "_raw_codes", "_seen_cids", "_cids", "_collapsed_len", "_collapsed_set", "_ckpt_cache",
+    )
+    SETS = ("reads", "present", "probes", "dirs", "opaque", "spawned", "loaded", "recorders", "services")
 
     def __init__(self):
         self.code: dict[str, set[str]] = {}
@@ -177,21 +181,82 @@ class Footprint:
         self.spawned: set[str] = set()
         self.loaded: set[str] = set()  # modules its Python children loaded
         self.recorders: set[str] = set()  # actual native-child provenance, never inferred
+        self.services: set[str] = set()  # loopback services connected to via socket.connect
+        self.duration_sec: float = 0.0
+        self._raw_codes: list = []
+        self._seen_cids: set[int] = set()
+        self._cids: list[int] = []
+        self._collapsed_len: int = 0
+        self._collapsed_set: set[str] | None = None
+        self._ckpt_cache = None
 
-    def copy(self) -> "Footprint":
+    def flush_codes(self) -> None:
+        raw = self._raw_codes
+        if not raw:
+            return
+        seen = self._seen_cids
+        cids_list = self._cids
+        code_dict = self.code
+        get_cache = _code_cache.get
+        for c in raw:
+            cid = id(c)
+            if cid in seen:
+                continue
+            seen.add(cid)
+            info = get_cache(cid, False)
+            if info is False:
+                path = relative(c.co_filename)
+                if path is None:
+                    info = None
+                else:
+                    fn = function_of(c)
+                    idx = len(_code_table)
+                    _code_table.append((path, fn))
+                    info = (path, fn, idx)
+                    _all_ran_files.add(path)
+                _code_cache[cid] = info
+                _code_keepalive.append(c)
+            if info is not None:
+                path, fn, idx = info
+                cids_list.append(idx)
+                called = code_dict.get(path)
+                if called is None:
+                    called = code_dict.setdefault(path, set())
+                if fn is not None:
+                    called.add(fn)
+        raw.clear()
+
+    def copy(self, use_collapsed: bool = False) -> "Footprint":
+        self.flush_codes()
         fp = Footprint()
         fp.code = {file: set(functions) for file, functions in self.code.items()}
         for name in self.SETS:
-            setattr(fp, name, set(getattr(self, name)))
+            if use_collapsed and name == "probes" and self._collapsed_set is not None and len(self.probes) == self._collapsed_len:
+                fp.probes = set(self._collapsed_set)
+                fp._collapsed_len = len(fp.probes)
+                fp._collapsed_set = self._collapsed_set
+            else:
+                setattr(fp, name, set(getattr(self, name)))
+        fp.duration_sec = self.duration_sec
+        fp._seen_cids = set(self._seen_cids)
+        fp._cids = list(self._cids)
         return fp
 
     def update(self, other: "Footprint") -> None:
+        self.flush_codes()
+        other.flush_codes()
         for file, functions in other.code.items():
+            _all_ran_files.add(file)
             self.code.setdefault(file, set()).update(functions)
         for name in self.SETS:
             getattr(self, name).update(getattr(other, name))
+        self.duration_sec += other.duration_sec
+        self._collapsed_len = 0
+        self._collapsed_set = None
+        self._ckpt_cache = None
 
     def dump(self) -> dict:
+        self.flush_codes()
         record = {name: sorted(getattr(self, name)) for name in self.SETS}
         record["code"] = {file: sorted(functions) for file, functions in self.code.items()}
         return record
@@ -200,6 +265,7 @@ class Footprint:
     def load(cls, record: dict, *, native: bool = False) -> "Footprint":
         fp = cls()
         for file, functions in record.get("code", {}).items():
+            _all_ran_files.add(file)
             fp.code[file] = set(functions)
         for name in cls.SETS:
             getattr(fp, name).update(record.get(name, ()))
@@ -208,7 +274,15 @@ class Footprint:
             fp.opaque.add("native child record lacks kernel recorder provenance")
         return fp
 
-    def entry(self, through: int, at: dict[str, int], own=(), shared: "Footprint | None" = None) -> dict:
+    def entry(
+        self,
+        through: int,
+        at: dict[str, int],
+        own=(),
+        shared: "Footprint | None" = None,
+        probes_override: set[str] | None = None,
+        extra_reads: set[str] | None = None,
+    ) -> dict:
         """The footprint as an enact reach map target: `files` (found), `functions`, `dirs`,
         the modules it loaded, and `probes`, by directory (`_grouped`). The modules are the
         map's `load_order` up to `loaded_through` (`through`; `at`: each one's place in it),
@@ -216,29 +290,70 @@ class Footprint:
         the prefix of one list, a map grows with its modules, not their square per target. A file it only found present whose code
         `shared` (the part enact lays over it) runs is held by function, as the two merged
         would be: enact keeps a file whole that either part holds whole."""
-        found = set(self.code) | self.reads | self.present
-        coded = set(self.code) | (self.present & set(shared.code) if shared else set())
+        self.flush_codes()
+        if shared is not None:
+            shared.flush_codes()
+        code_dict = self.code
+        reads_set = (self.reads | extra_reads) if extra_reads else self.reads
+        present_set = self.present
+        found = set(code_dict) | reads_set | present_set
+        sorted_files = sorted(found)
+        shared_code = shared.code if shared is not None else None
+        functions = {}
+        for file in sorted_files:
+            if not file.endswith(".py") or file in reads_set:
+                continue
+            fns = code_dict.get(file)
+            if fns is not None:
+                functions[file] = sorted(fns) if fns else []
+            elif shared_code is not None and file in present_set and file in shared_code:
+                functions[file] = []
         entry = {
-            "files": sorted(found),
-            "recorders": sorted(self.recorders | {RECORDER}),
-            "functions": {
-                file: sorted(self.code.get(file, ()))
-                for file in sorted(coded)
-                if file.endswith(".py") and file not in self.reads
-            },
+            "files": sorted_files,
+            "recorders": sorted(self.recorders | {RECORDER}) if self.recorders else [RECORDER],
+            "functions": functions,
+            "loaded_through": through,
         }
-        entry["loaded_through"] = through
         rest = sorted(rel for rel in self.loaded.union(own) if at.get(rel, through) >= through)
         if rest:
             entry["loaded"] = rest
-        probes = self.probes - found
+        p_src = self.probes if probes_override is None else probes_override
+        probes = p_src - found
         if probes:
             entry["probes"] = _grouped(probes)
         if self.dirs:
             entry["dirs"] = sorted(f"dir:{d}" for d in self.dirs)
+        if shared is not None and self.duration_sec > 0.0:
+            entry["duration_ms"] = max(1, round(self.duration_sec * 1000))
         return entry
 
-    def collapse_probes(self, kinds: dict[str, str | None]) -> None:
+    def ensure_collapsed(self) -> None:
+        if not self.probes:
+            self._collapsed_len = 0
+            self._collapsed_set = set()
+            return
+        if self._collapsed_set is not None and len(self.probes) == self._collapsed_len:
+            return
+        get_parent = _parent_collapse_cache.get
+        kept = set()
+        add = kept.add
+        for probe in self.probes:
+            if "/" not in probe:
+                add(probe)
+                continue
+            parent = probe.rpartition("/")[0]
+            collapsed = get_parent(parent, False)
+            if collapsed is False:
+                collapsed = _resolve_parent_collapse(parent, _kinds_cache, _parent_collapse_cache)
+            add(probe if collapsed is None else collapsed)
+        self._collapsed_len = len(self.probes)
+        self._collapsed_set = kept
+
+    def collapse_probes(
+        self,
+        kinds: dict[str, str | None] | None = None,
+        p_cache: dict[str, str | None] | None = None,
+    ) -> None:
         """Keeps one path for the probes below a path that isn't a directory:
         an import system's lookups probe every candidate under every path entry, and some
         libraries look for files under each path they're given. A probe `X/…` below a file X
@@ -246,21 +361,49 @@ class Footprint:
         its presence. One below a missing directory D can only be found once
         something is added at or below D, which reaches whoever probed D: D stays, for all
         of them. `kinds` caches each path's kind."""
+        if not self.probes or (kinds is None and self._collapsed_set is not None and len(self.probes) == self._collapsed_len):
+            if self._collapsed_set is not None and len(self.probes) == self._collapsed_len and self.probes is not self._collapsed_set:
+                self.probes = set(self._collapsed_set)
+            return
+        use_global = kinds is None or kinds is _kinds_cache
+        k_cache = _kinds_cache if use_global else kinds
+        if p_cache is None:
+            p_cache = _parent_collapse_cache if use_global else {}
+        get_parent = p_cache.get
         kept = set()
+        add = kept.add
         for probe in self.probes:
-            parts = probe.split("/")
-            keep = probe
-            for end in range(1, len(parts)):
-                prefix = "/".join(parts[:end])
-                kind = kinds[prefix] if prefix in kinds else kinds.setdefault(prefix, _kind_of(prefix))
-                if kind == "dir":
-                    continue
-                if kind in ("file", "missing"):
-                    keep = prefix
-                break  # anything else (unreadable, a socket): the probe as it is
-            if keep is not None:
-                kept.add(keep)
+            if "/" not in probe:
+                add(probe)
+                continue
+            parent = probe.rpartition("/")[0]
+            collapsed = get_parent(parent, False)
+            if collapsed is False:
+                collapsed = _resolve_parent_collapse(parent, k_cache, p_cache)
+            add(probe if collapsed is None else collapsed)
         self.probes = kept
+        if use_global:
+            self._collapsed_len = len(kept)
+            self._collapsed_set = kept
+
+
+def _resolve_parent_collapse(
+    parent: str,
+    kinds: dict[str, str | None],
+    p_cache: dict[str, str | None],
+) -> str | None:
+    parts = parent.split("/")
+    ans = None
+    for end in range(1, len(parts) + 1):
+        prefix = "/".join(parts[:end])
+        kind = kinds[prefix] if prefix in kinds else kinds.setdefault(prefix, _kind_of(prefix))
+        if kind == "dir":
+            continue
+        if kind in ("file", "missing"):
+            ans = prefix
+        break
+    p_cache[parent] = ans
+    return ans
 
 
 def _kind_of(rel: str) -> str | None:
@@ -292,6 +435,7 @@ def _grouped(paths) -> list:
 
 TARGETS_TOOL = monitoring.PROFILER_ID
 SHARED_TOOL = 4  # an unnamed id; `start` takes a free one
+_DISABLE = monitoring.DISABLE
 root = ""  # the repository, with a trailing separator
 own: tuple[str, ...] = ()  # the recorders' own files and directories
 quiet: set[str] = set()
@@ -304,7 +448,10 @@ footprints: dict[str, Footprint] = {SHARED: Footprint()}
 shared = footprints[SHARED]
 current: Footprint | None = None  # the target recording (the targets tool's sink)
 current_key: str | None = None
+_current_raw_append = None  # pre-bound `current._raw_codes.append` for `on_start`
+_shared_raw_append = shared._raw_codes.append
 _ctx_target: contextvars.ContextVar[str | None] = contextvars.ContextVar("enact_footprint_target", default=None)
+_ctx_depth = 0  # > 0 while any `request_target` context manager is active
 depth = 0  # nesting of shared extents, every thread's
 children_dir = ""
 child_stem = ""
@@ -323,6 +470,17 @@ stats: dict[str, int] = {}
 # classified is a Python child's.
 local = _thread._local()
 _rel_cache: dict[str, str | None] = {}
+_dir_real_cache: dict[str, str] = {}
+_code_cache: dict[int, tuple[str, str | None, int] | None] = {}
+_code_table: list[tuple[str, str | None]] = []
+_code_keepalive: list = []
+_all_ran_files: set[str] = set()
+_kinds_cache: dict[str, str | None] = {}
+_parent_collapse_cache: dict[str, str | None] = {}
+_scanned_mod_keys: set[str] = set()
+_shared_ver = 0
+_cached_ckpt = None
+_orig_json_dump = None
 tracer = ""  # `enact trace exec`'s enact ($ENACT_EXE) on Linux: what runs a program unmodelled
 outer_kernel_trace = False  # outer kernel tracer supervises subprocess file/dir/probe opens
 _popen_pending = False  # `subprocess` not imported yet: Popen is patched once it is
@@ -355,9 +513,10 @@ def count(name: str, n: int = 1) -> None:
 
 def active_target_key() -> str | None:
     """The target active in the current context (`request_target`), process (`switch`), or env."""
-    ctx_key = _ctx_target.get()
-    if ctx_key is not None and ctx_key != SHARED:
-        return ctx_key
+    if _ctx_depth:
+        ctx_key = _ctx_target.get()
+        if ctx_key is not None and ctx_key != SHARED:
+            return ctx_key
     if current_key is not None and current_key != SHARED:
         return current_key
     env_target = os.environ.get("ENACT_TRACE_TARGET") or os.environ.get(ENV_TARGET)
@@ -368,15 +527,21 @@ def active_target_key() -> str | None:
 def request_target(key: str | None):
     """Scopes all function calls, file opens, stats, and outbound HTTP calls in the current
     thread or async task (`contextvars.ContextVar`) to `key`'s footprint."""
+    global _ctx_depth
     if not key:
         yield
         return
-    footprints.setdefault(key, Footprint())
+    fp = footprints.setdefault(key, Footprint())
+    t0 = time.monotonic()
     token = _ctx_target.set(key)
+    _ctx_depth += 1
     try:
         yield
     finally:
+        _ctx_depth -= 1
         _ctx_target.reset(token)
+        if key != SHARED and current_key != key:
+            fp.duration_sec += max(0.0, time.monotonic() - t0)
         _mark_loaded(key)
 
 
@@ -384,36 +549,72 @@ def sink() -> Footprint | None:
     """Where a file the process uses now is recorded: shared inside an extent."""
     if depth > 0:
         return shared
-    ctx_key = _ctx_target.get()
-    if ctx_key is not None:
-        return footprints.setdefault(ctx_key, Footprint())
+    if _ctx_depth:
+        ctx_key = _ctx_target.get()
+        if ctx_key is not None:
+            return footprints.setdefault(ctx_key, Footprint())
     return current
 
 
-def relative(path) -> str | None:
+def _fast_realpath(path: str, missing: bool = False) -> str:
+    """Resolves `path` with directory-level realpath memoization (`_dir_real_cache`).
+    When `missing=True` (known `FileNotFoundError`), avoids `lstat` on the leaf when the
+    parent directory is already resolved and not a symlink."""
+    dirname, _, basename = path.rpartition("/")
+    if not basename or basename in (".", ".."):
+        return os.path.realpath(path)
+    real_dir = _dir_real_cache.get(dirname)
+    if real_dir is None:
+        real_dir = os.path.realpath(dirname or "/")
+        try:
+            if (_real_lstat(dirname or "/").st_mode & 0o170000) == 0o040000:
+                _dir_real_cache[dirname] = real_dir
+        except OSError:
+            pass
+    candidate = f"{real_dir}/{basename}" if real_dir != "/" else f"/{basename}"
+    if missing:
+        return candidate
+    try:
+        if (_real_lstat(candidate).st_mode & 0o170000) == 0o120000:
+            return os.path.realpath(candidate)
+    except FileNotFoundError:
+        return candidate
+    except OSError:
+        return os.path.realpath(path)
+    return candidate
+
+
+def relative(path, missing: bool = False) -> str | None:
     """`path` from the repository root ("" for the root): None outside it, in a dot
     directory or a `__pycache__`, or one of the recorders' own files."""
-    if isinstance(path, os.PathLike):
-        path = os.fspath(path)
-    if isinstance(path, bytes):
-        try:
-            path = os.fsdecode(path)
-        except (TypeError, ValueError):
+    if isinstance(path, str):
+        if not path or path[0] == "<":
             return None
-    if not isinstance(path, str) or not path or path.startswith("<"):
-        return None
-    cached = _rel_cache.get(path, False)
-    if cached is not False:
-        return cached
-    if not os.path.isabs(path):
+        cached = _rel_cache.get(path, False)
+        if cached is not False:
+            return cached
+    else:
+        if isinstance(path, os.PathLike):
+            path = os.fspath(path)
+        if isinstance(path, bytes):
+            try:
+                path = os.fsdecode(path)
+            except (TypeError, ValueError):
+                return None
+        if not isinstance(path, str) or not path or path.startswith("<"):
+            return None
+        cached = _rel_cache.get(path, False)
+        if cached is not False:
+            return cached
+    if not path.startswith("/"):
         try:
-            return relative(os.path.join(os.getcwd(), path))
+            return relative(os.path.join(os.getcwd(), path), missing=missing)
         except OSError:
             return None
     busy = getattr(local, "busy", False)
     local.busy = True
     try:
-        real = os.path.realpath(path)
+        real = _fast_realpath(path, missing=missing)
     finally:
         local.busy = busy
     rel = None
@@ -433,45 +634,59 @@ def function_of(code) -> str | None:
     return None if "<" in name else name
 
 
-def _ran(fp: Footprint, code) -> None:
+def _resolve_code(code) -> tuple[str, str | None, int] | None:
+    """Resolves and caches `(rel_path, function_name, idx)` once per unique `PyCodeObject`."""
+    _code_keepalive.append(code)
     path = relative(code.co_filename)
-    if path is not None:
-        function = function_of(code)
-        called = fp.code.get(path)
-        if called is None:
-            called = fp.code.setdefault(path, set())
-        if function:
-            called.add(function)
+    if path is None:
+        _code_cache[id(code)] = None
+        return None
+    fn = function_of(code)
+    idx = len(_code_table)
+    _code_table.append((path, fn))
+    _all_ran_files.add(path)
+    info = (path, fn, idx)
+    _code_cache[id(code)] = info
+    return info
+
+
+def _ran(fp: Footprint, code) -> None:
+    fp._raw_codes.append(code)
 
 
 def on_start(code, _offset):
-    ctx_key = _ctx_target.get()
-    if ctx_key is not None:
-        _ran(footprints.setdefault(ctx_key, Footprint()), code)
-        return None
-    fp = current
-    if fp is not None:
-        _ran(fp, code)
-    return monitoring.DISABLE
+    if _ctx_depth:
+        ctx_key = _ctx_target.get()
+        if ctx_key is not None:
+            footprints.setdefault(ctx_key, Footprint())._raw_codes.append(code)
+            return None
+    if _current_raw_append is not None:
+        _current_raw_append(code)
+    return _DISABLE
 
 
 def on_shared_start(code, _offset):
-    _ran(shared, code)
-    return monitoring.DISABLE
+    _shared_raw_append(code)
+    return _DISABLE
 
 
 def _kind(path: str) -> str | None:
     """"dir", "file", or None (missing), by the real `stat`."""
-    import stat as st
-
     try:
-        mode = _real_stat(path).st_mode
+        mode = _real_stat(path).st_mode & 0o170000
     except (OSError, ValueError):
         return None
-    return "dir" if st.S_ISDIR(mode) else "file"
+    return "dir" if mode == 0o040000 else "file"
 
 
 def _absolute(path) -> str | None:
+    if isinstance(path, str):
+        if path.startswith("/"):
+            return path
+        try:
+            return os.path.join(os.getcwd(), path)
+        except OSError:
+            return None
     if isinstance(path, int):
         return _fd_path(path)
     if path is None:
@@ -501,15 +716,8 @@ def _fd_path(fd: int) -> str | None:
         return None
 
 
-def note(path, kind: str | None = None, fp: Footprint | None = None) -> None:
-    """Records `path`: a listing if it's a directory, a read if a file, a probe if missing."""
-    fp = fp or sink()
-    if fp is None:
-        return
-    absolute = _absolute(path)
-    rel = relative(absolute) if absolute else None
-    if rel is None:
-        return
+def _note_rel(rel: str, absolute: str, kind: str | None, fp: Footprint) -> None:
+    global _shared_ver
     kind = kind or _kind(absolute)
     if kind == "dir":
         fp.dirs.add(rel)
@@ -517,6 +725,20 @@ def note(path, kind: str | None = None, fp: Footprint | None = None) -> None:
         fp.reads.add(rel)
     elif rel:
         fp.probes.add(rel)
+    if fp is shared:
+        _shared_ver += 1
+
+
+def note(path, kind: str | None = None, fp: Footprint | None = None) -> None:
+    """Records `path`: a listing if it's a directory, a read if a file, a probe if missing."""
+    fp = fp or sink()
+    if fp is None:
+        return
+    absolute = _absolute(path)
+    rel = relative(absolute, missing=(kind == "missing")) if absolute else None
+    if rel is None:
+        return
+    _note_rel(rel, absolute, kind, fp)
 
 
 # --- loaded modules ----------------------------------------------------------------------
@@ -555,14 +777,36 @@ def scan_modules() -> None:
     global _modules_seen
     modules = sys.modules
     try:
-        seen = (len(modules), next(reversed(modules)))
+        n = len(modules)
+        last_k = next(reversed(modules))
+        seen = (n, last_k)
     except (StopIteration, RuntimeError):
         seen = None
     if seen is not None and seen == _modules_seen:
         return
     _modules_seen = seen
-    for module in list(modules.values()):
-        note_module(module)
+    if not _scanned_mod_keys:
+        for k, module in list(modules.items()):
+            _scanned_mod_keys.add(k)
+            note_module(module)
+        return
+    new_mods = []
+    try:
+        for k in reversed(modules):
+            if k in _scanned_mod_keys:
+                break
+            _scanned_mod_keys.add(k)
+            mod = modules.get(k)
+            if mod is not None:
+                new_mods.append(mod)
+    except RuntimeError:
+        for k, mod in list(modules.items()):
+            if k not in _scanned_mod_keys:
+                _scanned_mod_keys.add(k)
+                if mod is not None:
+                    new_mods.append(mod)
+    for mod in reversed(new_mods):
+        note_module(mod)
 
 
 def _mark_loaded(key: str | None) -> None:
@@ -653,34 +897,50 @@ def _audit_open(args) -> None:
             return  # written, not read
     elif isinstance(flags, int) and flags & (os.O_WRONLY | os.O_RDWR) == os.O_WRONLY:
         return
-    try:
-        name = os.fsdecode(os.fspath(path))
-    except (TypeError, ValueError):
-        return
+    if isinstance(path, str):
+        name = path
+    else:
+        try:
+            name = os.fsdecode(os.fspath(path))
+        except (TypeError, ValueError):
+            return
     if name.endswith(".pyc"):
+        return
+    absolute = _absolute(name)
+    if absolute is None:
+        return
+    rel = relative(absolute)
+    if rel is None:
         return
     if name.endswith(".py") and _opened_by_import():
         return
-    absolute = _absolute(name)
-    if absolute is None or relative(absolute) is None or _unrecorded(sys._getframe(2)):
+    if _unrecorded(sys._getframe(2)):
         return
     kind = _kind(absolute)
     if kind == "file" and name.endswith(".py"):
         count("source_reads")
-    note(absolute, kind)
+    fp = sink()
+    if fp is not None:
+        _note_rel(rel, absolute, kind, fp)
 
 
 def _audit_listing(args) -> None:
+    absolute = _absolute(args[0] if args else None)
+    if absolute is None:
+        return
+    rel = relative(absolute)
+    if rel is None:
+        return
     caller = _caller()
     if caller is not None:
         if caller.co_name == "_fill_cache" and caller.co_filename.startswith("<frozen importlib"):
             return  # the import system: its lookups are probes (find_spec)
         if unlisted and _listed_by_unlisted():
             return  # the adapter's: a test runner's collection walk (`unlisted_callers`)
-    absolute = _absolute(args[0] if args else None)
-    if absolute is not None and relative(absolute) is not None:
-        count("listings")
-        note(absolute)
+    count("listings")
+    fp = sink()
+    if fp is not None:
+        _note_rel(rel, absolute, None, fp)
 
 
 def _audit_glob(args) -> None:
@@ -741,6 +1001,91 @@ def _audit_exec(args) -> None:
         write_child()  # this image ends here; the next one leaves its own record
 
 
+_DEFAULT_SERVICE_PORTS = {
+    5432: "postgres",
+    8123: "clickhouse",
+    9000: "clickhouse",
+    9440: "clickhouse",
+    6379: "redis",
+    9092: "kafka",
+    19000: "seaweedfs",
+    8333: "seaweedfs",
+    7233: "temporal",
+    10000: "azurite",
+    10001: "azurite",
+    10002: "azurite",
+}
+
+_SERVICE_PORT_ENV_VARS = (
+    ("postgres", ("POSTGRES_PORT", "PGPORT", "DATABASE_URL", "POSTGRES_URL")),
+    ("clickhouse", ("CLICKHOUSE_HTTP_PORT", "CLICKHOUSE_PORT", "CLICKHOUSE_SECURE_PORT", "CLICKHOUSE_URL")),
+    ("redis", ("REDIS_PORT", "REDIS_URL")),
+    ("kafka", ("KAFKA_PORT", "KAFKA_HOSTS", "KAFKA_BROKERS", "KAFKA_BOOTSTRAP_SERVERS")),
+    ("seaweedfs", ("SEAWEEDFS_PORT", "OBJECT_STORAGE_PORT", "S3_PORT", "S3_ENDPOINT", "OBJECT_STORAGE_ENDPOINT", "AWS_ENDPOINT_URL")),
+    ("temporal", ("TEMPORAL_PORT", "TEMPORAL_HOST", "TEMPORAL_ADDRESS", "TEMPORAL_CLI_ADDRESS")),
+    ("azurite", ("AZURITE_PORT", "AZURITE_BLOB_PORT")),
+)
+
+
+def _extract_ports(raw: str) -> list[int]:
+    ports = []
+    if raw.isdigit():
+        val = int(raw)
+        if 0 < val <= 65535:
+            ports.append(val)
+        return ports
+    for chunk in raw.replace("/", " ").replace(",", " ").split():
+        _, sep, tail = chunk.rpartition(":")
+        if sep and tail.isdigit():
+            val = int(tail)
+            if 0 < val <= 65535:
+                ports.append(val)
+    return ports
+
+
+def _service_for_port(port: int) -> str | None:
+    for svc, keys in _SERVICE_PORT_ENV_VARS:
+        for key in keys:
+            raw = os.environ.get(key)
+            if raw and port in _extract_ports(raw):
+                return svc
+    for key, raw in os.environ.items():
+        if key.startswith("ENVE_SERVICE_") and key.endswith("_PORT") and raw.isdigit() and int(raw) == port:
+            return key[len("ENVE_SERVICE_") : -len("_PORT")].lower()
+    return _DEFAULT_SERVICE_PORTS.get(port)
+
+
+def _is_loopback_host(host) -> bool:
+    if isinstance(host, bytes):
+        try:
+            host = host.decode("latin1")
+        except Exception:
+            return False
+    if not isinstance(host, str):
+        return False
+    h = host.strip().lower()
+    return h in ("127.0.0.1", "localhost", "::1", "0.0.0.0", "") or h.startswith("127.")
+
+
+def _audit_socket_connect(args) -> None:
+    address = args[1] if len(args) > 1 else None
+    fp = sink()
+    if fp is None or address is None:
+        return
+    if isinstance(address, tuple) and len(address) >= 2:
+        host, port = address[0], address[1]
+        if isinstance(port, int) and _is_loopback_host(host):
+            svc = _service_for_port(port)
+            if svc:
+                fp.services.add(svc)
+    elif isinstance(address, (str, bytes)):
+        path = address.decode("latin1", errors="ignore") if isinstance(address, bytes) else address
+        if ".s.PGSQL." in path:
+            fp.services.add("postgres")
+        elif "redis" in path.lower() or (os.environ.get("REDIS_SOCKET") and path == os.environ.get("REDIS_SOCKET")):
+            fp.services.add("redis")
+
+
 # `os.spawn*` and `pty.spawn` fork and exec: the forked child classifies its `os.exec`.
 AUDITED = {
     "open": _audit_open,
@@ -752,6 +1097,7 @@ AUDITED = {
     "os.system": _audit_system,
     "os.posix_spawn": _audit_posix_spawn,
     "os.exec": _audit_exec,
+    "socket.connect": _audit_socket_connect,
 }
 
 
@@ -1315,6 +1661,7 @@ def write_child() -> None:
     _writing = True
     try:
         scan_modules()
+        current.flush_codes()
         current.loaded.update(loaded_order)
         # Loaded in this child before its recording started (its `site`), or by an extension
         # loader: no monitoring saw them run, so they are read whole. A forked child's parent
@@ -1359,13 +1706,14 @@ def _die(signum: int) -> None:
 
 
 def _record_child(token: str, spawn_id: str) -> None:
-    global child, current, current_key, footprints, depth, child_from, _writing, _signalled
+    global child, current, current_key, _current_raw_append, footprints, depth, child_from, _writing, _signalled
     child = True
     _writing, _signalled = False, 0
     child_from = len(loaded_order)
     depth = 0
     footprints = {}
     current, current_key = Footprint(), token
+    _current_raw_append = current._raw_codes.append
     os._exit = _exit
     import atexit
 
@@ -1541,20 +1889,22 @@ def merge_children() -> None:
 
 def enter_shared() -> None:
     """What runs from here to `leave_shared` serves every later target: it is shared."""
-    global depth
+    global depth, _shared_ver
     if child:
         return
     depth += 1
     if depth == 1:
+        _shared_ver += 1
         _arm(SHARED_TOOL, PY_START)
 
 
 def leave_shared() -> None:
-    global depth
+    global depth, _shared_ver
     if child:
         return
     depth -= 1
     if depth == 0:
+        _shared_ver += 1
         _arm(SHARED_TOOL, 0)
 
 
@@ -1624,6 +1974,7 @@ def _patch_imports() -> None:
         return spec
 
     def find_spec_recording(name, path, target=None):
+        global _shared_ver
         outer = getattr(local, "probes", None)
         local.probes = probes = []
         try:
@@ -1631,8 +1982,10 @@ def _patch_imports() -> None:
         finally:
             local.probes = outer
         fp = sink() if spec is None else shared if not child else current
-        if fp is not None:
+        if fp is not None and probes:
             fp.probes.update(probes)
+            if fp is shared:
+                _shared_ver += 1
         return spec
 
     finder.find_spec = find_spec_probing
@@ -1642,50 +1995,80 @@ def _patch_imports() -> None:
 def _probe_lookup(probes: list, directory: str, finder, tail: str, spec) -> None:
     """The files a lookup of `tail` in `directory` checked before the one it took: each was
     missing, and would have been found, so adding one changes what the import gets."""
-    prefix = f"{directory}/" if directory else ""
-    suffixes = [suffix for suffix, _loader in getattr(finder, "_loaders", ())]
-    candidates = [f"{prefix}{tail}/__init__{s}" for s in suffixes] + [f"{prefix}{tail}{s}" for s in suffixes]
+    pkg = f"{directory}/{tail}" if directory else tail
+    suffixes = getattr(finder, "_enact_suffixes", None)
+    if suffixes is None:
+        suffixes = tuple(suffix for suffix, _loader in getattr(finder, "_loaders", ()))
+        try:
+            finder._enact_suffixes = suffixes
+        except Exception:
+            pass
     origin = getattr(spec, "origin", None) if spec is not None else None
     found = relative(origin) if origin else None
     count("lookups_probed")
-    for candidate in candidates:
+    if found is None:
+        # Fast path when nothing was found in this finder: if `pkg` is already known to be
+        # missing or a regular file in `_kinds_cache`, all `pkg/__init__<suffix>` probes
+        # collapse to `pkg`.
+        pkg_kind = _kinds_cache.get(pkg)
+        if pkg_kind is None and pkg not in _kinds_cache:
+            pkg_kind = _kinds_cache.setdefault(pkg, _kind_of(pkg))
+        if pkg_kind in ("missing", "file"):
+            probes.append(pkg)
+            for s in suffixes:
+                probes.append(f"{pkg}{s}")
+            return
+        for s in suffixes:
+            probes.append(f"{pkg}/__init__{s}")
+        for s in suffixes:
+            probes.append(f"{pkg}{s}")
+        probes.append(pkg)
+        return
+    for s in suffixes:
+        candidate = f"{pkg}/__init__{s}"
         if candidate == found:
             return
         probes.append(candidate)
-    if spec is None or found is None:
-        probes.append(f"{prefix}{tail}")  # its namespace package's directory, missing or bare
+    for s in suffixes:
+        candidate = f"{pkg}{s}"
+        if candidate == found:
+            return
+        probes.append(candidate)
+    if spec is None:
+        probes.append(pkg)  # its namespace package's directory, missing or bare
 
 
-def _checked(path, call):
-    """A `stat` the code under test made: a missing path is a probe, a file a presence
-    predicate found too (`_presence_only`), any other file is found. The recorder's own (this
-    thread busy) is none."""
-    if getattr(local, "busy", False):
-        return call()
-    try:
-        result = call()
-    except (FileNotFoundError, NotADirectoryError):
-        fp = sink()
-        if fp is not None and not _unrecorded(sys._getframe(2)):
-            local.busy = True
-            try:
-                count("stat_probes")
-                note(path, "missing", fp)
-            finally:
-                local.busy = False
-        raise
+def _checked_missing(path) -> None:
     fp = sink()
-    regular = (result.st_mode & 0o170000) == 0o100000
-    if fp is not None and regular and not _unrecorded(sys._getframe(2)):
+    if fp is None:
+        return
+    local.busy = True
+    try:
+        absolute = _absolute(path)
+        rel = relative(absolute, missing=True) if absolute else None
+        if rel is not None and not _unrecorded(sys._getframe(2)):
+            count("stat_probes")
+            _note_rel(rel, absolute, "missing", fp)
+    finally:
+        local.busy = False
+
+
+def _checked_hit(path, result):
+    global _shared_ver
+    fp = sink()
+    if fp is not None and (result.st_mode & 0o170000) == 0o100000:
         local.busy = True
         try:
             absolute = _absolute(path)
             rel = relative(absolute) if absolute else None
-            if rel and _presence_only(sys._getframe(2)):
-                count("presence_probes")
-                fp.probes.add(rel)
-            elif rel:
-                fp.present.add(rel)
+            if rel and not _unrecorded(sys._getframe(2)):
+                if _presence_only(sys._getframe(2)):
+                    count("presence_probes")
+                    fp.probes.add(rel)
+                else:
+                    fp.present.add(rel)
+                if fp is shared:
+                    _shared_ver += 1
         finally:
             local.busy = False
     return result
@@ -1735,12 +2118,22 @@ def _patch_stat() -> None:
     def stat(path, *, dir_fd=None, follow_symlinks=True):
         if getattr(local, "busy", False) or dir_fd is not None or isinstance(path, int):
             return _real_stat(path, dir_fd=dir_fd, follow_symlinks=follow_symlinks)
-        return _checked(path, lambda: _real_stat(path, follow_symlinks=follow_symlinks))
+        try:
+            res = _real_stat(path) if follow_symlinks else _real_lstat(path)
+        except (FileNotFoundError, NotADirectoryError):
+            _checked_missing(path)
+            raise
+        return _checked_hit(path, res)
 
     def lstat(path, *, dir_fd=None):
-        if getattr(local, "busy", False) or dir_fd is not None:
+        if getattr(local, "busy", False) or dir_fd is not None or isinstance(path, int):
             return _real_lstat(path, dir_fd=dir_fd)
-        return _checked(path, lambda: _real_lstat(path))
+        try:
+            res = _real_lstat(path)
+        except (FileNotFoundError, NotADirectoryError):
+            _checked_missing(path)
+            raise
+        return _checked_hit(path, res)
 
     os.stat = stat
     os.lstat = lstat
@@ -2062,6 +2455,8 @@ def narrow_own_modules(fps: dict[str, Footprint] | None = None, order: list[str]
     fps = footprints if fps is None else fps
     order = loaded_order if order is None else order
     marks = loaded_marks if marks is None else marks
+    for fp in fps.values():
+        fp.flush_codes()
     common = fps[SHARED]
     owners: dict[str, list[str]] = {}
     for key in fps:
@@ -2205,8 +2600,13 @@ def _patch_http_context() -> None:
 
 
 def _install(repo: str, recorders) -> None:
-    global root, own, tracer, outer_kernel_trace
-    root = os.path.realpath(repo) + os.sep
+    global root, own, tracer, outer_kernel_trace, _orig_json_dump
+    import json
+
+    _orig_json_dump = json.dump
+    real_repo = os.path.realpath(repo)
+    root = real_repo + os.sep
+    _dir_real_cache[real_repo] = real_repo
     outer_kernel_trace = os.environ.get(ENV_OUTER_KERNEL_TRACE, "").lower() in ("1", "true", "yes")
     exe = os.environ.get(ENV_EXE, "")
     tracer = "" if outer_kernel_trace else (exe if sys.platform == "linux" and exe and os.access(exe, os.X_OK) else "")
@@ -2228,7 +2628,7 @@ def start(repo: str, recorders=(), quiet_programs=(), unlisted_callers=(), reade
     `unlisted_callers`: fragments of the file names of code whose directory listings say
     nothing about the tests (a test runner's collection walk, whose findings are targets
     themselves, and whose `conftest.py`/`__init__.py` checks are probes)."""
-    global current, current_key, SHARED_TOOL, unlisted
+    global current, current_key, _current_raw_append, SHARED_TOOL, unlisted
     quiet.update(quiet_programs)
     tree_readers.update({name: tuple(paths) for name, paths in (readers or {}).items()})
     unlisted = tuple(unlisted_callers)
@@ -2243,6 +2643,7 @@ def start(repo: str, recorders=(), quiet_programs=(), unlisted_callers=(), reade
     os.register_at_fork(after_in_child=_after_fork_in_child)
     _note_started_modules(shared)
     current, current_key = shared, SHARED
+    _current_raw_append = shared._raw_codes.append
     switched_at.append(time.monotonic())
     switched_to.append(SHARED)
     monitoring.set_events(TARGETS_TOOL, PY_START)
@@ -2344,7 +2745,7 @@ def _rearm(tool: int, name: str, callback, on: bool) -> str | None:
 def switch(key: str | None) -> None:
     """Records into `key`'s footprint (SHARED: every target's); None: a target not recorded,
     which runs unmonitored (its imports and cache computations are still shared)."""
-    global current, current_key
+    global current, current_key, _current_raw_append
     if child:
         return
     if STATS:
@@ -2352,11 +2753,15 @@ def switch(key: str | None) -> None:
     fp = None if key is None else footprint(key)
     if fp is current:
         return
+    now = time.monotonic()
+    if current is not None and current is not shared and switched_at:
+        current.duration_sec += max(0.0, now - switched_at[-1])
     _check_monitoring()
     _mark_loaded(current_key)
     _arm(TARGETS_TOOL, 0 if fp is None else PY_START)
     current, current_key = fp, key
-    switched_at.append(time.monotonic())
+    _current_raw_append = None if fp is None else fp._raw_codes.append
+    switched_at.append(now)
     switched_to.append(key)
     os.environ[ENV_TARGET] = key or ""
     monitoring.restart_events()
@@ -2365,25 +2770,32 @@ def switch(key: str | None) -> None:
 def finish() -> tuple[dict, dict[str, tuple[dict, list[str]]]]:
     """Stops recording: the shared footprint's map entry, each target's own entry, and why
     each target is opaque (the shared footprint's reasons too)."""
-    global current
+    global current, _current_raw_append
     if STATS:
         _account_caches(current_key)
+    now = time.monotonic()
+    if current is not None and current is not shared and switched_at:
+        current.duration_sec += max(0.0, now - switched_at[-1])
     _check_monitoring()
     _mark_loaded(current_key)
     _arm(TARGETS_TOOL, 0)
     _arm(SHARED_TOOL, 0)
     current = None
-    switched_at.append(time.monotonic())
+    _current_raw_append = None
+    switched_at.append(now)
     switched_to.append(None)
     _end_helpers()
     merge_children()
     import shutil
 
     shutil.rmtree(children_dir, ignore_errors=True)
+    for fp in footprints.values():
+        fp.flush_codes()
     kinds: dict[str, str | None] = {}
+    p_cache: dict[str, str | None] = {}
     count("probes_recorded", sum(len(fp.probes) for fp in footprints.values()))
     for fp in footprints.values():
-        fp.collapse_probes(kinds)
+        fp.collapse_probes(kinds, p_cache)
     count("probes_kept", sum(len(fp.probes) for fp in footprints.values()))
     scan_modules()
     narrow_own_modules()
@@ -2391,16 +2803,52 @@ def finish() -> tuple[dict, dict[str, tuple[dict, list[str]]]]:
     # (an extension module) is read whole, as loaded modules are among the files.
     marks = {key: loaded_marks.get(key, len(loaded_order)) for key in footprints if key != SHARED}
     common = min(marks.values(), default=len(loaded_order))
-    ran = set(shared.code).union(*(fp.code for fp in footprints.values()))
+    ran = _all_ran_files | set(shared.code)
     shared.reads.update(rel for rel in loaded_order if rel not in ran)
-    at = {rel: i for i, rel in enumerate(loaded_order)}
+    sh_sig = (
+        _shared_ver,
+        len(shared.code),
+        len(shared.reads),
+        len(shared.present),
+        len(shared.dirs),
+        len(shared.probes),
+        len(shared.opaque),
+        len(shared.services),
+        len(loaded_order),
+        loaded_order[-1] if loaded_order else "",
+    )
+    if _cached_ckpt is not None and _cached_ckpt[0] == sh_sig:
+        at = _cached_ckpt[1]
+        sh_entries = _cached_ckpt[2]
+    else:
+        at = {rel: i for i, rel in enumerate(loaded_order)}
+        sh_entries = {}
+    sh_entry = sh_entries.get(common)
+    if sh_entry is None:
+        sh_entry = shared.entry(common, at)
     out = {}
     for key, fp in footprints.items():
         if key != SHARED:
-            # What it ran itself was loaded by its end (a file run by path, not imported).
-            own = (f for f in fp.code if f.endswith(".py"))
-            out[key] = (fp.entry(marks[key], at, own, shared), sorted(fp.opaque | shared.opaque))
-    return shared.entry(common, at), out
+            fp_sig = (
+                sh_sig,
+                marks[key],
+                len(fp.code),
+                len(fp.reads),
+                len(fp.present),
+                len(fp.dirs),
+                len(fp.probes),
+                len(fp.loaded),
+                len(fp.opaque),
+                len(fp.services),
+                max(1, round(fp.duration_sec * 1000)) if fp.duration_sec > 0.0 else 0,
+            )
+            if fp._ckpt_cache is not None and fp._ckpt_cache[0] == fp_sig:
+                out[key] = fp._ckpt_cache[1]
+            else:
+                # What it ran itself was loaded by its end (a file run by path, not imported).
+                own = (f for f in fp.code if f.endswith(".py"))
+                out[key] = (fp.entry(marks[key], at, own, shared), sorted(fp.opaque | shared.opaque))
+    return sh_entry, out
 
 
 def checkpoint(keys) -> tuple[dict, dict[str, tuple[dict, list[str]]], list[str]] | None:
@@ -2425,15 +2873,96 @@ def checkpoint(keys) -> tuple[dict, dict[str, tuple[dict, list[str]]], list[str]
 
 
 def _checkpoint(keys):
+    global _cached_ckpt
     import json
     from bisect import bisect_right
 
     _mark_loaded(current_key)
     scan_modules()
-    fps = {SHARED: shared.copy()}
-    fps.update((key, footprints[key].copy()) for key in keys if key in footprints and key != SHARED)
+    shared.flush_codes()
+    shared.ensure_collapsed()
+    valid_keys = [key for key in keys if key in footprints and key != SHARED]
+    if not valid_keys:
+        return None
+    for key in valid_keys:
+        orig = footprints[key]
+        orig.flush_codes()
+        orig.ensure_collapsed()
     records = os.path.join(children_dir, "records")
     started = _started_children(records)
+    has_spawned = bool(shared.spawned) or any(footprints[k].spawned for k in valid_keys)
+    has_narrow_candidates = bool(own_modules & set(shared.code)) or any(
+        k.split("::", 1)[0] in shared.code for k in valid_keys
+    )
+    if not started and not has_spawned and not has_narrow_candidates:
+        # Fast path: no child processes and no own-module narrowing candidates in `shared.code`.
+        # Avoid deep-copying `shared` and all `k` target footprints on every checkpoint.
+        for fp in footprints.values():
+            fp.flush_codes()
+        order = list(loaded_order)
+        default_mark = len(order)
+        marks = {key: loaded_marks.get(key, default_mark) for key in valid_keys}
+        common = min(marks.values())
+        unran = {rel for rel in order if rel not in _all_ran_files} - shared.reads
+        sh_reads_len = len(shared.reads) + len(unran)
+        sh_probes_set = shared._collapsed_set if shared._collapsed_set is not None else shared.probes
+        sh_sig = (
+            _shared_ver,
+            len(shared.code),
+            sh_reads_len,
+            len(shared.present),
+            len(shared.dirs),
+            len(sh_probes_set),
+            len(shared.opaque),
+            len(shared.services),
+            default_mark,
+            order[-1] if order else "",
+        )
+        if _cached_ckpt is not None and _cached_ckpt[0] == sh_sig:
+            at = _cached_ckpt[1]
+            sh_entries = _cached_ckpt[2]
+        else:
+            at = {rel: i for i, rel in enumerate(order)}
+            sh_entries = {}
+            _cached_ckpt = (sh_sig, at, sh_entries)
+        sh_entry = sh_entries.get(common)
+        if sh_entry is None:
+            sh_entry = sh_entries.setdefault(
+                common,
+                shared.entry(common, at, probes_override=sh_probes_set, extra_reads=unran),
+            )
+        out = {}
+        for key in valid_keys:
+            orig_fp = footprints[key]
+            p_set = orig_fp._collapsed_set if orig_fp._collapsed_set is not None else orig_fp.probes
+            fp_sig = (
+                sh_sig,
+                marks[key],
+                len(orig_fp.code),
+                len(orig_fp.reads),
+                len(orig_fp.present),
+                len(orig_fp.dirs),
+                len(p_set),
+                len(orig_fp.loaded),
+                len(orig_fp.opaque),
+                len(orig_fp.services),
+                max(1, round(orig_fp.duration_sec * 1000)) if orig_fp.duration_sec > 0.0 else 0,
+            )
+            if orig_fp._ckpt_cache is not None and orig_fp._ckpt_cache[0] == fp_sig:
+                out[key] = orig_fp._ckpt_cache[1]
+            else:
+                own = (f for f in orig_fp.code if f.endswith(".py"))
+                res = (
+                    orig_fp.entry(marks[key], at, own, shared, probes_override=p_set),
+                    sorted(orig_fp.opaque | shared.opaque),
+                )
+                orig_fp._ckpt_cache = (fp_sig, res)
+                out[key] = res
+        count("checkpoints")
+        return sh_entry, out, order
+
+    fps = {SHARED: shared.copy(use_collapsed=True)}
+    fps.update((key, footprints[key].copy(use_collapsed=True)) for key in valid_keys)
     unknown: set[str] = set()
     for stem, (token, spawn_id, start) in started.items():
         traced = spawn_id.startswith("exec:")
@@ -2468,23 +2997,69 @@ def _checkpoint(keys):
         if fp.spawned - spawned:
             fp.opaque.add(f"{len(fp.spawned - spawned)} Python child process(es) left no record (no site, or never ran)")
         fp.spawned.clear()
-    kinds: dict[str, str | None] = {}
     for fp in fps.values():
-        fp.collapse_probes(kinds)
+        fp.collapse_probes()
     order, marks = list(loaded_order), {key: loaded_marks.get(key, len(loaded_order)) for key in fps}
     marks.pop(SHARED, None)
     narrow_own_modules(fps, order, marks)
     common = min(marks.values())
-    ran = set(shared.code).union(*(fp.code for fp in footprints.values()), *(fp.code for fp in fps.values()))
-    fps[SHARED].reads.update(rel for rel in order if rel not in ran)
-    at = {rel: i for i, rel in enumerate(order)}
+    for fp in footprints.values():
+        fp.flush_codes()
+    ran = _all_ran_files | set(shared.code) | set(fps[SHARED].code)
+    sh_fp = fps[SHARED]
+    sh_fp.reads.update(rel for rel in order if rel not in ran)
+    sh_sig = (
+        _shared_ver,
+        len(sh_fp.code),
+        len(sh_fp.reads),
+        len(sh_fp.present),
+        len(sh_fp.dirs),
+        len(sh_fp.probes),
+        len(sh_fp.opaque),
+        len(sh_fp.services),
+        len(order),
+        order[-1] if order else "",
+    )
+    if _cached_ckpt is not None and _cached_ckpt[0] == sh_sig:
+        at = _cached_ckpt[1]
+        sh_entries = _cached_ckpt[2]
+    else:
+        at = {rel: i for i, rel in enumerate(order)}
+        sh_entries = {}
+        _cached_ckpt = (sh_sig, at, sh_entries)
+    sh_entry = sh_entries.get(common)
+    if sh_entry is None:
+        sh_entry = sh_entries.setdefault(common, sh_fp.entry(common, at))
     out = {}
     for key, fp in fps.items():
         if key != SHARED:
-            own = (f for f in fp.code if f.endswith(".py"))
-            out[key] = (fp.entry(marks[key], at, own, fps[SHARED]), sorted(fp.opaque | fps[SHARED].opaque))
+            orig_fp = footprints.get(key)
+            fp_sig = (
+                sh_sig,
+                marks[key],
+                len(fp.code),
+                len(fp.reads),
+                len(fp.present),
+                len(fp.dirs),
+                len(fp.probes),
+                len(fp.loaded),
+                len(fp.opaque),
+                len(fp.services),
+                max(1, round(fp.duration_sec * 1000)) if fp.duration_sec > 0.0 else 0,
+            )
+            if orig_fp is not None and orig_fp._ckpt_cache is not None and orig_fp._ckpt_cache[0] == fp_sig:
+                out[key] = orig_fp._ckpt_cache[1]
+            else:
+                own = (f for f in fp.code if f.endswith(".py"))
+                res = (fp.entry(marks[key], at, own, sh_fp), sorted(fp.opaque | sh_fp.opaque))
+                if orig_fp is not None:
+                    orig_fp._ckpt_cache = (fp_sig, res)
+                out[key] = res
     count("checkpoints")
-    return fps[SHARED].entry(common, at), out, order
+    return sh_entry, out, order
+
+
+_json_frag_cache: dict = {}
 
 
 def write_map(out_dir: str, prefix: str, shared_entry: dict, targets: dict, path: str | None = None,
@@ -2502,20 +3077,63 @@ def write_map(out_dir: str, prefix: str, shared_entry: dict, targets: dict, path
     fd, temp = tempfile.mkstemp(suffix=".partial", prefix=prefix, dir=out_dir)
     if path is None:
         path = temp.removesuffix(".partial") + ".json"
+    actual_order = loaded_order if order is None else order
+    service_deps = {
+        key: sorted(footprints[key].services | shared.services)
+        for key in sorted(targets)
+        if key in footprints and (footprints[key].services or shared.services)
+    }
+    payload = {
+        "version": 1,
+        "recorder": RECORDER,
+        "outcomes": True,
+        "load_order": actual_order,
+        "shared": shared_entry,
+        "targets": targets,
+    }
+    if service_deps:
+        payload["target_service_deps"] = service_deps
     try:
         with os.fdopen(fd, "w") as f:
-            json.dump(
-                {
-                    "version": 1,
-                    "recorder": RECORDER,
-                    "outcomes": True,
-                    "load_order": loaded_order if order is None else order,
-                    "shared": shared_entry,
-                    "targets": targets,
-                },
-                f,
-                separators=(",", ":"),
-            )
+            if _orig_json_dump is not None and json.dump is _orig_json_dump:
+                dumps = json.dumps
+                if order is not None or _json_frag_cache:
+                    sh_id = id(shared_entry)
+                    sh_cached = _json_frag_cache.get(sh_id)
+                    if sh_cached is None or sh_cached[0] is not shared_entry:
+                        sh_str = dumps(shared_entry, separators=(",", ":"))
+                        _json_frag_cache[sh_id] = (shared_entry, sh_str)
+                    else:
+                        sh_str = sh_cached[1]
+                    ord_key = ("__order__", len(actual_order), actual_order[-1] if actual_order else "")
+                    ord_str = _json_frag_cache.get(ord_key)
+                    if ord_str is None:
+                        ord_str = dumps(actual_order, separators=(",", ":"))
+                        _json_frag_cache[ord_key] = ord_str
+                    t_parts = []
+                    append = t_parts.append
+                    for k, v in targets.items():
+                        tk = (k, id(v))
+                        tc = _json_frag_cache.get(tk)
+                        if tc is not None and tc[0] is v:
+                            append(tc[1])
+                        else:
+                            frag = f"{dumps(k, separators=(',', ':'))}:{dumps(v, separators=(',', ':'))}"
+                            _json_frag_cache[tk] = (v, frag)
+                            append(frag)
+                    svc_suffix = (
+                        f',"target_service_deps":{dumps(service_deps, separators=(",", ":"))}'
+                        if service_deps
+                        else ""
+                    )
+                    f.write(
+                        f'{{"version":1,"recorder":{dumps(RECORDER)},"outcomes":true,'
+                        f'"load_order":{ord_str},"shared":{sh_str},"targets":{{{",".join(t_parts)}}}{svc_suffix}}}'
+                    )
+                else:
+                    f.write(dumps(payload, separators=(",", ":")))
+            else:
+                json.dump(payload, f, separators=(",", ":"))
         os.replace(temp, path)
     finally:
         if os.path.exists(temp):
@@ -2540,6 +3158,8 @@ def write_stats(map_path: str, targets: int, opaque: dict) -> None:
 
 def summary(targets: int) -> dict:
     """What the recording saw, for its log and diagnostics."""
+    for fp in footprints.values():
+        fp.flush_codes()
     report = dict(sorted(stats.items()))
     report["targets"] = targets
     report["opaque_targets"] = sum(1 for k, fp in footprints.items() if k != SHARED and fp.opaque)
@@ -2555,3 +3175,139 @@ def summary(targets: int) -> dict:
         report["caches_read_across_targets"] = sum(1 for n in lost if n)
         report["caches"] = len(caches)
     return report
+
+
+def _raw_target_v2(
+    fp: Footprint,
+    *,
+    is_shared: bool = False,
+    mark: int | None = None,
+    outcome=None,
+    skipped_on: list[str] | None = None,
+) -> dict:
+    fp.flush_codes()
+    entry: dict = {}
+    if fp._cids:
+        entry["cids"] = list(fp._cids)
+    if fp.code:
+        covered: dict[str, set[str]] = {}
+        for idx in fp._cids:
+            path, fn = _code_table[idx]
+            s = covered.setdefault(path, set())
+            if fn is not None:
+                s.add(fn)
+        extra_code = {}
+        for file, fns in fp.code.items():
+            cov = covered.get(file)
+            if cov is None or fns - cov:
+                extra_code[file] = sorted(fns)
+        if extra_code:
+            entry["code"] = extra_code
+    if fp.reads:
+        entry["reads"] = sorted(fp.reads)
+    if fp.present:
+        entry["present"] = sorted(fp.present)
+    if fp.probes:
+        entry["probes"] = sorted(fp.probes)
+    if fp.dirs:
+        entry["dirs"] = sorted(fp.dirs)
+    if fp.loaded:
+        entry["loaded"] = sorted(fp.loaded)
+    if mark is not None:
+        entry["loaded_mark"] = mark
+    if fp.recorders:
+        entry["recorders"] = sorted(fp.recorders)
+    if fp.services:
+        entry["services"] = sorted(fp.services)
+    if fp.opaque:
+        entry["opaque"] = sorted(fp.opaque)
+    if outcome is not None:
+        entry["outcome"] = outcome
+    if skipped_on:
+        entry["skipped_on"] = list(skipped_on)
+    if not is_shared and fp.duration_sec > 0.0:
+        entry["duration_ms"] = max(1, round(fp.duration_sec * 1000))
+    return entry
+
+
+def dump_raw_v2(
+    outcomes: dict | None = None,
+    skipped: dict[str, list[str]] | None = None,
+) -> dict:
+    """Stops recording (if still active) and returns a `version: 2` raw footprint payload
+    (`RawPythonFootprintV2`) for native Rust post-processing (`collapse_probes`,
+    `narrow_own_modules`, `_grouped` probe compression, and `TraceReachMap` construction)."""
+    global current, _current_raw_append
+    if current is not None:
+        if STATS:
+            _account_caches(current_key)
+        now = time.monotonic()
+        if current is not shared and switched_at:
+            current.duration_sec += max(0.0, now - switched_at[-1])
+        _check_monitoring()
+        _mark_loaded(current_key)
+        _arm(TARGETS_TOOL, 0)
+        _arm(SHARED_TOOL, 0)
+        current = None
+        _current_raw_append = None
+        switched_at.append(now)
+        switched_to.append(None)
+        _end_helpers()
+        merge_children()
+        import shutil
+
+        shutil.rmtree(children_dir, ignore_errors=True)
+    scan_modules()
+    for fp in footprints.values():
+        fp.flush_codes()
+    default_mark = len(loaded_order)
+    return {
+        "version": 2,
+        "recorder": RECORDER,
+        "outcomes": True,
+        "root": root.rstrip("/"),
+        "code_table": [[path, fn] for path, fn in _code_table],
+        "load_order": list(loaded_order),
+        "own_modules": sorted(own_modules),
+        "first_loaded_by": {m: by for m, by in first_loaded_by.items() if by is not None},
+        "import_edges": [[imp, mod] for imp, mod in sorted(import_edges)],
+        "shared": _raw_target_v2(shared, is_shared=True),
+        "targets": {
+            key: _raw_target_v2(
+                fp,
+                is_shared=False,
+                mark=loaded_marks.get(key, default_mark),
+                outcome=(outcomes or {}).get(key),
+                skipped_on=(skipped or {}).get(key),
+            )
+            for key, fp in footprints.items()
+            if key != SHARED
+        },
+    }
+
+
+def write_raw_v2(
+    out_dir: str,
+    prefix: str,
+    outcomes: dict | None = None,
+    skipped: dict[str, list[str]] | None = None,
+    path: str | None = None,
+) -> str:
+    """Writes a `version: 2` raw footprint map (`RawPythonFootprintV2`) atomically to `out_dir`."""
+    import json
+    import tempfile
+
+    payload = dump_raw_v2(outcomes=outcomes, skipped=skipped)
+    os.makedirs(out_dir, exist_ok=True)
+    fd, temp = tempfile.mkstemp(suffix=".partial", prefix=prefix, dir=out_dir)
+    if path is None:
+        path = temp.removesuffix(".partial") + ".json"
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(payload, f, separators=(",", ":"))
+        os.replace(temp, path)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+    return path
+

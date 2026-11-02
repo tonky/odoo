@@ -7,7 +7,10 @@ import (
 	"enact.dev/schema"
 )
 
-#OdooTargetScope: schema.#TargetScope & {fallback: "all"}
+#OdooTargetScope: schema.#TargetScope & {
+	fallback: "all"
+	incidental_reads: ["**/__manifest__.py"]
+}
 
 #OdooLint: schema.#Task & {
 	command: "bash \"$(git rev-parse --show-toplevel)/helpers/odoo-lint.sh\" {changed_files}"
@@ -15,6 +18,8 @@ import (
 }
 
 #OdooAddonBase: schema.#Component & {
+	kind:       schema.#ComponentKindMode | *"addon"
+	domain:     string | *"erp"
 	technology: "python"
 	resources: {cpus: float | *1.0, memory_mb: int | *2048}
 	services: db: schema.#PostgresService & {
@@ -105,6 +110,9 @@ pipeline: schema.#Pipeline & {
 		"base": {
 			description: "Odoo core kernel, ORM, data models, security, and base addon"
 			title:       "Odoo Base Framework & Core Models"
+			kind:        "service"
+			domain:      "kernel"
+			uses:        [{protocol: schema.#Protocol.Sql, target: "db", title: "ORM relational model persistence"}]
 			resources:   {cpus: 2.0, memory_mb: 4096}
 			root:        "odoo/addons/base"
 			scoping: domain_roots: ["odoo/addons/base", "odoo"]
@@ -115,27 +123,34 @@ pipeline: schema.#Pipeline & {
 		"web": {
 			description: "Odoo web client, owl components, and UI assets"
 			title:       "Odoo Web Client & Owl UI Engine"
+			kind:        "app"
+			domain:      "web"
+			uses:        [{protocol: schema.#Protocol.Http, target: "base", title: "JSON-RPC & Owl controller dispatch"}]
 			tags:        ["web", "ui"]
 		}
 		"mail": {
 			description: "Odoo discussions, activities, and communication gateways"
 			title:       "Odoo Discussions & Activity Gateway"
+			domain:      "communication"
 			tags:        ["mail", "discuss"]
 		}
 		"account": {
 			description: "Odoo Invoicing and Accounting core framework"
 			title:       "Odoo Invoicing & Financial Accounting"
+			domain:      "finance"
 			resources:   {cpus: 2.0, memory_mb: 4096}
 			tags:        ["account", "invoicing"]
 		}
 		"sale": {
 			description: "Odoo Sales quotations, pricing rules, and sales orders"
 			title:       "Odoo Sales & Quotation Management"
+			domain:      "commerce"
 			tags:        ["sale", "crm"]
 		}
 		"stock": {
 			description: "Odoo Inventory, delivery orders, and warehouse management"
 			title:       "Odoo Inventory & Warehouse Logistics"
+			domain:      "logistics"
 			tags:        ["stock", "inventory"]
 		}
 		"test_lint": {
