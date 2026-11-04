@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+# Fast Hermetic Pre-Commit Hook (Oxlint + Ruff)
+# Inspects only staged files, executing in <100ms
+
+ROOT_DIR=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+cd "$ROOT_DIR"
+
+STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
+STAGED_JS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(js|ts)$' || true)
+
+if [ -n "$STAGED_PY" ]; then
+    echo "⚡ [pre-commit] Checking Python files with Ruff..."
+    enve run -- ruff check --config ruff.toml --exit-zero $STAGED_PY
+fi
+
+if [ -n "$STAGED_JS" ]; then
+    echo "⚡ [pre-commit] Checking JavaScript files with Oxlint..."
+    enve run -- oxlint -c oxlint.json $STAGED_JS || {
+        echo "❌ Oxlint check failed."
+        exit 1
+    }
+fi

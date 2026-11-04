@@ -1,0 +1,18 @@
+{
+ "addons/payment_iyzico": {
+  "startup": 17.32,
+  "contention": 0.38
+ },
+ "addons/payment_iyzico/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 0.1,
+  "contention": 0.4
+ },
+ "addons/payment_iyzico/tests/test_payment_transaction.py::TestPaymentTransaction": {
+  "seconds": 0.11,
+  "contention": 0.4
+ },
+ "addons/payment_iyzico/tests/test_processing_flows.py::TestProcessingFlows": {
+  "seconds": 0.18,
+  "contention": 0.4
+ }
+}

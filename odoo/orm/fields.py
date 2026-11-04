@@ -52,6 +52,18 @@ def resolve_mro(model: BaseModel, name: str, predicate) -> list[typing.Any]:
         in mro order on ``model`` that satisfy ``predicate``.  Model registry
         classes are ignored.
     """
+    model_cls = model if isinstance(model, type) else type(model)
+    cache = model_cls.__dict__.get('_mro_resolve_cache')
+    if cache is None:
+        try:
+            cache = model_cls._mro_resolve_cache = {}
+        except (AttributeError, TypeError):
+            cache = None
+
+    key = (name, predicate)
+    if cache is not None and key in cache:
+        return list(cache[key])
+
     result = []
     for cls in model._model_classes__:
         value = cls.__dict__.get(name, SENTINEL)
@@ -60,6 +72,9 @@ def resolve_mro(model: BaseModel, name: str, predicate) -> list[typing.Any]:
         if not predicate(value):
             break
         result.append(value)
+
+    if cache is not None:
+        cache[key] = tuple(result)
     return result
 
 

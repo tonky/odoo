@@ -1,0 +1,18 @@
+{
+ "addons/project_sale_expense": {
+  "startup": 16.19,
+  "contention": 0.51
+ },
+ "addons/project_sale_expense/tests/test_expense_analytics.py::TestExpenseAnalytics": {
+  "seconds": 2.7,
+  "contention": 0.53
+ },
+ "addons/project_sale_expense/tests/test_project_profitability.py::TestProjectSaleExpenseProfitability": {
+  "seconds": 3.79,
+  "contention": 0.56
+ },
+ "addons/project_sale_expense/tests/test_project_sale_expense.py::TestSaleExpense": {
+  "seconds": 2.42,
+  "contention": 0.55
+ }
+}

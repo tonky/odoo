@@ -408,6 +408,8 @@ class configmanager:
                          help="specifies the languages for the translations you want to be loaded")
         group.add_option("--i18n-overwrite", dest="overwrite_existing_translations", action="store_true", my_default=False, file_exportable=False,
                          help="overwrites existing translation terms on updating a module.")
+        group.add_option("--skip-translations", dest="skip_translations", action="store_true", my_default=False, file_exportable=False, env_name="ODOO_SKIP_TRANSLATIONS",
+                         help="skip loading and updating module translations during installation or update (useful for fast CI / testing)")
         parser.add_option_group(group)
 
         # Security Group

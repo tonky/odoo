@@ -1,0 +1,46 @@
+{
+ "odoo/addons/test_assetsbundle": {
+  "startup": 14.37,
+  "contention": 0.13
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::AssetsNodeOrmCacheUsage": {
+  "seconds": 0.14,
+  "contention": 0.16
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::TestAddonPaths": {
+  "seconds": 0.03,
+  "contention": 0.09
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::TestAssetsBundleInBrowser": {
+  "seconds": 1.2,
+  "contention": 0.16
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::TestAssetsBundleWithIRAMock": {
+  "seconds": 0.05,
+  "contention": 0.09
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::TestAssetsManifest": {
+  "seconds": 0.21,
+  "contention": 0.09
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::TestErrorManagement": {
+  "seconds": 2.71,
+  "contention": 0.21
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::TestJavascriptAssetsBundle": {
+  "seconds": 0.65,
+  "contention": 0.09
+ },
+ "odoo/addons/test_assetsbundle/tests/test_assetsbundle.py::TestXMLAssetsBundle": {
+  "seconds": 0.02,
+  "contention": 0.09
+ },
+ "odoo/addons/test_assetsbundle/tests/test_js_transpiler.py::TestJsTranspiler": {
+  "seconds": 0.01,
+  "contention": 0.26
+ },
+ "odoo/addons/test_assetsbundle/tests/test_js_transpiler_regex.py::TestJsTranspiler": {
+  "seconds": 0.0,
+  "contention": 0.26
+ }
+}

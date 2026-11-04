@@ -1442,8 +1442,9 @@ class ChromeBrowser:
             headless=True,
             debug=False,
     ):
+        headless_mode = os.environ.get('ODOO_BROWSER_HEADLESS_MODE', '')
         headless_switches = {
-            '--headless': '',
+            '--headless': headless_mode,
             '--disable-extensions': '',
             '--disable-background-networking' : '',
             '--disable-background-timer-throttling' : '',
@@ -2138,7 +2139,7 @@ def _find_executable():
         return browser_bin_path
     system = platform.system()
     if system == 'Linux':
-        for bin_ in ['google-chrome', 'chromium', 'chromium-browser', 'google-chrome-stable']:
+        for bin_ in ['chromium-headless-shell', 'headless-shell', 'google-chrome', 'chromium', 'chromium-browser', 'google-chrome-stable']:
             try:
                 return find_in_path(bin_)
             except IOError:

@@ -1,0 +1,18 @@
+{
+ "addons/sms_twilio": {
+  "startup": 14.51,
+  "contention": 0.42
+ },
+ "addons/sms_twilio/tests/test_sms_twilio.py::TestSmsTwilio": {
+  "seconds": 0.32,
+  "contention": 0.44
+ },
+ "addons/sms_twilio/tests/test_sms_twilio_controller.py::TestSmsTwilioController": {
+  "seconds": 0.17,
+  "contention": 0.44
+ },
+ "addons/sms_twilio/tests/test_twilio_account_manage.py::TestSmsTwilio": {
+  "seconds": 0.1,
+  "contention": 0.44
+ }
+}

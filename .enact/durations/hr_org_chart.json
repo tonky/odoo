@@ -1,0 +1,18 @@
+{
+ "addons/hr_org_chart": {
+  "startup": 21.32,
+  "contention": 0.51
+ },
+ "addons/hr_org_chart/tests/test_employee.py::TestEmployee": {
+  "seconds": 0.22,
+  "contention": 0.51
+ },
+ "addons/hr_org_chart/tests/test_employee_deletion.py::TestEmployeeDeletion": {
+  "seconds": 0.17,
+  "contention": 0.51
+ },
+ "addons/hr_org_chart/tests/test_employee_ui.py::TestEmployeeUi": {
+  "seconds": 4.72,
+  "contention": 0.53
+ }
+}

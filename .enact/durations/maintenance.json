@@ -1,0 +1,22 @@
+{
+ "addons/maintenance": {
+  "startup": 14.27,
+  "contention": 0.46
+ },
+ "addons/maintenance/tests/test_calendar_with_recurrence.py::TestCalendarWithRecurrence": {
+  "seconds": 3.31,
+  "contention": 0.47
+ },
+ "addons/maintenance/tests/test_maintenance.py::TestEquipment": {
+  "seconds": 0.45,
+  "contention": 0.46
+ },
+ "addons/maintenance/tests/test_maintenance.py::TestEquipmentPostInstall": {
+  "seconds": 0.37,
+  "contention": 0.48
+ },
+ "addons/maintenance/tests/test_maintenance_multicompany.py::TestEquipmentMulticompany": {
+  "seconds": 0.31,
+  "contention": 0.46
+ }
+}

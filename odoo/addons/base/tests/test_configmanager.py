@@ -150,6 +150,7 @@ class TestConfigManager(TransactionCase):
             # i18n
             'load_language': None,
             'overwrite_existing_translations': False,
+            'skip_translations': False,
             # security
             'list_db': True,
 
@@ -268,6 +269,7 @@ class TestConfigManager(TransactionCase):
             # i18n
             'load_language': 'fr_FR',  # blacklist for save, read from the config file
             'overwrite_existing_translations': False,  # blacklist for save, read from the config file
+            'skip_translations': False,  # blacklist for save, read from the config file
 
             # security
             'list_db': False,
@@ -364,6 +366,7 @@ class TestConfigManager(TransactionCase):
             'limit_time_worker_cron': 0,
             'osv_memory_count_limit': 0,
             'overwrite_existing_translations': False,
+            'skip_translations': False,
             'pg_path': '',
             'pidfile': '',
             'proxy_mode': False,
@@ -574,6 +577,7 @@ class TestConfigManager(TransactionCase):
             # i18n
             'load_language': 'fr_FR',
             'overwrite_existing_translations': True,
+            'skip_translations': False,
             # security
             'list_db': False,
 
@@ -701,6 +705,7 @@ class TestConfigManager(TransactionCase):
             # i18n (not loaded)
             'load_language': None,
             'overwrite_existing_translations': False,
+            'skip_translations': False,
 
             # security
             'list_db': False,

@@ -1,0 +1,14 @@
+{
+ "addons/l10n_es_edi_sii": {
+  "startup": 8.48,
+  "contention": 0.54
+ },
+ "addons/l10n_es_edi_sii/tests/test_edi_xml.py::TestEdiXmls": {
+  "seconds": 5.18,
+  "contention": 0.55
+ },
+ "addons/l10n_es_edi_sii/tests/test_resequence.py::TestResequenceSII": {
+  "seconds": 2.81,
+  "contention": 0.54
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "addons/payment_razorpay": {
+  "startup": 17.48,
+  "contention": 0.32
+ },
+ "addons/payment_razorpay/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 0.12,
+  "contention": 0.35
+ },
+ "addons/payment_razorpay/tests/test_payment_transaction.py::TestPaymentTransaction": {
+  "seconds": 0.12,
+  "contention": 0.35
+ },
+ "addons/payment_razorpay/tests/test_processing_flows.py::TestProcessingFlows": {
+  "seconds": 0.11,
+  "contention": 0.35
+ }
+}

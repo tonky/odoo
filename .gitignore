@@ -8,6 +8,11 @@ _build/
 !.github
 !.mailmap
 !.weblate.json
+!.enact
+.enact/state/
+.enact/upstream-baseline.json
+.enact/changed-files.txt
+.enact/pr-changes.patch
 # compiled python files
 *.py[co]
 __pycache__/
@@ -43,7 +48,11 @@ package.json
 .husky
 
 # various virtualenv
-/bin/
+/bin/*
+!/bin/enact
+!/bin/enve
+!/bin/odoo-scope
+!/bin/trace-runner
 /build/
 /dist/
 /include/
@@ -51,3 +60,4 @@ package.json
 /man/
 /share/
 /src/
+tmp/

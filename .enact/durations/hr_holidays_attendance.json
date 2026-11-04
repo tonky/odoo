@@ -1,0 +1,18 @@
+{
+ "addons/hr_holidays_attendance": {
+  "startup": 9.27,
+  "contention": 0.17
+ },
+ "addons/hr_holidays_attendance/tests/test_accrual_allocations.py::TestAccrualAllocationsAttendance": {
+  "seconds": 4.24,
+  "contention": 0.21
+ },
+ "addons/hr_holidays_attendance/tests/test_holidays_overtime.py::TestHolidaysOvertime": {
+  "seconds": 1.48,
+  "contention": 0.26
+ },
+ "addons/hr_holidays_attendance/tests/test_leave_attendance_report.py::TestLeaveAttendanceReport": {
+  "seconds": 1.09,
+  "contention": 0.26
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "addons/repair": {
+  "startup": 20.78,
+  "contention": 0.52
+ },
+ "addons/repair/tests/test_anglo_saxon_valuation.py::TestAngloSaxonValuation": {
+  "seconds": 1.3,
+  "contention": 0.52
+ },
+ "addons/repair/tests/test_anglo_saxon_valuation.py::TestAngloSaxonValuationNoSkip": {
+  "seconds": 1.62,
+  "contention": 0.51
+ },
+ "addons/repair/tests/test_repair.py::TestRepair": {
+  "seconds": 3.02,
+  "contention": 0.51
+ },
+ "addons/repair/tests/test_repair.py::TestRepairHttp": {
+  "seconds": 2.59,
+  "contention": 0.49
+ },
+ "addons/repair/tests/test_rules_installation.py::TestGlobalRouteRulesInstallation": {
+  "seconds": 0.09,
+  "contention": 0.55
+ }
+}

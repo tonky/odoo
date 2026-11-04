@@ -1,0 +1,18 @@
+{
+ "addons/crm_livechat": {
+  "startup": 25.3,
+  "contention": 0.52
+ },
+ "addons/crm_livechat/tests/test_chatbot_lead.py::CrmChatbotCase": {
+  "seconds": 7.08,
+  "contention": 0.52
+ },
+ "addons/crm_livechat/tests/test_crm_lead.py::TestLivechatLead": {
+  "seconds": 0.5,
+  "contention": 0.51
+ },
+ "addons/crm_livechat/tests/test_discuss_channel_access.py::TestDiscussChannelAccess": {
+  "seconds": 0.67,
+  "contention": 0.51
+ }
+}

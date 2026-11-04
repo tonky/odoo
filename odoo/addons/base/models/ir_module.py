@@ -878,6 +878,8 @@ class IrModuleModule(models.Model):
             self.write({'category_id': cat_id})
 
     def _update_translations(self, filter_lang=None, overwrite=False):
+        if tools.config.get("skip_translations"):
+            return
         if not filter_lang:
             langs = self.env['res.lang'].get_installed()
             filter_lang = [code for code, _ in langs]

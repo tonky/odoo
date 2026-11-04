@@ -1,0 +1,26 @@
+{
+ "addons/stock_picking_batch": {
+  "startup": 21.48,
+  "contention": 0.43
+ },
+ "addons/stock_picking_batch/tests/test_auto_waving.py::TestAutoWaving": {
+  "seconds": 0.9,
+  "contention": 0.43
+ },
+ "addons/stock_picking_batch/tests/test_batch_picking.py::TestBatchPicking": {
+  "seconds": 1.42,
+  "contention": 0.43
+ },
+ "addons/stock_picking_batch/tests/test_batch_picking.py::TestBatchPicking02": {
+  "seconds": 0.87,
+  "contention": 0.45
+ },
+ "addons/stock_picking_batch/tests/test_batch_picking.py::TestBatchPickingSynchronization": {
+  "seconds": 2.96,
+  "contention": 0.46
+ },
+ "addons/stock_picking_batch/tests/test_wave_picking.py::TestBatchPicking": {
+  "seconds": 1.01,
+  "contention": 0.44
+ }
+}

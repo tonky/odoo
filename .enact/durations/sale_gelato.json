@@ -1,0 +1,18 @@
+{
+ "addons/sale_gelato": {
+  "startup": 3.77,
+  "contention": 0.27
+ },
+ "addons/sale_gelato/tests/test_delivery_carrier.py::TestDeliveryCarrier": {
+  "seconds": 0.24,
+  "contention": 0.28
+ },
+ "addons/sale_gelato/tests/test_product_template.py::TestProductTemplate": {
+  "seconds": 0.45,
+  "contention": 0.28
+ },
+ "addons/sale_gelato/tests/test_sale_order.py::TestGelatoSaleOrder": {
+  "seconds": 0.21,
+  "contention": 0.28
+ }
+}

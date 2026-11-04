@@ -1,0 +1,18 @@
+{
+ "addons/mrp_subcontracting_dropshipping": {
+  "startup": 12.71,
+  "contention": 0.34
+ },
+ "addons/mrp_subcontracting_dropshipping/tests/test_anglo_saxon_valuation.py::TestSubcontractingDropshippingValuation": {
+  "seconds": 2.0,
+  "contention": 0.37
+ },
+ "addons/mrp_subcontracting_dropshipping/tests/test_purchase_subcontracting.py::TestSubcontractingDropshippingFlows": {
+  "seconds": 4.39,
+  "contention": 0.39
+ },
+ "addons/mrp_subcontracting_dropshipping/tests/test_sale_dropshipping.py::TestSaleDropshippingFlows": {
+  "seconds": 2.19,
+  "contention": 0.35
+ }
+}

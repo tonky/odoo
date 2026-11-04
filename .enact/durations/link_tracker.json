@@ -1,0 +1,18 @@
+{
+ "addons/link_tracker": {
+  "startup": 14.34,
+  "contention": 0.46
+ },
+ "addons/link_tracker/tests/test_link_tracker.py::TestLinkTracker": {
+  "seconds": 0.09,
+  "contention": 0.46
+ },
+ "addons/link_tracker/tests/test_mail_render_mixin.py::TestMailRenderMixin": {
+  "seconds": 0.26,
+  "contention": 0.48
+ },
+ "addons/link_tracker/tests/test_tracker_http_requests.py::TestTrackerHttpRequests": {
+  "seconds": 0.02,
+  "contention": 0.48
+ }
+}

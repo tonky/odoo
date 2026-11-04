@@ -230,8 +230,9 @@ def load_module_graph(
             migrations.migrate_module(package, 'post')
 
             # Update translations for all installed languages
-            overwrite = tools.config["overwrite_existing_translations"]
-            module._update_translations(overwrite=overwrite)
+            if not tools.config.get("skip_translations"):
+                overwrite = tools.config["overwrite_existing_translations"]
+                module._update_translations(overwrite=overwrite)
 
         if package.name is not None:
             registry._init_modules.add(package.name)

@@ -1,0 +1,18 @@
+{
+ "addons/payment_flutterwave": {
+  "startup": 17.6,
+  "contention": 0.31
+ },
+ "addons/payment_flutterwave/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 0.1,
+  "contention": 0.33
+ },
+ "addons/payment_flutterwave/tests/test_payment_transaction.py::TestPaymentTransaction": {
+  "seconds": 0.15,
+  "contention": 0.34
+ },
+ "addons/payment_flutterwave/tests/test_processing_flows.py::TestProcessingFlows": {
+  "seconds": 0.2,
+  "contention": 0.35
+ }
+}

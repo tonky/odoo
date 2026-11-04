@@ -1,0 +1,18 @@
+{
+ "addons/payment_asiapay": {
+  "startup": 16.92,
+  "contention": 0.43
+ },
+ "addons/payment_asiapay/tests/test_payment_provider.py::TestPaymentProvider": {
+  "seconds": 0.1,
+  "contention": 0.45
+ },
+ "addons/payment_asiapay/tests/test_payment_transaction.py::TestPaymentTransaction": {
+  "seconds": 0.15,
+  "contention": 0.45
+ },
+ "addons/payment_asiapay/tests/test_processing_flows.py::TestProcessingFlows": {
+  "seconds": 0.12,
+  "contention": 0.45
+ }
+}

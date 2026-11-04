@@ -1,0 +1,18 @@
+{
+ "addons/test_sale_product_configurators": {
+  "startup": 20.55,
+  "contention": 0.49
+ },
+ "addons/test_sale_product_configurators/tests/test_event_sale_with_product_configurator.py::TestEventProductConfiguratorUi": {
+  "seconds": 7.29,
+  "contention": 0.46
+ },
+ "addons/test_sale_product_configurators/tests/test_sale_product_configurator.py::TestProductConfiguratorUi": {
+  "seconds": 36.45,
+  "contention": 0.52
+ },
+ "addons/test_sale_product_configurators/tests/test_sale_product_matrix.py::TestSaleMatrixUi": {
+  "seconds": 5.93,
+  "contention": 0.46
+ }
+}
