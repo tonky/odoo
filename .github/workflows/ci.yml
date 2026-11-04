@@ -112,6 +112,7 @@ jobs:
         GOMODCACHE repo/go mod
         GOCACHE repo/go build
         ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENACT_OUTPUTS_CACHE repo/outputs .
         ENVE_MIRROR shared/enve-nar .
         LAYOUT
         }
@@ -326,14 +327,14 @@ jobs:
         }
         mkdir -p "$HOME/.cargo/bin"
         if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap; do
+          for b in enact enve bwrap enact-ebpf-loader; do
             src="$BIN_DIR/$b"
             if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
               src="$BIN_DIR/$PLATFORM/$b"
             fi
             [ -f "$src" ] || continue
             if ! runs_here "$src"; then
-              if [ "$b" = bwrap ]; then
+              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
                 echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
                 continue
               fi
@@ -489,6 +490,7 @@ jobs:
         GOMODCACHE repo/go mod
         GOCACHE repo/go build
         ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENACT_OUTPUTS_CACHE repo/outputs .
         ENVE_MIRROR shared/enve-nar .
         LAYOUT
         }
@@ -1999,14 +2001,14 @@ jobs:
         }
         mkdir -p "$HOME/.cargo/bin"
         if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap; do
+          for b in enact enve bwrap enact-ebpf-loader; do
             src="$BIN_DIR/$b"
             if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
               src="$BIN_DIR/$PLATFORM/$b"
             fi
             [ -f "$src" ] || continue
             if ! runs_here "$src"; then
-              if [ "$b" = bwrap ]; then
+              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
                 echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
                 continue
               fi
@@ -2260,6 +2262,7 @@ jobs:
         GOMODCACHE repo/go mod
         GOCACHE repo/go build
         ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENACT_OUTPUTS_CACHE repo/outputs .
         ENVE_MIRROR shared/enve-nar .
         LAYOUT
         }
@@ -2400,14 +2403,14 @@ jobs:
         }
         mkdir -p "$HOME/.cargo/bin"
         if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap; do
+          for b in enact enve bwrap enact-ebpf-loader; do
             src="$BIN_DIR/$b"
             if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
               src="$BIN_DIR/$PLATFORM/$b"
             fi
             [ -f "$src" ] || continue
             if ! runs_here "$src"; then
-              if [ "$b" = bwrap ]; then
+              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
                 echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
                 continue
               fi
@@ -2475,7 +2478,7 @@ jobs:
       id: consolidate_reach
       run: |-
         cd "${GITHUB_WORKSPACE}"
-        if [ -n "$(find "$RUNNER_TEMP/enact-footprints" -name '*.bin' -print -quit 2>/dev/null)" ]; then
+        if [ -n "$(find "$RUNNER_TEMP/enact-footprints" -name '*.bin' -print -quit 2>/dev/null)" ] || [ "$GITHUB_EVENT_NAME" = push ]; then
           enact reach store pull || true
           enact reach store push --deltas "$RUNNER_TEMP/enact-footprints"
           echo "consolidated=true" >> "$GITHUB_OUTPUT"
@@ -2562,6 +2565,7 @@ jobs:
         GOMODCACHE repo/go mod
         GOCACHE repo/go build
         ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENACT_OUTPUTS_CACHE repo/outputs .
         ENVE_MIRROR shared/enve-nar .
         LAYOUT
         }
@@ -2702,14 +2706,14 @@ jobs:
         }
         mkdir -p "$HOME/.cargo/bin"
         if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap; do
+          for b in enact enve bwrap enact-ebpf-loader; do
             src="$BIN_DIR/$b"
             if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
               src="$BIN_DIR/$PLATFORM/$b"
             fi
             [ -f "$src" ] || continue
             if ! runs_here "$src"; then
-              if [ "$b" = bwrap ]; then
+              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
                 echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
                 continue
               fi
@@ -2842,6 +2846,7 @@ jobs:
         GOMODCACHE repo/go mod
         GOCACHE repo/go build
         ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
+        ENACT_OUTPUTS_CACHE repo/outputs .
         ENVE_MIRROR shared/enve-nar .
         LAYOUT
         }
@@ -2983,14 +2988,14 @@ jobs:
         }
         mkdir -p "$HOME/.cargo/bin"
         if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap; do
+          for b in enact enve bwrap enact-ebpf-loader; do
             src="$BIN_DIR/$b"
             if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
               src="$BIN_DIR/$PLATFORM/$b"
             fi
             [ -f "$src" ] || continue
             if ! runs_here "$src"; then
-              if [ "$b" = bwrap ]; then
+              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
                 echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
                 continue
               fi
@@ -3081,13 +3086,14 @@ jobs:
           path: .enact/state/templates
           restore-keys: templates-1-${{ runner.os }}-
     - name: Record Restored Package Caches
-      if: ${{ steps.runner_caches.outputs.host == '' }}
+      if: ${{ steps.runner_caches.outputs.host == '' || contains(format(',{0},', matrix.caches), ',templates,') }}
       continue-on-error: true
       run: enact ci cache-delta record
       env:
         ENACT_CACHE_DELTA: |-
           python_l1_cache /tmp/.cache/uv
           python_l1_cache /tmp/.cache/pip
+          cache_templates .enact/state/templates
     - name: Download the Reach Map
       continue-on-error: true
       uses: actions/download-artifact@v8
@@ -3163,6 +3169,7 @@ jobs:
         ENACT_R2_BUCKET: ${{ secrets.R2_BUCKET || env.R2_BUCKET }}
         ENACT_RECORD: ${{ (github.event_name == 'workflow_dispatch' && inputs.warm_reach == 'true' && github.ref_name == github.event.repository.default_branch) && 'every' || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch) && 'auto' || 'off' }}
         ENACT_RUNNER_TIER: ${{ matrix.runner_tier }}
+        ENACT_SAME_REPO_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch }}
         ENACT_TOPOLOGY: ${{ matrix.topology }}
     - name: Push Updated Dependencies to the Remote Cache
       if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -3214,13 +3221,14 @@ jobs:
         retention-days: "1"
     - name: Check Package Caches for New Entries
       id: cache_delta
-      if: ${{ !cancelled() && steps.runner_caches.outputs.host == '' && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') }}
+      if: ${{ !cancelled() && (steps.runner_caches.outputs.host == '' || contains(format(',{0},', matrix.caches), ',templates,')) && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') }}
       continue-on-error: true
       run: enact ci cache-delta check
       env:
         ENACT_CACHE_DELTA: |-
           python_l1_cache /tmp/.cache/uv
           python_l1_cache /tmp/.cache/pip
+          cache_templates .enact/state/templates
         ENACT_UV_PRUNE: "true"
     - name: Save Python build & venv cache
       if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') != '' && contains(matrix.technology, 'python') && steps.runner_caches.outputs.host == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') && steps.cache_delta.outputs.python_l1_cache == 'true') && steps.python_l1_cache.outputs.cache-hit != 'true'
@@ -3242,7 +3250,7 @@ jobs:
             /tmp/go-build
             /tmp/go/pkg/mod
       - name: Save Cache [Postgres template dumps]
-        if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && contains(format(',{0},', matrix.caches), ',templates,') && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.cache_templates.outputs.cache-matched-key, format('templates-1-{0}-', runner.os)))) && steps.cache_templates.outputs.cache-hit != 'true'
+        if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && contains(format(',{0},', matrix.caches), ',templates,') && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.cache_templates.outputs.cache-matched-key, format('templates-1-{0}-', runner.os)) || steps.cache_delta.outputs.cache_templates == 'true')) && steps.cache_templates.outputs.cache-hit != 'true'
         continue-on-error: true
         uses: actions/cache/save@v6
         with:

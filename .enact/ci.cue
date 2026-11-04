@@ -51,10 +51,11 @@ pipeline: {
 				labels: ["self-hosted", "Linux", "ARM64", "tonky-ci"]
 				tier: "dedicated", available: 1, cost_per_min: 0.008
 				pool: {
-					cpus: 4, memory_mb: 8192
+					cpus: 16, memory_mb: 36864
 					sizes: {
 						"tonky-ci-s": {cpus: 2, memory_mb: 4096}
 						"tonky-ci-m": {cpus: 4, memory_mb: 8192}
+						"tonky-ci-l": {cpus: 6, memory_mb: 13312}
 					}
 				}
 			}

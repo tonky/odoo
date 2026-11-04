@@ -17,6 +17,14 @@ import (
 	filter: {include: ["**/*.py", "**/*.js"], on_empty: "skip"}
 }
 
+let shardFixture = {
+	setup: "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh acquire"
+	release: "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh release"
+	allow_env: ["ODOO_SHARD_HTTP_PORT", "ODOO_SHARD_FILESTORE"]
+	inputs: ["helpers/odoo-shard.sh", "helpers/odoo-fixture.sh", "helpers/odoo-env.sh", "helpers/free-port.sh"]
+	timeout: "120s"
+}
+
 #OdooAddonBase: schema.#Component & {
 	kind:       schema.#ComponentKindMode | *"addon"
 	domain:     string | *"erp"
@@ -102,7 +110,10 @@ pipeline: schema.#Pipeline & {
 					recorder: "own"
 					let excluded = strings.Join([for f in meta.known_failures {",-/\(addon):\(f.test)"}], "")
 					let max_failed = [if addon != "base" {"ODOO_TEST_MAX_FAILED_TESTS=1 "}, ""][0]
-					test: schema.#SlotTask | *"\(max_failed)bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i \(addon) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}\(excluded)"
+					jobs: test: {
+						fixture: shardFixture
+						tasks: [{command: string | *"\(max_failed)bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i \(addon) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}\(excluded)"}]
+					}
 				}
 			}
 		}
@@ -159,12 +170,15 @@ pipeline: schema.#Pipeline & {
 				"odoo/addons/test_lint/tests/test_p[!y]*.py",
 			]
 			recorder: "own"
-			test: "ODOO_TEST_MAX_FAILED_TESTS=1 bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i test_lint -u test_lint --test-enable --stop-after-init --test-tags {targets_tags},-/test_lint:TestPyLint"
-			jobs: pylint: tasks: [{
-				name:    "TestPyLint"
-				command: "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i test_lint -u test_lint --test-enable --stop-after-init --test-tags /test_lint:TestPyLint"
-				timeout: "20m"
-			}]
+			jobs: test: tasks: [{command: "ODOO_TEST_MAX_FAILED_TESTS=1 bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i test_lint -u test_lint --test-enable --stop-after-init --test-tags {targets_tags},-/test_lint:TestPyLint"}]
+			jobs: pylint: {
+				fixture: shardFixture
+				tasks: [{
+					name:    "TestPyLint"
+					command: "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i test_lint -u test_lint --test-enable --stop-after-init --test-tags /test_lint:TestPyLint"
+					timeout: "20m"
+				}]
+			}
 		}
 		"root": {
 			description: "Odoo platform entrypoints, runtime dependencies, packaging, and tooling"
