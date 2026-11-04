@@ -2,7 +2,7 @@
 repository's functions and files each test class uses, as an enact reach map in <dir>
 (`{"shared": {...}, "targets": {"<file>::<Class>": {"files": [...], "functions": {"<file>":
 [...]}, "dirs": [...], "probes": [...]}}}`, what every class holds written once as `shared`, a
-file per run: `enact trace pack` merges them and notes each file's layout).
+file per run: `enact reach pack` merges them and notes each file's layout).
 
 A file-open trace can't tell odoo's tests apart: every installed addon's Python is imported
 before the first test. This records in the process instead (enact_footprint.py, shared with

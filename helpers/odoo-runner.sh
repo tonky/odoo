@@ -3,7 +3,7 @@
 # from the repository root, wherever a job runs it. Its data directory (file stores,
 # sessions) is ODOO_DATA_DIR, else the checkout's for the service instance (odoo-env.sh).
 # With ENACT_FOOTPRINT_DIR
-# (a directory: `enact trace record` sets it), the run records each test class's footprint
+# (a directory: `enact reach record` sets it), the run records each test class's footprint
 # in a map there (odoo-footprint.py);
 # with ODOO_DURATIONS (a directory), each test class's seconds (odoo-durations.py). A
 # --test-enable run that runs 0 tests fails.

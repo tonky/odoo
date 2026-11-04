@@ -7,7 +7,7 @@ default:
 test-base:
     enve run -- bash helpers/odoo-runner.sh -d test_odoo -i base --test-enable --stop-after-init
 
-# Run enact affected components
+# Run the affected components (`enact ci matrix`)
 test-affected:
     enact run --keep-going
 
