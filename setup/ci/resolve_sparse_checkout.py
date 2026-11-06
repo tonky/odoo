@@ -11,9 +11,12 @@ Extracts transitive dependencies from:
 Can check or synchronize .enact/components.cue automatically.
 """
 
+from __future__ import annotations
+
 import argparse
 import ast
 import glob
+import json
 import multiprocessing
 import os
 import re
@@ -373,41 +376,207 @@ def not_run_tests(addon_dir: Path, test_py_files: list | None = None) -> dict:
     return found
 
 
-def load_addons_from_cue(cue_path: Path) -> dict:
+def _parse_cue_string_list(raw: str) -> list[str]:
+    out = []
+    for token in raw.replace("\n", ",").split(","):
+        clean = token.strip().strip('"').strip("'").strip()
+        if clean and not clean.startswith("//"):
+            out.append(clean)
+    return out
+
+
+def load_addons_overrides(repo_root: Path) -> dict[str, dict]:
+    """Load optional .enact/addons-overrides.json (or addons-overrides.json) ComponentOverride entries."""
+    for rel in (Path(".enact") / "addons-overrides.json", Path("addons-overrides.json")):
+        path = repo_root / rel
+        if not path.is_file():
+            continue
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+        if not isinstance(raw, dict):
+            return {}
+        if isinstance(raw.get("components"), dict):
+            return {
+                k: v for k, v in raw["components"].items() if isinstance(v, dict)
+            }
+        return {k: v for k, v in raw.items() if isinstance(v, dict)}
+    return {}
+
+
+def apply_addons_overrides(repo_root: Path, manifests: dict) -> None:
+    """Deterministically merge .enact/addons-overrides.json ComponentOverride entries into manifests."""
+    overrides = load_addons_overrides(repo_root)
+    if not overrides:
+        return
+    for name in sorted(overrides.keys()):
+        ov = overrides[name]
+        if name not in manifests:
+            rel_dir = ov.get("root") or ov.get("dir")
+            if not isinstance(rel_dir, str) or not rel_dir.strip("/"):
+                if (repo_root / "addons" / name).is_dir():
+                    rel_dir = f"addons/{name}"
+                elif (repo_root / "odoo" / "addons" / name).is_dir():
+                    rel_dir = f"odoo/addons/{name}"
+                else:
+                    continue
+            manifests[name] = {
+                "name": name,
+                "dir": rel_dir.strip("/"),
+                "depends": [],
+                "test_deps": [],
+                "test_depends": [],
+                "imports": [],
+                "auto_install": False,
+                "countries": [],
+                "installable": True,
+                "has_tests": False,
+                "not_run": {},
+            }
+        m = manifests[name]
+        for dir_key in ("root", "dir"):
+            if isinstance(ov.get(dir_key), str) and ov[dir_key].strip("/"):
+                m["dir"] = ov[dir_key].strip("/")
+        for dep_key in ("depends_on", "depends"):
+            if dep_key in ov:
+                if ov[dep_key] is None:
+                    m["depends"] = []
+                elif isinstance(ov[dep_key], list):
+                    m["depends"] = sorted({
+                        d for d in ov[dep_key] if isinstance(d, str) and d and d != name
+                    })
+        if isinstance(ov.get("extra_depends"), list):
+            merged_deps = set(m.get("depends", []))
+            merged_deps.update(
+                d for d in ov["extra_depends"] if isinstance(d, str) and d and d != name
+            )
+            m["depends"] = sorted(merged_deps)
+
+        if "test_depends" in ov:
+            if ov["test_depends"] is None:
+                m["test_depends"] = []
+                m["test_deps"] = []
+            elif isinstance(ov["test_depends"], list):
+                td = sorted({
+                    d for d in ov["test_depends"] if isinstance(d, str) and d and d != name
+                })
+                m["test_depends"] = td
+                m["test_deps"] = td
+        if isinstance(ov.get("extra_test_depends"), list):
+            merged_td = set(m.get("test_depends", []))
+            merged_td.update(
+                d for d in ov["extra_test_depends"] if isinstance(d, str) and d and d != name
+            )
+            td = sorted(merged_td)
+            m["test_depends"] = td
+            m["test_deps"] = td
+
+        if "imports" in ov:
+            if ov["imports"] is None:
+                m["imports"] = []
+            elif isinstance(ov["imports"], list):
+                m["imports"] = sorted({
+                    d for d in ov["imports"] if isinstance(d, str) and d and d != name
+                })
+        if isinstance(ov.get("extra_imports"), list):
+            merged_imp = set(m.get("imports", []))
+            merged_imp.update(
+                d for d in ov["extra_imports"] if isinstance(d, str) and d and d != name
+            )
+            m["imports"] = sorted(merged_imp)
+
+        extra_sparse = set(m.get("extra_sparse_paths", []))
+        if "sparse_paths" in ov:
+            if ov["sparse_paths"] is None:
+                extra_sparse.clear()
+            elif isinstance(ov["sparse_paths"], list):
+                extra_sparse = {
+                    p.strip("/") for p in ov["sparse_paths"] if isinstance(p, str) and p.strip("/")
+                }
+        ws = ov.get("workspace_scope")
+        if isinstance(ws, dict) and "include" in ws:
+            if ws["include"] is None:
+                extra_sparse.clear()
+            elif isinstance(ws["include"], list):
+                extra_sparse.update(
+                    p.strip("/") for p in ws["include"] if isinstance(p, str) and p.strip("/")
+                )
+        if isinstance(ov.get("extra_sparse_paths"), list):
+            extra_sparse.update(
+                p.strip("/") for p in ov["extra_sparse_paths"] if isinstance(p, str) and p.strip("/")
+            )
+        extra_sparse.discard(m["dir"])
+        if extra_sparse:
+            m["extra_sparse_paths"] = sorted(extra_sparse)
+        elif "extra_sparse_paths" in m:
+            m["extra_sparse_paths"] = []
+
+        tags = list(m.get("test_tags", []))
+        if "test_tags" in ov:
+            if ov["test_tags"] is None:
+                tags = []
+            elif isinstance(ov["test_tags"], list):
+                tags = [t for t in ov["test_tags"] if isinstance(t, str) and t]
+        if isinstance(ov.get("extra_test_tags"), list):
+            tags.extend(t for t in ov["extra_test_tags"] if isinstance(t, str) and t)
+        if tags:
+            m["test_tags"] = sorted(set(tags))
+        elif "test_tags" in m:
+            m["test_tags"] = []
+
+        if isinstance(ov.get("has_tests"), bool):
+            m["has_tests"] = ov["has_tests"]
+        if isinstance(ov.get("template"), str) and ov["template"]:
+            m["template"] = ov["template"]
+
+
+def load_addons_from_cue(cue_path: Path, apply_overrides: bool = True) -> dict:
     manifests = {}
     if not cue_path.is_file():
         return manifests
     with open(cue_path, encoding="utf-8") as f:
         content = f.read()
-    entry_pattern = re.compile(
-        r'"([a-zA-Z0-9_-]+)":\s*\{\s*dir:\s*"([^"]+)"\s*depends:\s*\[(.*?)\](?:\s*test_depends:\s*\[(.*?)\])?\s*has_tests:\s*(true|false)',
-        re.DOTALL,
-    )
-    for m in entry_pattern.finditer(content):
-        name = m.group(1)
-        dir_path = m.group(2)
-        raw_deps = m.group(3) or ""
-        deps = [
-            d.strip().strip(",").strip().strip('"').strip()
-            for d in raw_deps.splitlines()
-            if d.strip().strip(",").strip().strip('"').strip()
-        ]
-        raw_test_deps = m.group(4) or ""
-        test_deps = [
-            d.strip().strip(",").strip().strip('"').strip()
-            for d in raw_test_deps.splitlines()
-            if d.strip().strip(",").strip().strip('"').strip()
-        ]
-        has_tests = m.group(5) == "true"
-        manifests[name] = {
+    addons_match = re.search(r"_addons:\s*\{(.*)\n\}", content, re.DOTALL)
+    body = addons_match.group(1) if addons_match else content
+    for name, block in extract_component_blocks(body).items():
+        dir_m = re.search(r'dir:\s*"([^"]+)"', block)
+        if not dir_m:
+            continue
+        dir_path = dir_m.group(1)
+        deps_m = re.search(r"depends:\s*\[(.*?)\]", block, re.DOTALL)
+        deps = _parse_cue_string_list(deps_m.group(1)) if deps_m else []
+        tdeps_m = re.search(r"test_depends:\s*\[(.*?)\]", block, re.DOTALL)
+        test_deps = _parse_cue_string_list(tdeps_m.group(1)) if tdeps_m else []
+        imp_m = re.search(r"imports:\s*\[(.*?)\]", block, re.DOTALL)
+        imports = _parse_cue_string_list(imp_m.group(1)) if imp_m else []
+        extra_sparse_m = re.search(r"extra_sparse_paths:\s*\[(.*?)\]", block, re.DOTALL)
+        extra_sparse = _parse_cue_string_list(extra_sparse_m.group(1)) if extra_sparse_m else []
+        test_tags_m = re.search(r"test_tags:\s*\[(.*?)\]", block, re.DOTALL)
+        test_tags = _parse_cue_string_list(test_tags_m.group(1)) if test_tags_m else []
+        ht_m = re.search(r"has_tests:\s*(true|false)", block)
+        has_tests = ht_m.group(1) == "true" if ht_m else False
+        auto_install: bool | list[str] = False
+        auto_m = re.search(r"auto_install:\s*(true|\[.*?\])", block, re.DOTALL)
+        if auto_m:
+            raw_auto = auto_m.group(1).strip()
+            auto_install = True if raw_auto == "true" else _parse_cue_string_list(raw_auto.strip("[]"))
+        entry = {
             "name": name,
             "dir": dir_path,
             "depends": deps,
             "test_deps": test_deps,
             "test_depends": test_deps,
+            "imports": imports,
             "has_tests": has_tests,
-            "auto_install": False,
+            "auto_install": auto_install,
         }
+        if extra_sparse:
+            entry["extra_sparse_paths"] = extra_sparse
+        if test_tags:
+            entry["test_tags"] = test_tags
+        manifests[name] = entry
+    if apply_overrides:
+        repo_root = cue_path.parent.parent if cue_path.parent.name == ".enact" else cue_path.parent
+        apply_addons_overrides(repo_root, manifests)
     return manifests
 
 
@@ -502,11 +671,12 @@ def index_all_manifests(repo_root: Path) -> dict:
                     manifests[name] = meta
 
     # In a sparse checkout, disk manifests may be partial; fall back to .enact/addons.cue for unpopulated addons
-    cue_manifests = load_addons_from_cue(repo_root / ".enact" / "addons.cue")
+    cue_manifests = load_addons_from_cue(repo_root / ".enact" / "addons.cue", apply_overrides=False)
     for k, v in cue_manifests.items():
         if k not in manifests:
             manifests[k] = v
 
+    apply_addons_overrides(repo_root, manifests)
     return manifests
 
 
@@ -554,6 +724,7 @@ def find_addon_dependencies(repo_root: Path, addon_dir: Path, manifests: dict) -
     if addon_name in manifests:
         deps.update(manifests[addon_name].get("depends", []))
         deps.update(manifests[addon_name].get("test_depends", []))
+        deps.update(manifests[addon_name].get("imports", []))
 
     # 1. Scan tests
     tests_dir = addon_dir / "tests"
@@ -580,7 +751,8 @@ def resolve_component_sparse(
     include_l10n: bool = False,
 ) -> list:
     """Compute the transitive closure of needed directories for a component."""
-    root_path = repo_root / comp_root
+    comp_clean = comp_root.strip("/")
+    root_path = repo_root / comp_clean
     direct_deps = find_addon_dependencies(repo_root, root_path, manifests)
 
     closure = set(direct_deps)
@@ -594,7 +766,11 @@ def resolve_component_sparse(
         visited.add(addon)
 
         if addon in manifests:
-            all_deps = set(manifests[addon].get("depends", [])) | set(manifests[addon].get("test_depends", []))
+            all_deps = (
+                set(manifests[addon].get("depends", []))
+                | set(manifests[addon].get("test_depends", []))
+                | set(manifests[addon].get("imports", []))
+            )
             for dep in all_deps:
                 if not include_l10n and dep.startswith("l10n_"):
                     continue
@@ -603,11 +779,18 @@ def resolve_component_sparse(
                     queue.append(dep)
 
     # Convert to directory paths, excluding component root itself
-    dirs = [
+    dirs = {
         manifests[a]["dir"]
         for a in closure
-        if a in manifests and manifests[a]["dir"] != comp_root
-    ]
+        if a in manifests and manifests[a]["dir"] != comp_clean
+    }
+    root_addon = root_path.name
+    for a in closure | ({root_addon} if root_addon in manifests else set()):
+        if a in manifests:
+            for extra in manifests[a].get("extra_sparse_paths", []):
+                clean_extra = extra.strip("/")
+                if clean_extra and clean_extra != comp_clean:
+                    dirs.add(clean_extra)
     return sorted(dirs)
 
 
@@ -854,6 +1037,16 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
         if imports:
             items = ", ".join(f'"{d}"' for d in imports)
             lines.append(f"\t\timports: [{items}]")
+        extra_sparse = sorted(
+            p.strip("/") for p in m.get("extra_sparse_paths", []) if p.strip("/") and p.strip("/") != m_dir
+        )
+        if extra_sparse:
+            items = ", ".join(f'"{p}"' for p in extra_sparse)
+            lines.append(f"\t\textra_sparse_paths: [{items}]")
+        test_tags = sorted(t for t in m.get("test_tags", []) if t)
+        if test_tags:
+            items = ", ".join(f'"{t}"' for t in test_tags)
+            lines.append(f"\t\ttest_tags: [{items}]")
         # What install_set() and odoo-scope's sparse closure follow: an addon odoo
         # installs_automatically() once a job installs its triggers is installed too, so its
         # directory is in the job's cone.
@@ -865,8 +1058,9 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
                 lines.append(f"\t\tauto_install: [{items}]")
             else:
                 lines.append("\t\tauto_install: true")
-        if has_tests and name in templates:
-            lines.append(f'\t\ttemplate: "{templates[name]}"')
+        tpl = m.get("template") or templates.get(name)
+        if has_tests and tpl:
+            lines.append(f'\t\ttemplate: "{tpl}"')
         not_run = {r: t for r, t in m.get("not_run", {}).items() if t} if has_tests else {}
         if not_run:
             lines.append("\t\tnot_run: [")

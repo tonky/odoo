@@ -2,8 +2,8 @@
   "platforms": {
     "aarch64-darwin": {
       "binding": {
-        "environment_sha256": "342b7b06774842f6fb8f64bd3b8fa2f0fb9facf391e1f2e6cd1f14e4aa45bcda",
-        "inventory_sha256": "dfe32fd2bf9c1075734326418a1960e93c7ed9635d406bc85968285cec92a771",
+        "environment_sha256": "c14a191aa2322e7a199b9ac200fcad839f84b1608e59c72c87c7a5b6dc392147",
+        "inventory_sha256": "0ac29fa314d5a8a098fde2dc1b651aafc682a78243154c541c365969fcb02976",
         "profile": null,
         "version": 2
       },
@@ -1349,9 +1349,6 @@
           ]
         },
         {
-          "hash_name": "r0hwss2nr62w9akyjb9ks0h4swzgz53b-playwright-browsers-1.62.1"
-        },
-        {
           "hash_name": "r1glp00746l4rxg5yb6147xlk8yjcgsw-expand-response-params",
           "nar_hash": "sha256:0vlcfc9sa9bdr9hadmc9jhrcmlnmh95dwjvq3dvz6x9d9daqx98y",
           "nar_size": 34816,
@@ -1869,6 +1866,9 @@
             "r7y3mm4kwgf91q597qjj1lqdbnpq84bi-ld64-957.1",
             "xkj3i84sphv82plsnpa17h86v9awyyxc-xar-minimal-503-lib"
           ]
+        },
+        {
+          "hash_name": "zmvmqwnaj4wf16fljr1ps6hbi1wamrha-playwright-browsers-1.62.1"
         },
         {
           "hash_name": "zz38k7syg2qhj2k3mz7361z5a7spwpqp-perl5.42.3-Compress-Raw-Zlib-2.222",
@@ -2498,7 +2498,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "4ad644106797b21695f8ab4dee41df4d448ad4be3dd56bf5d19b1eb943b5b268"
+        "projectSha256": "0528acf9261b6b8abf565ce03eaac854a61fde1edebc5be265a3a79e3c181566"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -2508,11 +2508,11 @@
         "ENVE_SERVICE_DB_HOST": "127.0.0.1",
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
-        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/r0hwss2nr62w9akyjb9ks0h4swzgz53b-playwright-browsers-1.62.1/fonts.conf",
+        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/zmvmqwnaj4wf16fljr1ps6hbi1wamrha-playwright-browsers-1.62.1/fonts.conf",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
         "PGUSER": "odoo",
-        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/r0hwss2nr62w9akyjb9ks0h4swzgz53b-playwright-browsers-1.62.1",
+        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/zmvmqwnaj4wf16fljr1ps6hbi1wamrha-playwright-browsers-1.62.1",
         "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "1",
         "PYTHONNOUSERSITE": "1",
         "UV_PYTHON_DOWNLOADS": "never",
@@ -2756,7 +2756,7 @@
             "s2vi23sgwpjv4qvnyfknv7l041m8vm94-bash-interactive-5.3p15",
             "sjzhqc66j881n9lyg3m15aqiykad4h5k-bash-interactive-5.3p15-dev"
           ],
-          "closure": "r0hwss2nr62w9akyjb9ks0h4swzgz53b-playwright-browsers-1.62.1",
+          "closure": "zmvmqwnaj4wf16fljr1ps6hbi1wamrha-playwright-browsers-1.62.1",
           "version": "1.62.1"
         },
         "postgresql": {
@@ -2853,8 +2853,8 @@
     },
     "aarch64-linux": {
       "binding": {
-        "environment_sha256": "342b7b06774842f6fb8f64bd3b8fa2f0fb9facf391e1f2e6cd1f14e4aa45bcda",
-        "inventory_sha256": "8d6cdfa6ae0a2dca3e2a5fe8aafeb157e9df930adf8c6052bb513fec30e16f6b",
+        "environment_sha256": "c14a191aa2322e7a199b9ac200fcad839f84b1608e59c72c87c7a5b6dc392147",
+        "inventory_sha256": "7d1d41f90bc33342e2edbe03f9d505fe8a5e4c63473dea362b677d4ac5dcf6cd",
         "profile": null,
         "version": 2
       },
@@ -3813,9 +3813,6 @@
           ]
         },
         {
-          "hash_name": "ax6482mznvgvdkbslbaivrdq79crn4r8-playwright-browsers-1.62.1"
-        },
-        {
           "hash_name": "b4qrn3vpad80jjvi9znghshv7wmv3n65-perl5.42.3-TimeDate-2.33",
           "nar_hash": "sha256:18d49k8p2vzszn5dx6w7dvnpgw5dlq1x3a3c42hqlp8ab4qs7cr0",
           "nar_size": 90248,
@@ -4128,6 +4125,9 @@
             "hx9wvdx2l59iahwf9nmrx7rwkm6cymgs-glibc-2.44-25",
             "qn78wss6bq6rhdwba0j8dsgzi64prnwj-gmp-with-cxx-6.3.0"
           ]
+        },
+        {
+          "hash_name": "faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1"
         },
         {
           "hash_name": "ficwc08a9q1rigvr4jv9l3xsvmx3yfqn-xgcc-16.2.0-libgcc",
@@ -6920,7 +6920,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "4ad644106797b21695f8ab4dee41df4d448ad4be3dd56bf5d19b1eb943b5b268"
+        "projectSha256": "0528acf9261b6b8abf565ce03eaac854a61fde1edebc5be265a3a79e3c181566"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -6930,12 +6930,12 @@
         "ENVE_SERVICE_DB_HOST": "127.0.0.1",
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
-        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/ax6482mznvgvdkbslbaivrdq79crn4r8-playwright-browsers-1.62.1/fonts.conf",
+        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1/fonts.conf",
         "LD_RUN_PATH": "$ENVE_STORE_DIR/hbn2n04k3nr7hl6c7p0006a1vlj97r47-cyrus-sasl-2.1.28/lib:$ENVE_STORE_DIR/na9inwswsrgxxqpqrz3ms78qn7pyxg44-gcc-16.2.0-lib/lib",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
         "PGUSER": "odoo",
-        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/ax6482mznvgvdkbslbaivrdq79crn4r8-playwright-browsers-1.62.1",
+        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1",
         "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "1",
         "PYTHONNOUSERSITE": "1",
         "UV_PYTHON_DOWNLOADS": "never",
@@ -7236,7 +7236,7 @@
             "z5jjq635b8n3yaf7i4dw1rkfv4bxfzl5-libxfixes-6.0.2-dev",
             "zvslra1w3iwm9hvrmnyrz85dvsj5bkgl-systemd-minimal-libs-261.3-dev"
           ],
-          "closure": "ax6482mznvgvdkbslbaivrdq79crn4r8-playwright-browsers-1.62.1",
+          "closure": "faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1",
           "version": "1.62.1"
         },
         "postgresql": {
@@ -7348,8 +7348,8 @@
     },
     "x86_64-linux": {
       "binding": {
-        "environment_sha256": "342b7b06774842f6fb8f64bd3b8fa2f0fb9facf391e1f2e6cd1f14e4aa45bcda",
-        "inventory_sha256": "d52bc499a13a95a74596b268c78a25099e7245a004cde10eeb2288efb2efca35",
+        "environment_sha256": "c14a191aa2322e7a199b9ac200fcad839f84b1608e59c72c87c7a5b6dc392147",
+        "inventory_sha256": "11dff965956f7711cef6ccf0e20d6f1b4d8926206c3d3cab3e678e749fcedcb7",
         "profile": null,
         "version": 2
       },
@@ -7463,6 +7463,9 @@
             "1n27gqlnvg10l9912jvx9gfkmhhvfywp-python3.13-packaging-26.2",
             "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15"
           ]
+        },
+        {
+          "hash_name": "21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1"
         },
         {
           "hash_name": "2a4dzjm774pgqs3d9v4637b26167zj94-libpciaccess-0.19",
@@ -9031,9 +9034,6 @@
             "qdy92dmb9czwxirspbbgii6za4mgh4vz-db-5.3.28",
             "wx1y0adli2qggk81pm4marx3km1scqxg-libxcrypt-4.5.2"
           ]
-        },
-        {
-          "hash_name": "m5yc6849qj2sai649c3xwa4802h2zq92-playwright-browsers-1.62.1"
         },
         {
           "hash_name": "mf2q7c86hgfps5v7qv5wy4jafk4mkj30-libuv-1.52.1-dev",
@@ -11416,7 +11416,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "4ad644106797b21695f8ab4dee41df4d448ad4be3dd56bf5d19b1eb943b5b268"
+        "projectSha256": "0528acf9261b6b8abf565ce03eaac854a61fde1edebc5be265a3a79e3c181566"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -11426,12 +11426,12 @@
         "ENVE_SERVICE_DB_HOST": "127.0.0.1",
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
-        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/m5yc6849qj2sai649c3xwa4802h2zq92-playwright-browsers-1.62.1/fonts.conf",
+        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1/fonts.conf",
         "LD_RUN_PATH": "$ENVE_STORE_DIR/m419ayyrwpqfkgazp2iyv0x7jfj973bn-cyrus-sasl-2.1.28/lib:$ENVE_STORE_DIR/j7qx4s4mr17j1wqgvqdzj33lmrnzb387-gcc-16.2.0-lib/lib",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
         "PGUSER": "odoo",
-        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/m5yc6849qj2sai649c3xwa4802h2zq92-playwright-browsers-1.62.1",
+        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1",
         "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "1",
         "PYTHONNOUSERSITE": "1",
         "UV_PYTHON_DOWNLOADS": "never",
@@ -11732,7 +11732,7 @@
             "znrm90algr0fvnnnp130am1qfg59nl1f-libx11-1.8.13",
             "zrkqwk0989k5wa1gn3cjb76jfga3d8i3-expat-2.8.5"
           ],
-          "closure": "m5yc6849qj2sai649c3xwa4802h2zq92-playwright-browsers-1.62.1",
+          "closure": "21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1",
           "version": "1.62.1"
         },
         "postgresql": {

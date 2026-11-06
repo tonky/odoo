@@ -47,9 +47,11 @@ let shardFixture = {
 }
 
 _addons: [string]: {
-	not_run:       *[] | [...schema.#NotRun]
-	known_not_run: *[] | [...schema.#NotRun]
-	template:      *"base" | string
+	not_run:             *[] | [...schema.#NotRun]
+	known_not_run:       *[] | [...schema.#NotRun]
+	template:            *"base" | string
+	extra_sparse_paths?: [...string]
+	test_tags?:          [...string]
 }
 _templates: [string]: addon_dirs: [...string]
 

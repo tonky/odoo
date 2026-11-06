@@ -41,9 +41,10 @@ on:
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
   COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  ENVE_CACHE_PUBLIC_KEY: enve-r2-1:ckHPTeWVef6mba+1AwWHjKYCsUWKPfP9IXPm5YXNoHg=
   ENVE_SERVICE_GID: "1000"
   ENVE_SERVICE_UID: "1000"
-  ENVE_SUBSTITUTERS: https://pub-30fd937eb7634039b8c49d49bfec91a9.r2.dev https://cache.nixos.org
+  ENVE_SUBSTITUTERS: https://pub-30fd937eb7634039b8c49d49bfec91a9.r2.dev,https://cache.nixos.org
   ENVE_TRUSTED_PUBLIC_KEYS: enve-r2-1:ckHPTeWVef6mba+1AwWHjKYCsUWKPfP9IXPm5YXNoHg=
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   GOCACHE: /tmp/go-build
@@ -66,85 +67,16 @@ jobs:
     - name: Probe Runner Caches
       id: runner_caches
       run: |
-        #!/usr/bin/env bash
-        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
-        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
-        # seen by every repository the host serves, holds only signature-verified content: the enve
-        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
-        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
-        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
-        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
-        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
         set -euo pipefail
         host="${ENACT_HOST_CACHE:-}"
         if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
             echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
             host=""
         fi
-        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
-        # without a word: from `/` down, each component owned by root or the user and writable by
-        # no one else, a root-owned sticky ancestor excepted.
-        trusted_store() {
-            local path="" part owner mode uid
-            uid=$(id -u)
-            IFS=/ read -ra parts <<<"${1#/}"
-            for part in "${parts[@]}"; do
-                path="$path/$part"
-                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
-                mode=$((8#$mode))
-                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
-                if (( mode & 8#22 )); then
-                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
-                fi
-            done
-        }
-        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
-        # names a repository, every other path a directory.
-        layout() {
-            cat <<LAYOUT
-        ENVE_STORE_DIR repo/enve-store .
-        UV_CACHE_DIR repo/uv .
-        PIP_CACHE_DIR repo/pip .
-        ENACT_PNPM_STORE repo/pnpm .
-        npm_config_cache repo/npm .
-        YARN_CACHE_FOLDER repo/yarn .
-        BUN_INSTALL_CACHE_DIR repo/bun .
-        GOMODCACHE repo/go mod
-        GOCACHE repo/go build
-        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
-        ENACT_OUTPUTS_CACHE repo/outputs .
-        ENVE_MIRROR shared/enve-nar .
-        LAYOUT
-        }
         if [ -n "$host" ]; then
-            # The repository's stores are writable by no one else: enve trusts no other store.
-            # `shared/` stays as the host made it, writable by the jobs of every repository.
-            umask 022
-            chmod go-w "$host/repo" 2>/dev/null || true
-            # The enve store check reads what enve wrote since.
-            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
-            while read -r var entry path; do
-                # The host provides `shared/`; without it the NAR mirror is skipped.
-                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
-                mkdir -p "$host/$entry"
-                touch "$host/$entry"
-                dir="$host/$entry/$path"
-                case "$var" in
-                    ENACT_GIT_MIRROR) ;;
-                    *) mkdir -p "$dir" ;;
-                esac
-                dir="${dir%/.}"
-                if [ "${entry%%/*}" = repo ]; then
-                    chmod 755 "$host/$entry" 2>/dev/null || true
-                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
-                fi
-                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
-                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
-                    exit 1
-                fi
-                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
-                echo "$var=$dir" >> "$GITHUB_ENV"
-            done < <(layout)
+            mkdir -p "$host/repo/git" "$host/repo/outputs"
+            echo "ENACT_GIT_MIRROR=$host/repo/git/${GITHUB_REPOSITORY##*/}.git" >> "$GITHUB_ENV"
+            echo "ENACT_OUTPUTS_CACHE=$host/repo/outputs" >> "$GITHUB_ENV"
         fi
         echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
         printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
@@ -154,12 +86,6 @@ jobs:
       if: ${{ steps.runner_caches.outputs.host != '' }}
       continue-on-error: true
       run: |
-        #!/usr/bin/env bash
-        # Checks the commit out through the host cache's mirror of the repository
-        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
-        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
-        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
-        # one per line; none checks the whole tree out.
         set -euo pipefail
         git config --global --add safe.directory "*"
         url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
@@ -190,9 +116,7 @@ jobs:
             touch "$mirror" "$mirror/HEAD" 2>/dev/null || true
         ) 9>"$mirror.lock"
         cd "$GITHUB_WORKSPACE"
-        # A half-made repository would mislead the fallback checkout into reusing it.
         trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
-        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
         find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
         git init -q .
         echo "$mirror/objects" > .git/objects/info/alternates
@@ -308,80 +232,15 @@ jobs:
           enact-reach-${{ github.base_ref || github.event.repository.default_branch }}-
     - name: Install committed enact & enve builds
       run: |
-        # The repository's committed enact, enve and bubblewrap builds: bin/<os>-<arch>/ for this runner
-        # (bin/linux-x86_64/, bin/linux-aarch64/), else bin/. They're copied to ~/.cargo/bin,
-        # which goes ahead of bin/ on PATH, so the runner's own build wins over bin/'s. A build for
-        # another CPU (an x86_64 enve on an arm64 runner) is never installed: enact or enve fails
-        # here, naming the directory to commit, instead of the first step that runs it.
-        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
-        PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
-        # Whether this runner can execute $1: false only for an ELF of another CPU or OS.
-        runs_here() {
-          local header
-          header="$(od -An -tx1 -N20 "$1" 2>/dev/null | tr -d ' \n')"
-          [ "${header:0:8}" = 7f454c46 ] || return 0
-          case "$PLATFORM:${header:36:4}" in
-            linux-x86_64:3e00 | linux-aarch64:b700) return 0 ;;
-          esac
-          return 1
-        }
-        mkdir -p "$HOME/.cargo/bin"
-        if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap enact-ebpf-loader; do
-            src="$BIN_DIR/$b"
-            if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
-              src="$BIN_DIR/$PLATFORM/$b"
-            fi
-            [ -f "$src" ] || continue
-            if ! runs_here "$src"; then
-              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
-                echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
-                continue
-              fi
-              echo "::error title=No $b for $PLATFORM::bin/$b is a build for another CPU; commit this runner's as bin/$PLATFORM/$b"
-              exit 1
-            fi
-            chmod +x "$src" 2>/dev/null || true
-            cp -f "$src" "$HOME/.cargo/bin/$b"
-          done
-          echo "$BIN_DIR" >> "$GITHUB_PATH"
-        fi
-        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        P="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
+        E="${GITHUB_WORKSPACE:-$PWD}/bin/$P/enact"
+        [ -f "$E" ] || E="${GITHUB_WORKSPACE:-$PWD}/bin/enact"
+        [ -f "$E" ] || E="$(command -v enact || echo "$HOME/.cargo/bin/enact")"
+        chmod +x "$E" 2>/dev/null || true
+        "$E" --version >/dev/null 2>&1 || { echo "::error title=No enact for $P::$E does not run on this $P runner; commit its build as bin/$P/enact"; exit 1; }
+        "$E" ci install-binaries
     - name: Ensure enve & enact CLI on PATH
-      run: |
-        git config --global --add safe.directory "*" 2>/dev/null || true
-        # The store the runner cache probe chose (a host cache's), else the user store.
-        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
-        mkdir -p "$store"
-        if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
-          sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
-        fi
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$store" /nix/store 2>/dev/null || true
-        fi
-        # The previous step's $GITHUB_PATH entries apply from the next step on.
-        export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
-        # Isolation as on a Linux workstation: with bubblewrap on PATH (e.g. the repository's
-        # bin/bwrap), enve sandboxes commands and services and maps the profile's hosts inside.
-        # GitHub's Ubuntu runners restrict unprivileged user namespaces (AppArmor), which bwrap
-        # needs; the VM is disposable, so lift that. Without a working bwrap, enve runs on the host:
-        # its profile's host aliases go to the runner's /etc/hosts instead.
-        if command -v bwrap >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
-          && [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
-          sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-        fi
-        if command -v bwrap >/dev/null 2>&1 && bwrap --bind / / true 2>/dev/null; then
-          echo "enve isolation: $(bwrap --version)"
-        elif command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
-          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
-            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
-            | sudo tee -a /etc/hosts >/dev/null || true
-        fi
+      run: enact ci setup-runner
     - name: Compute Affected Component Matrix
       id: diff
       run: |-
@@ -444,85 +303,16 @@ jobs:
     - name: Probe Runner Caches
       id: runner_caches
       run: |
-        #!/usr/bin/env bash
-        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
-        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
-        # seen by every repository the host serves, holds only signature-verified content: the enve
-        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
-        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
-        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
-        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
-        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
         set -euo pipefail
         host="${ENACT_HOST_CACHE:-}"
         if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
             echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
             host=""
         fi
-        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
-        # without a word: from `/` down, each component owned by root or the user and writable by
-        # no one else, a root-owned sticky ancestor excepted.
-        trusted_store() {
-            local path="" part owner mode uid
-            uid=$(id -u)
-            IFS=/ read -ra parts <<<"${1#/}"
-            for part in "${parts[@]}"; do
-                path="$path/$part"
-                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
-                mode=$((8#$mode))
-                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
-                if (( mode & 8#22 )); then
-                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
-                fi
-            done
-        }
-        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
-        # names a repository, every other path a directory.
-        layout() {
-            cat <<LAYOUT
-        ENVE_STORE_DIR repo/enve-store .
-        UV_CACHE_DIR repo/uv .
-        PIP_CACHE_DIR repo/pip .
-        ENACT_PNPM_STORE repo/pnpm .
-        npm_config_cache repo/npm .
-        YARN_CACHE_FOLDER repo/yarn .
-        BUN_INSTALL_CACHE_DIR repo/bun .
-        GOMODCACHE repo/go mod
-        GOCACHE repo/go build
-        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
-        ENACT_OUTPUTS_CACHE repo/outputs .
-        ENVE_MIRROR shared/enve-nar .
-        LAYOUT
-        }
         if [ -n "$host" ]; then
-            # The repository's stores are writable by no one else: enve trusts no other store.
-            # `shared/` stays as the host made it, writable by the jobs of every repository.
-            umask 022
-            chmod go-w "$host/repo" 2>/dev/null || true
-            # The enve store check reads what enve wrote since.
-            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
-            while read -r var entry path; do
-                # The host provides `shared/`; without it the NAR mirror is skipped.
-                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
-                mkdir -p "$host/$entry"
-                touch "$host/$entry"
-                dir="$host/$entry/$path"
-                case "$var" in
-                    ENACT_GIT_MIRROR) ;;
-                    *) mkdir -p "$dir" ;;
-                esac
-                dir="${dir%/.}"
-                if [ "${entry%%/*}" = repo ]; then
-                    chmod 755 "$host/$entry" 2>/dev/null || true
-                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
-                fi
-                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
-                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
-                    exit 1
-                fi
-                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
-                echo "$var=$dir" >> "$GITHUB_ENV"
-            done < <(layout)
+            mkdir -p "$host/repo/git" "$host/repo/outputs"
+            echo "ENACT_GIT_MIRROR=$host/repo/git/${GITHUB_REPOSITORY##*/}.git" >> "$GITHUB_ENV"
+            echo "ENACT_OUTPUTS_CACHE=$host/repo/outputs" >> "$GITHUB_ENV"
         fi
         echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
         printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
@@ -532,12 +322,6 @@ jobs:
       if: ${{ steps.runner_caches.outputs.host != '' }}
       continue-on-error: true
       run: |
-        #!/usr/bin/env bash
-        # Checks the commit out through the host cache's mirror of the repository
-        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
-        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
-        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
-        # one per line; none checks the whole tree out.
         set -euo pipefail
         git config --global --add safe.directory "*"
         url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
@@ -568,9 +352,7 @@ jobs:
             touch "$mirror" "$mirror/HEAD" 2>/dev/null || true
         ) 9>"$mirror.lock"
         cd "$GITHUB_WORKSPACE"
-        # A half-made repository would mislead the fallback checkout into reusing it.
         trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
-        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
         find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
         git init -q .
         echo "$mirror/objects" > .git/objects/info/alternates
@@ -1982,80 +1764,15 @@ jobs:
         submodules: "false"
     - name: Install committed enact & enve builds
       run: |
-        # The repository's committed enact, enve and bubblewrap builds: bin/<os>-<arch>/ for this runner
-        # (bin/linux-x86_64/, bin/linux-aarch64/), else bin/. They're copied to ~/.cargo/bin,
-        # which goes ahead of bin/ on PATH, so the runner's own build wins over bin/'s. A build for
-        # another CPU (an x86_64 enve on an arm64 runner) is never installed: enact or enve fails
-        # here, naming the directory to commit, instead of the first step that runs it.
-        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
-        PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
-        # Whether this runner can execute $1: false only for an ELF of another CPU or OS.
-        runs_here() {
-          local header
-          header="$(od -An -tx1 -N20 "$1" 2>/dev/null | tr -d ' \n')"
-          [ "${header:0:8}" = 7f454c46 ] || return 0
-          case "$PLATFORM:${header:36:4}" in
-            linux-x86_64:3e00 | linux-aarch64:b700) return 0 ;;
-          esac
-          return 1
-        }
-        mkdir -p "$HOME/.cargo/bin"
-        if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap enact-ebpf-loader; do
-            src="$BIN_DIR/$b"
-            if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
-              src="$BIN_DIR/$PLATFORM/$b"
-            fi
-            [ -f "$src" ] || continue
-            if ! runs_here "$src"; then
-              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
-                echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
-                continue
-              fi
-              echo "::error title=No $b for $PLATFORM::bin/$b is a build for another CPU; commit this runner's as bin/$PLATFORM/$b"
-              exit 1
-            fi
-            chmod +x "$src" 2>/dev/null || true
-            cp -f "$src" "$HOME/.cargo/bin/$b"
-          done
-          echo "$BIN_DIR" >> "$GITHUB_PATH"
-        fi
-        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        P="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
+        E="${GITHUB_WORKSPACE:-$PWD}/bin/$P/enact"
+        [ -f "$E" ] || E="${GITHUB_WORKSPACE:-$PWD}/bin/enact"
+        [ -f "$E" ] || E="$(command -v enact || echo "$HOME/.cargo/bin/enact")"
+        chmod +x "$E" 2>/dev/null || true
+        "$E" --version >/dev/null 2>&1 || { echo "::error title=No enact for $P::$E does not run on this $P runner; commit its build as bin/$P/enact"; exit 1; }
+        "$E" ci install-binaries
     - name: Ensure enve & enact CLI on PATH
-      run: |
-        git config --global --add safe.directory "*" 2>/dev/null || true
-        # The store the runner cache probe chose (a host cache's), else the user store.
-        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
-        mkdir -p "$store"
-        if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
-          sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
-        fi
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$store" /nix/store 2>/dev/null || true
-        fi
-        # The previous step's $GITHUB_PATH entries apply from the next step on.
-        export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
-        # Isolation as on a Linux workstation: with bubblewrap on PATH (e.g. the repository's
-        # bin/bwrap), enve sandboxes commands and services and maps the profile's hosts inside.
-        # GitHub's Ubuntu runners restrict unprivileged user namespaces (AppArmor), which bwrap
-        # needs; the VM is disposable, so lift that. Without a working bwrap, enve runs on the host:
-        # its profile's host aliases go to the runner's /etc/hosts instead.
-        if command -v bwrap >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
-          && [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
-          sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-        fi
-        if command -v bwrap >/dev/null 2>&1 && bwrap --bind / / true 2>/dev/null; then
-          echo "enve isolation: $(bwrap --version)"
-        elif command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
-          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
-            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
-            | sudo tee -a /etc/hosts >/dev/null || true
-        fi
+      run: enact ci setup-runner
     - name: Download the Reach Map
       continue-on-error: true
       uses: actions/download-artifact@v8
@@ -2114,21 +1831,7 @@ jobs:
           restore-keys: ${{ runner.os }}-enact-tasks-
     - name: Pull Dependencies via enve
       if: ${{ steps.stage_plan.outputs.stage_has_work == 'true' }}
-      run: |-
-        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$store" /nix/store 2>/dev/null || true
-        fi
-        if [ -f "enve.lock" ]; then
-          if [ -n "$ENACT_R2_BUCKET" ] && ! enve run --locked -- true 2>/dev/null; then
-            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" -j 16
-          fi
-          enve run --locked -- true
-        fi
+      run: enact ci deps pull --remote signed
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || env.R2_ACCESS_KEY_ID }}
         AWS_REGION: auto
@@ -2216,85 +1919,16 @@ jobs:
     - name: Probe Runner Caches
       id: runner_caches
       run: |
-        #!/usr/bin/env bash
-        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
-        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
-        # seen by every repository the host serves, holds only signature-verified content: the enve
-        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
-        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
-        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
-        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
-        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
         set -euo pipefail
         host="${ENACT_HOST_CACHE:-}"
         if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
             echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
             host=""
         fi
-        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
-        # without a word: from `/` down, each component owned by root or the user and writable by
-        # no one else, a root-owned sticky ancestor excepted.
-        trusted_store() {
-            local path="" part owner mode uid
-            uid=$(id -u)
-            IFS=/ read -ra parts <<<"${1#/}"
-            for part in "${parts[@]}"; do
-                path="$path/$part"
-                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
-                mode=$((8#$mode))
-                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
-                if (( mode & 8#22 )); then
-                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
-                fi
-            done
-        }
-        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
-        # names a repository, every other path a directory.
-        layout() {
-            cat <<LAYOUT
-        ENVE_STORE_DIR repo/enve-store .
-        UV_CACHE_DIR repo/uv .
-        PIP_CACHE_DIR repo/pip .
-        ENACT_PNPM_STORE repo/pnpm .
-        npm_config_cache repo/npm .
-        YARN_CACHE_FOLDER repo/yarn .
-        BUN_INSTALL_CACHE_DIR repo/bun .
-        GOMODCACHE repo/go mod
-        GOCACHE repo/go build
-        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
-        ENACT_OUTPUTS_CACHE repo/outputs .
-        ENVE_MIRROR shared/enve-nar .
-        LAYOUT
-        }
         if [ -n "$host" ]; then
-            # The repository's stores are writable by no one else: enve trusts no other store.
-            # `shared/` stays as the host made it, writable by the jobs of every repository.
-            umask 022
-            chmod go-w "$host/repo" 2>/dev/null || true
-            # The enve store check reads what enve wrote since.
-            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
-            while read -r var entry path; do
-                # The host provides `shared/`; without it the NAR mirror is skipped.
-                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
-                mkdir -p "$host/$entry"
-                touch "$host/$entry"
-                dir="$host/$entry/$path"
-                case "$var" in
-                    ENACT_GIT_MIRROR) ;;
-                    *) mkdir -p "$dir" ;;
-                esac
-                dir="${dir%/.}"
-                if [ "${entry%%/*}" = repo ]; then
-                    chmod 755 "$host/$entry" 2>/dev/null || true
-                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
-                fi
-                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
-                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
-                    exit 1
-                fi
-                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
-                echo "$var=$dir" >> "$GITHUB_ENV"
-            done < <(layout)
+            mkdir -p "$host/repo/git" "$host/repo/outputs"
+            echo "ENACT_GIT_MIRROR=$host/repo/git/${GITHUB_REPOSITORY##*/}.git" >> "$GITHUB_ENV"
+            echo "ENACT_OUTPUTS_CACHE=$host/repo/outputs" >> "$GITHUB_ENV"
         fi
         echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
         printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
@@ -2304,12 +1938,6 @@ jobs:
       if: ${{ steps.runner_caches.outputs.host != '' }}
       continue-on-error: true
       run: |
-        #!/usr/bin/env bash
-        # Checks the commit out through the host cache's mirror of the repository
-        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
-        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
-        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
-        # one per line; none checks the whole tree out.
         set -euo pipefail
         git config --global --add safe.directory "*"
         url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
@@ -2340,9 +1968,7 @@ jobs:
             touch "$mirror" "$mirror/HEAD" 2>/dev/null || true
         ) 9>"$mirror.lock"
         cd "$GITHUB_WORKSPACE"
-        # A half-made repository would mislead the fallback checkout into reusing it.
         trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
-        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
         find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
         git init -q .
         echo "$mirror/objects" > .git/objects/info/alternates
@@ -2384,80 +2010,15 @@ jobs:
         submodules: "false"
     - name: Install committed enact & enve builds
       run: |
-        # The repository's committed enact, enve and bubblewrap builds: bin/<os>-<arch>/ for this runner
-        # (bin/linux-x86_64/, bin/linux-aarch64/), else bin/. They're copied to ~/.cargo/bin,
-        # which goes ahead of bin/ on PATH, so the runner's own build wins over bin/'s. A build for
-        # another CPU (an x86_64 enve on an arm64 runner) is never installed: enact or enve fails
-        # here, naming the directory to commit, instead of the first step that runs it.
-        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
-        PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
-        # Whether this runner can execute $1: false only for an ELF of another CPU or OS.
-        runs_here() {
-          local header
-          header="$(od -An -tx1 -N20 "$1" 2>/dev/null | tr -d ' \n')"
-          [ "${header:0:8}" = 7f454c46 ] || return 0
-          case "$PLATFORM:${header:36:4}" in
-            linux-x86_64:3e00 | linux-aarch64:b700) return 0 ;;
-          esac
-          return 1
-        }
-        mkdir -p "$HOME/.cargo/bin"
-        if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap enact-ebpf-loader; do
-            src="$BIN_DIR/$b"
-            if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
-              src="$BIN_DIR/$PLATFORM/$b"
-            fi
-            [ -f "$src" ] || continue
-            if ! runs_here "$src"; then
-              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
-                echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
-                continue
-              fi
-              echo "::error title=No $b for $PLATFORM::bin/$b is a build for another CPU; commit this runner's as bin/$PLATFORM/$b"
-              exit 1
-            fi
-            chmod +x "$src" 2>/dev/null || true
-            cp -f "$src" "$HOME/.cargo/bin/$b"
-          done
-          echo "$BIN_DIR" >> "$GITHUB_PATH"
-        fi
-        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        P="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
+        E="${GITHUB_WORKSPACE:-$PWD}/bin/$P/enact"
+        [ -f "$E" ] || E="${GITHUB_WORKSPACE:-$PWD}/bin/enact"
+        [ -f "$E" ] || E="$(command -v enact || echo "$HOME/.cargo/bin/enact")"
+        chmod +x "$E" 2>/dev/null || true
+        "$E" --version >/dev/null 2>&1 || { echo "::error title=No enact for $P::$E does not run on this $P runner; commit its build as bin/$P/enact"; exit 1; }
+        "$E" ci install-binaries
     - name: Ensure enve & enact CLI on PATH
-      run: |
-        git config --global --add safe.directory "*" 2>/dev/null || true
-        # The store the runner cache probe chose (a host cache's), else the user store.
-        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
-        mkdir -p "$store"
-        if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
-          sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
-        fi
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$store" /nix/store 2>/dev/null || true
-        fi
-        # The previous step's $GITHUB_PATH entries apply from the next step on.
-        export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
-        # Isolation as on a Linux workstation: with bubblewrap on PATH (e.g. the repository's
-        # bin/bwrap), enve sandboxes commands and services and maps the profile's hosts inside.
-        # GitHub's Ubuntu runners restrict unprivileged user namespaces (AppArmor), which bwrap
-        # needs; the VM is disposable, so lift that. Without a working bwrap, enve runs on the host:
-        # its profile's host aliases go to the runner's /etc/hosts instead.
-        if command -v bwrap >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
-          && [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
-          sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-        fi
-        if command -v bwrap >/dev/null 2>&1 && bwrap --bind / / true 2>/dev/null; then
-          echo "enve isolation: $(bwrap --version)"
-        elif command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
-          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
-            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
-            | sudo tee -a /etc/hosts >/dev/null || true
-        fi
+      run: enact ci setup-runner
     - name: Restore Reach Store
       id: reach-store
       continue-on-error: true
@@ -2519,85 +2080,16 @@ jobs:
     - name: Probe Runner Caches
       id: runner_caches
       run: |
-        #!/usr/bin/env bash
-        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
-        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
-        # seen by every repository the host serves, holds only signature-verified content: the enve
-        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
-        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
-        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
-        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
-        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
         set -euo pipefail
         host="${ENACT_HOST_CACHE:-}"
         if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
             echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
             host=""
         fi
-        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
-        # without a word: from `/` down, each component owned by root or the user and writable by
-        # no one else, a root-owned sticky ancestor excepted.
-        trusted_store() {
-            local path="" part owner mode uid
-            uid=$(id -u)
-            IFS=/ read -ra parts <<<"${1#/}"
-            for part in "${parts[@]}"; do
-                path="$path/$part"
-                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
-                mode=$((8#$mode))
-                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
-                if (( mode & 8#22 )); then
-                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
-                fi
-            done
-        }
-        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
-        # names a repository, every other path a directory.
-        layout() {
-            cat <<LAYOUT
-        ENVE_STORE_DIR repo/enve-store .
-        UV_CACHE_DIR repo/uv .
-        PIP_CACHE_DIR repo/pip .
-        ENACT_PNPM_STORE repo/pnpm .
-        npm_config_cache repo/npm .
-        YARN_CACHE_FOLDER repo/yarn .
-        BUN_INSTALL_CACHE_DIR repo/bun .
-        GOMODCACHE repo/go mod
-        GOCACHE repo/go build
-        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
-        ENACT_OUTPUTS_CACHE repo/outputs .
-        ENVE_MIRROR shared/enve-nar .
-        LAYOUT
-        }
         if [ -n "$host" ]; then
-            # The repository's stores are writable by no one else: enve trusts no other store.
-            # `shared/` stays as the host made it, writable by the jobs of every repository.
-            umask 022
-            chmod go-w "$host/repo" 2>/dev/null || true
-            # The enve store check reads what enve wrote since.
-            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
-            while read -r var entry path; do
-                # The host provides `shared/`; without it the NAR mirror is skipped.
-                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
-                mkdir -p "$host/$entry"
-                touch "$host/$entry"
-                dir="$host/$entry/$path"
-                case "$var" in
-                    ENACT_GIT_MIRROR) ;;
-                    *) mkdir -p "$dir" ;;
-                esac
-                dir="${dir%/.}"
-                if [ "${entry%%/*}" = repo ]; then
-                    chmod 755 "$host/$entry" 2>/dev/null || true
-                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
-                fi
-                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
-                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
-                    exit 1
-                fi
-                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
-                echo "$var=$dir" >> "$GITHUB_ENV"
-            done < <(layout)
+            mkdir -p "$host/repo/git" "$host/repo/outputs"
+            echo "ENACT_GIT_MIRROR=$host/repo/git/${GITHUB_REPOSITORY##*/}.git" >> "$GITHUB_ENV"
+            echo "ENACT_OUTPUTS_CACHE=$host/repo/outputs" >> "$GITHUB_ENV"
         fi
         echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
         printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
@@ -2607,12 +2099,6 @@ jobs:
       if: ${{ steps.runner_caches.outputs.host != '' }}
       continue-on-error: true
       run: |
-        #!/usr/bin/env bash
-        # Checks the commit out through the host cache's mirror of the repository
-        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
-        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
-        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
-        # one per line; none checks the whole tree out.
         set -euo pipefail
         git config --global --add safe.directory "*"
         url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
@@ -2643,9 +2129,7 @@ jobs:
             touch "$mirror" "$mirror/HEAD" 2>/dev/null || true
         ) 9>"$mirror.lock"
         cd "$GITHUB_WORKSPACE"
-        # A half-made repository would mislead the fallback checkout into reusing it.
         trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
-        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
         find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
         git init -q .
         echo "$mirror/objects" > .git/objects/info/alternates
@@ -2687,80 +2171,15 @@ jobs:
         submodules: "false"
     - name: Install committed enact & enve builds
       run: |
-        # The repository's committed enact, enve and bubblewrap builds: bin/<os>-<arch>/ for this runner
-        # (bin/linux-x86_64/, bin/linux-aarch64/), else bin/. They're copied to ~/.cargo/bin,
-        # which goes ahead of bin/ on PATH, so the runner's own build wins over bin/'s. A build for
-        # another CPU (an x86_64 enve on an arm64 runner) is never installed: enact or enve fails
-        # here, naming the directory to commit, instead of the first step that runs it.
-        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
-        PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
-        # Whether this runner can execute $1: false only for an ELF of another CPU or OS.
-        runs_here() {
-          local header
-          header="$(od -An -tx1 -N20 "$1" 2>/dev/null | tr -d ' \n')"
-          [ "${header:0:8}" = 7f454c46 ] || return 0
-          case "$PLATFORM:${header:36:4}" in
-            linux-x86_64:3e00 | linux-aarch64:b700) return 0 ;;
-          esac
-          return 1
-        }
-        mkdir -p "$HOME/.cargo/bin"
-        if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap enact-ebpf-loader; do
-            src="$BIN_DIR/$b"
-            if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
-              src="$BIN_DIR/$PLATFORM/$b"
-            fi
-            [ -f "$src" ] || continue
-            if ! runs_here "$src"; then
-              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
-                echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
-                continue
-              fi
-              echo "::error title=No $b for $PLATFORM::bin/$b is a build for another CPU; commit this runner's as bin/$PLATFORM/$b"
-              exit 1
-            fi
-            chmod +x "$src" 2>/dev/null || true
-            cp -f "$src" "$HOME/.cargo/bin/$b"
-          done
-          echo "$BIN_DIR" >> "$GITHUB_PATH"
-        fi
-        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        P="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
+        E="${GITHUB_WORKSPACE:-$PWD}/bin/$P/enact"
+        [ -f "$E" ] || E="${GITHUB_WORKSPACE:-$PWD}/bin/enact"
+        [ -f "$E" ] || E="$(command -v enact || echo "$HOME/.cargo/bin/enact")"
+        chmod +x "$E" 2>/dev/null || true
+        "$E" --version >/dev/null 2>&1 || { echo "::error title=No enact for $P::$E does not run on this $P runner; commit its build as bin/$P/enact"; exit 1; }
+        "$E" ci install-binaries
     - name: Ensure enve & enact CLI on PATH
-      run: |
-        git config --global --add safe.directory "*" 2>/dev/null || true
-        # The store the runner cache probe chose (a host cache's), else the user store.
-        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
-        mkdir -p "$store"
-        if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
-          sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
-        fi
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$store" /nix/store 2>/dev/null || true
-        fi
-        # The previous step's $GITHUB_PATH entries apply from the next step on.
-        export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
-        # Isolation as on a Linux workstation: with bubblewrap on PATH (e.g. the repository's
-        # bin/bwrap), enve sandboxes commands and services and maps the profile's hosts inside.
-        # GitHub's Ubuntu runners restrict unprivileged user namespaces (AppArmor), which bwrap
-        # needs; the VM is disposable, so lift that. Without a working bwrap, enve runs on the host:
-        # its profile's host aliases go to the runner's /etc/hosts instead.
-        if command -v bwrap >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
-          && [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
-          sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-        fi
-        if command -v bwrap >/dev/null 2>&1 && bwrap --bind / / true 2>/dev/null; then
-          echo "enve isolation: $(bwrap --version)"
-        elif command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
-          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
-            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
-            | sudo tee -a /etc/hosts >/dev/null || true
-        fi
+      run: enact ci setup-runner
     - name: Download All Component Telemetry
       continue-on-error: true
       uses: actions/download-artifact@v8
@@ -2800,85 +2219,16 @@ jobs:
     - name: Probe Runner Caches
       id: runner_caches
       run: |
-        #!/usr/bin/env bash
-        # The runner's host cache: `ENACT_HOST_CACHE` names a directory the host mounts read-write
-        # into every job and keeps across jobs. `repo/` holds this repository's stores; `shared/`,
-        # seen by every repository the host serves, holds only signature-verified content: the enve
-        # NAR mirror (`ENVE_MIRROR`), which enve reads first and fills with the paths it pulled and
-        # verified (signed by cache.nixos.org or a key in `ENVE_TRUSTED_PUBLIC_KEYS`); a tampered
-        # entry fails verification and enve falls back to the next substituter. Concurrent jobs share both: enve, uv, pnpm and Go lock their
-        # own stores, and the git mirror is fetched under a lock. The host drops the least recently
-        # used entries under `repo/` and `shared/` whole, so each store owns one, touched on every use.
         set -euo pipefail
         host="${ENACT_HOST_CACHE:-}"
         if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
             echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
             host=""
         fi
-        # enve's trust check of a store directory, which it otherwise leaves for a fallback store
-        # without a word: from `/` down, each component owned by root or the user and writable by
-        # no one else, a root-owned sticky ancestor excepted.
-        trusted_store() {
-            local path="" part owner mode uid
-            uid=$(id -u)
-            IFS=/ read -ra parts <<<"${1#/}"
-            for part in "${parts[@]}"; do
-                path="$path/$part"
-                read -r owner mode < <(stat -c '%u %a' "$path" 2>/dev/null || stat -f '%u %Mp%Lp' "$path")
-                mode=$((8#$mode))
-                [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
-                if (( mode & 8#22 )); then
-                    [ "$owner" = 0 ] && (( mode & 8#1000 )) && [ "$path" != "$1" ] || return 1
-                fi
-            done
-        }
-        # The layout, one line per store: `<variable> <entry> <path under the entry>`; the git mirror
-        # names a repository, every other path a directory.
-        layout() {
-            cat <<LAYOUT
-        ENVE_STORE_DIR repo/enve-store .
-        UV_CACHE_DIR repo/uv .
-        PIP_CACHE_DIR repo/pip .
-        ENACT_PNPM_STORE repo/pnpm .
-        npm_config_cache repo/npm .
-        YARN_CACHE_FOLDER repo/yarn .
-        BUN_INSTALL_CACHE_DIR repo/bun .
-        GOMODCACHE repo/go mod
-        GOCACHE repo/go build
-        ENACT_GIT_MIRROR repo/git ${GITHUB_REPOSITORY##*/}.git
-        ENACT_OUTPUTS_CACHE repo/outputs .
-        ENVE_MIRROR shared/enve-nar .
-        LAYOUT
-        }
         if [ -n "$host" ]; then
-            # The repository's stores are writable by no one else: enve trusts no other store.
-            # `shared/` stays as the host made it, writable by the jobs of every repository.
-            umask 022
-            chmod go-w "$host/repo" 2>/dev/null || true
-            # The enve store check reads what enve wrote since.
-            touch "${RUNNER_TEMP:-/tmp}/enact-host-cache.stamp"
-            while read -r var entry path; do
-                # The host provides `shared/`; without it the NAR mirror is skipped.
-                { [ -d "$host/${entry%%/*}" ] && [ -w "$host/${entry%%/*}" ]; } || continue
-                mkdir -p "$host/$entry"
-                touch "$host/$entry"
-                dir="$host/$entry/$path"
-                case "$var" in
-                    ENACT_GIT_MIRROR) ;;
-                    *) mkdir -p "$dir" ;;
-                esac
-                dir="${dir%/.}"
-                if [ "${entry%%/*}" = repo ]; then
-                    chmod 755 "$host/$entry" 2>/dev/null || true
-                    [ ! -d "$dir" ] || chmod 755 "$dir" 2>/dev/null || true
-                fi
-                if [ "$var" = ENVE_STORE_DIR ] && ! trusted_store "$dir"; then
-                    echo "::error::enve won't trust $dir (an owner other than $(id -un) or root, or writable by others, on the way from /) and would store elsewhere: fix the host cache's ownership and modes"
-                    exit 1
-                fi
-                [ "$var" != ENVE_MIRROR ] || dir="file://$dir"
-                echo "$var=$dir" >> "$GITHUB_ENV"
-            done < <(layout)
+            mkdir -p "$host/repo/git" "$host/repo/outputs"
+            echo "ENACT_GIT_MIRROR=$host/repo/git/${GITHUB_REPOSITORY##*/}.git" >> "$GITHUB_ENV"
+            echo "ENACT_OUTPUTS_CACHE=$host/repo/outputs" >> "$GITHUB_ENV"
         fi
         echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
         printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
@@ -2888,12 +2238,6 @@ jobs:
       if: ${{ steps.runner_caches.outputs.host != '' }}
       continue-on-error: true
       run: |
-        #!/usr/bin/env bash
-        # Checks the commit out through the host cache's mirror of the repository
-        # (`ENACT_GIT_MIRROR`, from the runner cache probe): the mirror fetches what it lacks under its
-        # lock, and the work tree borrows its objects (alternates), so the checkout has the whole
-        # history at the cost of a few new commits. `ENACT_SPARSE_CONE`: the cone's directories,
-        # one per line; none checks the whole tree out.
         set -euo pipefail
         git config --global --add safe.directory "*"
         url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
@@ -2924,9 +2268,7 @@ jobs:
             touch "$mirror" "$mirror/HEAD" 2>/dev/null || true
         ) 9>"$mirror.lock"
         cd "$GITHUB_WORKSPACE"
-        # A half-made repository would mislead the fallback checkout into reusing it.
         trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
-        # A fresh work tree, as actions/checkout leaves one: nothing of an earlier job survives.
         find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
         git init -q .
         echo "$mirror/objects" > .git/objects/info/alternates
@@ -2969,80 +2311,15 @@ jobs:
         submodules: "false"
     - name: Install committed enact & enve builds
       run: |
-        # The repository's committed enact, enve and bubblewrap builds: bin/<os>-<arch>/ for this runner
-        # (bin/linux-x86_64/, bin/linux-aarch64/), else bin/. They're copied to ~/.cargo/bin,
-        # which goes ahead of bin/ on PATH, so the runner's own build wins over bin/'s. A build for
-        # another CPU (an x86_64 enve on an arm64 runner) is never installed: enact or enve fails
-        # here, naming the directory to commit, instead of the first step that runs it.
-        BIN_DIR="${GITHUB_WORKSPACE:-$PWD}/bin"
-        PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
-        # Whether this runner can execute $1: false only for an ELF of another CPU or OS.
-        runs_here() {
-          local header
-          header="$(od -An -tx1 -N20 "$1" 2>/dev/null | tr -d ' \n')"
-          [ "${header:0:8}" = 7f454c46 ] || return 0
-          case "$PLATFORM:${header:36:4}" in
-            linux-x86_64:3e00 | linux-aarch64:b700) return 0 ;;
-          esac
-          return 1
-        }
-        mkdir -p "$HOME/.cargo/bin"
-        if [ -d "$BIN_DIR" ]; then
-          for b in enact enve bwrap enact-ebpf-loader; do
-            src="$BIN_DIR/$b"
-            if [ -f "$BIN_DIR/$PLATFORM/$b" ]; then
-              src="$BIN_DIR/$PLATFORM/$b"
-            fi
-            [ -f "$src" ] || continue
-            if ! runs_here "$src"; then
-              if [ "$b" = bwrap ] || [ "$b" = enact-ebpf-loader ]; then
-                echo "::warning::bin/$b is a build for another CPU than this $PLATFORM runner: not installed"
-                continue
-              fi
-              echo "::error title=No $b for $PLATFORM::bin/$b is a build for another CPU; commit this runner's as bin/$PLATFORM/$b"
-              exit 1
-            fi
-            chmod +x "$src" 2>/dev/null || true
-            cp -f "$src" "$HOME/.cargo/bin/$b"
-          done
-          echo "$BIN_DIR" >> "$GITHUB_PATH"
-        fi
-        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        P="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
+        E="${GITHUB_WORKSPACE:-$PWD}/bin/$P/enact"
+        [ -f "$E" ] || E="${GITHUB_WORKSPACE:-$PWD}/bin/enact"
+        [ -f "$E" ] || E="$(command -v enact || echo "$HOME/.cargo/bin/enact")"
+        chmod +x "$E" 2>/dev/null || true
+        "$E" --version >/dev/null 2>&1 || { echo "::error title=No enact for $P::$E does not run on this $P runner; commit its build as bin/$P/enact"; exit 1; }
+        "$E" ci install-binaries
     - name: Ensure enve & enact CLI on PATH
-      run: |
-        git config --global --add safe.directory "*" 2>/dev/null || true
-        # The store the runner cache probe chose (a host cache's), else the user store.
-        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
-        mkdir -p "$store"
-        if command -v sudo >/dev/null 2>&1; then
-          sudo mkdir -p -m 0755 /nix 2>/dev/null || true
-          sudo chown -R "$(id -u):$(id -g)" /nix 2>/dev/null || true
-        fi
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$store" /nix/store 2>/dev/null || true
-        fi
-        # The previous step's $GITHUB_PATH entries apply from the next step on.
-        export PATH="$HOME/.cargo/bin:${GITHUB_WORKSPACE:-$PWD}/bin:$PATH"
-        # Isolation as on a Linux workstation: with bubblewrap on PATH (e.g. the repository's
-        # bin/bwrap), enve sandboxes commands and services and maps the profile's hosts inside.
-        # GitHub's Ubuntu runners restrict unprivileged user namespaces (AppArmor), which bwrap
-        # needs; the VM is disposable, so lift that. Without a working bwrap, enve runs on the host:
-        # its profile's host aliases go to the runner's /etc/hosts instead.
-        if command -v bwrap >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
-          && [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
-          sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-        fi
-        if command -v bwrap >/dev/null 2>&1 && bwrap --bind / / true 2>/dev/null; then
-          echo "enve isolation: $(bwrap --version)"
-        elif command -v sudo >/dev/null 2>&1 && command -v enve >/dev/null 2>&1 && [ -f enve.cue ]; then
-          enve cue export -q -e profiles.dev.hosts enve.cue 2>/dev/null \
-            | jq -r 'to_entries[] | "\(.value) \(.key)"' 2>/dev/null \
-            | sudo tee -a /etc/hosts >/dev/null || true
-        fi
+      run: enact ci setup-runner
     - parallel:
       - name: Restore enact Task CAS Cache
         id: enact-tasks-cache
@@ -3125,27 +2402,7 @@ jobs:
       env:
         ENACT_SELECT_BASE: ${{ matrix.select_base }}
     - name: Pull Dependencies via enve
-      run: |-
-        store="${ENVE_STORE_DIR:-$HOME/.local/share/enve/store}"
-        if [ -d "/nix" ]; then
-          if [ -d "/nix/store" ] && [ ! -L "/nix/store" ]; then
-            cp -rn /nix/store/* "$store/" 2>/dev/null || true
-            rm -rf /nix/store 2>/dev/null || true
-          fi
-          ln -sfn "$store" /nix/store 2>/dev/null || true
-        fi
-        if [ -f "enve.lock" ]; then
-          if [ -n "$ENACT_R2_BUCKET" ] && ! enve run --locked -- true 2>/dev/null; then
-            enve cache pull enve.lock --cache "$ENACT_R2_BUCKET" -j 16
-          fi
-          enve run --locked -- true
-        fi
-        if [ -n "$ENACT_COMPONENT_DIR" ] && [ "$ENACT_COMPONENT_DIR" != "." ] && [ -f "$ENACT_COMPONENT_DIR/enve.lock" ]; then
-          if [ -n "$ENACT_R2_BUCKET" ] && ! (cd "$ENACT_COMPONENT_DIR" && enve run --locked -- true 2>/dev/null); then
-            enve cache pull "$ENACT_COMPONENT_DIR/enve.lock" --cache "$ENACT_R2_BUCKET" -j 16
-          fi
-          (cd "$ENACT_COMPONENT_DIR" && enve run --locked -- true)
-        fi
+      run: enact ci deps pull --component --remote signed
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || env.R2_ACCESS_KEY_ID }}
         AWS_REGION: auto
@@ -3163,6 +2420,7 @@ jobs:
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || env.R2_SECRET_ACCESS_KEY }}
         CI_COMPONENT: ${{ matrix.component }}
+        ENACT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         ENACT_MATRIX_COMMAND: ${{ matrix.command }}
         ENACT_MAX_PARALLEL: ${{ matrix.max_parallel }}
         ENACT_PREEMPTION_NOTICE_SEC: ${{ matrix.preemption_notice_sec }}
@@ -3174,21 +2432,7 @@ jobs:
     - name: Push Updated Dependencies to the Remote Cache
       if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
       continue-on-error: true
-      run: |-
-        if [ -z "${ENVE_CACHE_SECRET_KEY:-}" ] && [ -z "${NIX_SECRET_KEY:-}" ]; then
-          echo "Skipping closure upload: signed remote cache requires ENVE_CACHE_SECRET_KEY or NIX_SECRET_KEY."
-          exit 0
-        fi
-        if [ -n "$ENACT_R2_BUCKET" ]; then
-          if [ -f "enve.lock" ]; then
-            echo "🛰️ Pushing missing/updated closures to the remote cache from repository root..."
-            enve cache push enve.lock --cache "$ENACT_R2_BUCKET" -j 16 || true
-          fi
-          if [ -n "$ENACT_COMPONENT_DIR" ] && [ "$ENACT_COMPONENT_DIR" != "." ] && [ -f "$ENACT_COMPONENT_DIR/enve.lock" ]; then
-            echo "🛰️ Pushing missing/updated closures to the remote cache from $ENACT_COMPONENT_DIR..."
-            (cd "$ENACT_COMPONENT_DIR" && enve cache push enve.lock --cache "$ENACT_R2_BUCKET" -j 16) || true
-          fi
-        fi
+      run: enact ci deps push --signed
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || env.R2_ACCESS_KEY_ID }}
         AWS_REGION: auto

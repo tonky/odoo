@@ -15,7 +15,6 @@ pipeline: {
 			asset_prefixes:  ["@"]
 		}
 		durations: [".enact/durations/*.json"]
-		recorders: "enact_footprint.py": "7"
 	}
 	caches: "templates": {
 		name:    "Postgres template dumps"
@@ -66,7 +65,7 @@ pipeline: {
 		local: {layout: "staged", services: "on_demand", stages: _stages}
 		nightly: {
 			layout: "staged", scope: "all", services: "on_demand"
-			triggers: {schedule: ["0 3 * * *"], workflow_dispatch: true}
+			triggers: {workflow_dispatch: true}
 			stages: [{
 				name: "tests", matrix: true, fail_fast: false, services: "on_demand"
 				select: [J.test, {component: "test_lint", job: "pylint"}]
