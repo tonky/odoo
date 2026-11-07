@@ -43,11 +43,15 @@ _addons: {
 	fleet: known_failures: [
 		{test: "TestFleet.test_change_future_driver", reason: "car2.plan_to_change_car stays False after another car's future driver is set"},
 	]
-	hr_holidays: known_failures: [
-		{test: "TestOutOfOfficePerformance.test_leave_im_status_performance_partner_offline", reason: "assertQueryCount: 5 queries, the test expects 4: hr_homeworking (auto_install with hr) reads the user's work location for today in im_status"},
-		{test: "TestOutOfOfficePerformance.test_leave_im_status_performance_user_leave_offline", reason: "assertQueryCount: 3 queries, the test expects 2 (hr_homeworking's im_status, as above)"},
-		{test: "TestOutOfOfficePerformance.test_leave_im_status_performance_partner_leave_offline", reason: "assertQueryCount: 5 queries, the test expects 4 (hr_homeworking's im_status, as above)"},
-	]
+	hr_holidays: {
+		known_failures: [
+			{test: "TestOutOfOfficePerformance.test_leave_im_status_performance_partner_offline", reason: "assertQueryCount: 5 queries, the test expects 4: hr_homeworking (auto_install with hr) reads the user's work location for today in im_status"},
+			{test: "TestOutOfOfficePerformance.test_leave_im_status_performance_user_leave_offline", reason: "assertQueryCount: 3 queries, the test expects 2 (hr_homeworking's im_status, as above)"},
+			{test: "TestOutOfOfficePerformance.test_leave_im_status_performance_partner_leave_offline", reason: "assertQueryCount: 5 queries, the test expects 4 (hr_homeworking's im_status, as above)"},
+			{test: "TestHrHolidaysTour.test_hr_holidays_tour", reason: "intermittent: step 17 races the list reload after approving; the approved leave leaves the 'Waiting For Me' list, and the empty list's tbody (the step's other branch) is hidden under the empty-state helper, so the step times out (LEARNINGS)"},
+		]
+		known_not_run: [{tests: ["addons/hr_holidays/tests/test_hr_holidays_tour.py"], reason: "its only test is a known upstream failure (known_failures.cue), tagged out"}]
+	}
 	hr_skills_event: known_failures: [
 		{test: "TestOnsite.test_onsite_employee_registration", reason: "tour hr_skills_event_onsite_tour, step 1: the Employees app (hr.menu_hr_root) is not in admin's home menu"},
 	]

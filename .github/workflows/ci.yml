@@ -41,6 +41,8 @@ on:
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
   COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  ENACT_REMOTE_SAVE_EVENT: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+  ENACT_SAVE_EVENT: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
   ENVE_CACHE_PUBLIC_KEY: enve-r2-1:ckHPTeWVef6mba+1AwWHjKYCsUWKPfP9IXPm5YXNoHg=
   ENVE_SERVICE_GID: "1000"
   ENVE_SERVICE_UID: "1000"
@@ -57,7 +59,6 @@ jobs:
     runs-on:
     - self-hosted
     - Linux
-    - X64
     - tonky-ci
     - tonky-ci-s
     timeout-minutes: 5
@@ -295,7 +296,6 @@ jobs:
     runs-on:
     - self-hosted
     - Linux
-    - X64
     - tonky-ci
     - tonky-ci-s
     timeout-minutes: 15
@@ -1911,7 +1911,6 @@ jobs:
     runs-on:
     - self-hosted
     - Linux
-    - X64
     - tonky-ci
     - tonky-ci-s
     timeout-minutes: 10
@@ -2072,7 +2071,6 @@ jobs:
     runs-on:
     - self-hosted
     - Linux
-    - X64
     - tonky-ci
     - tonky-ci-s
     timeout-minutes: 5
@@ -2194,7 +2192,7 @@ jobs:
         AWS_REGION: auto
         AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || env.R2_SECRET_ACCESS_KEY }}
         ENACT_R2_BUCKET: ${{ secrets.R2_BUCKET || env.R2_BUCKET }}
-        ENACT_UPLOAD_REPORT: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+        ENACT_UPLOAD_REPORT: ${{ env.ENACT_REMOTE_SAVE_EVENT == 'true' }}
     - name: Upload Master Workflow Dashboard
       if: always()
       continue-on-error: true
@@ -2430,7 +2428,7 @@ jobs:
         ENACT_SAME_REPO_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != github.event.repository.default_branch }}
         ENACT_TOPOLOGY: ${{ matrix.topology }}
     - name: Push Updated Dependencies to the Remote Cache
-      if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      if: success() && env.ENACT_REMOTE_SAVE_EVENT == 'true'
       continue-on-error: true
       run: enact ci deps push --signed
       env:
@@ -2465,7 +2463,7 @@ jobs:
         retention-days: "1"
     - name: Check Package Caches for New Entries
       id: cache_delta
-      if: ${{ !cancelled() && (steps.runner_caches.outputs.host == '' || contains(format(',{0},', matrix.caches), ',templates,')) && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') }}
+      if: ${{ !cancelled() && (steps.runner_caches.outputs.host == '' || contains(format(',{0},', matrix.caches), ',templates,')) && env.ENACT_SAVE_EVENT == 'true' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') }}
       continue-on-error: true
       run: enact ci cache-delta check
       env:
@@ -2475,7 +2473,7 @@ jobs:
           cache_templates .enact/state/templates
         ENACT_UV_PRUNE: "true"
     - name: Save Python build & venv cache
-      if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') != '' && contains(matrix.technology, 'python') && steps.runner_caches.outputs.host == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') && steps.cache_delta.outputs.python_l1_cache == 'true') && steps.python_l1_cache.outputs.cache-hit != 'true'
+      if: (env.ENACT_SAVE_EVENT == 'true' && hashFiles('**/uv.lock', '**/pyproject.toml', '**/requirements.txt', '**/poetry.lock') != '' && contains(matrix.technology, 'python') && steps.runner_caches.outputs.host == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') && steps.cache_delta.outputs.python_l1_cache == 'true') && steps.python_l1_cache.outputs.cache-hit != 'true'
       continue-on-error: true
       uses: actions/cache/save@v6
       with:
@@ -2485,7 +2483,7 @@ jobs:
           /tmp/.cache/pip
     - parallel:
       - name: Save Go build cache
-        if: (((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && hashFiles('**/go.mod', '**/go.sum') != '' && contains(matrix.technology, 'go') && steps.runner_caches.outputs.host == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1')) && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.go_l1_cache.outputs.cache-matched-key, format('{0}-go-{1}-', runner.os, hashFiles('**/go.mod', '**/go.sum'))))) && steps.go_l1_cache.outputs.cache-hit != 'true'
+        if: ((env.ENACT_SAVE_EVENT == 'true' && hashFiles('**/go.mod', '**/go.sum') != '' && contains(matrix.technology, 'go') && steps.runner_caches.outputs.host == '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1')) && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.go_l1_cache.outputs.cache-matched-key, format('{0}-go-{1}-', runner.os, hashFiles('**/go.mod', '**/go.sum'))))) && steps.go_l1_cache.outputs.cache-hit != 'true'
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
@@ -2494,7 +2492,7 @@ jobs:
             /tmp/go-build
             /tmp/go/pkg/mod
       - name: Save Cache [Postgres template dumps]
-        if: ((github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && contains(format(',{0},', matrix.caches), ',templates,') && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.cache_templates.outputs.cache-matched-key, format('templates-1-{0}-', runner.os)) || steps.cache_delta.outputs.cache_templates == 'true')) && steps.cache_templates.outputs.cache-hit != 'true'
+        if: (env.ENACT_SAVE_EVENT == 'true' && contains(format(',{0},', matrix.caches), ',templates,') && (github.event_name == 'schedule' || github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch || !startsWith(steps.cache_templates.outputs.cache-matched-key, format('templates-1-{0}-', runner.os)) || steps.cache_delta.outputs.cache_templates == 'true')) && steps.cache_templates.outputs.cache-hit != 'true'
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
