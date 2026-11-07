@@ -63,8 +63,11 @@ join() {
 
 # The plugins load from the tests directory and import odoo; `_pylint_path_setup` adds
 # ADDONS_PATH to odoo.addons, as odoo's own addons path does.
+# Sync the shared root .venv under a lock so concurrent lint tasks in one preflight
+# stage never race `uv run --exact` on `.venv/lib`.
+enact helper lock odoo-venv -- uv sync --frozen --exact --quiet
 PYTHONPATH="${PWD}/${tests}:${PWD}" ADDONS_PATH="${PWD}/odoo/addons:${PWD}/addons" \
-    exec uv run --frozen --exact pylint "${fixed[@]}" \
+    exec uv run --frozen --no-sync pylint "${fixed[@]}" \
     "--enable=$(join "${enable[@]}")" \
     "--load-plugins=$(join "${plugins[@]}")" \
     "--deprecated-modules=$(join "${deprecated[@]}")" \
