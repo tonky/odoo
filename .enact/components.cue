@@ -47,7 +47,10 @@ let shardFixture = {
 			template_inputs: {include: [...string], exclude: [...string]}
 		}
 	}
-	lint:            schema.#SlotTask | *#OdooLint
+	jobs: lint: {
+		resources: {cpus: 2.0, memory_mb: 2048}
+		tasks: [#OdooLint]
+	}
 	workspace_scope: include_dependencies: true
 	scoping: domain_roots: [...string]
 }
