@@ -2,8 +2,8 @@
   "platforms": {
     "aarch64-darwin": {
       "binding": {
-        "environment_sha256": "c14a191aa2322e7a199b9ac200fcad839f84b1608e59c72c87c7a5b6dc392147",
-        "inventory_sha256": "0ac29fa314d5a8a098fde2dc1b651aafc682a78243154c541c365969fcb02976",
+        "environment_sha256": "e8b47551e2031adab4f1ee979318392d1b8a1570380a40e22f9810c0abf7c4c6",
+        "inventory_sha256": "19d2b8193575362b37f06403caf8177a837a3bccd96b2ba8061bf8082f0bff4e",
         "profile": null,
         "version": 2
       },
@@ -2498,7 +2498,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "0528acf9261b6b8abf565ce03eaac854a61fde1edebc5be265a3a79e3c181566"
+        "projectSha256": "e558b19758f718f61f5283df1bd39d2d1240c2593acb03a266a22a68c8081ef6"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -2853,8 +2853,8 @@
     },
     "aarch64-linux": {
       "binding": {
-        "environment_sha256": "c14a191aa2322e7a199b9ac200fcad839f84b1608e59c72c87c7a5b6dc392147",
-        "inventory_sha256": "7d1d41f90bc33342e2edbe03f9d505fe8a5e4c63473dea362b677d4ac5dcf6cd",
+        "environment_sha256": "e8b47551e2031adab4f1ee979318392d1b8a1570380a40e22f9810c0abf7c4c6",
+        "inventory_sha256": "31f22257be3622f3b8ae8848e5c3cc91b598f19d89ae6c5beeabcddc740deb96",
         "profile": null,
         "version": 2
       },
@@ -4093,6 +4093,9 @@
           ]
         },
         {
+          "hash_name": "dg0d3qqm22kpkcpmmvy0wrgg3hwb4f0c-playwright-browsers-1.62.1"
+        },
+        {
           "hash_name": "dl0wapybzl0vijnliafw4h6j6xanxwkw-icu4c-78.3-dev",
           "nar_hash": "sha256:01clvy2nf5vw23yg06d9rab1hf8z00wzvy53q1xrl055p6dzsm7g",
           "nar_size": 6766160,
@@ -4125,9 +4128,6 @@
             "hx9wvdx2l59iahwf9nmrx7rwkm6cymgs-glibc-2.44-25",
             "qn78wss6bq6rhdwba0j8dsgzi64prnwj-gmp-with-cxx-6.3.0"
           ]
-        },
-        {
-          "hash_name": "faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1"
         },
         {
           "hash_name": "ficwc08a9q1rigvr4jv9l3xsvmx3yfqn-xgcc-16.2.0-libgcc",
@@ -4742,6 +4742,12 @@
             "hx9wvdx2l59iahwf9nmrx7rwkm6cymgs-glibc-2.44-25",
             "l13clvfaq0chhc0azqdp27djk1cn32zv-libev-4.33"
           ]
+        },
+        {
+          "hash_name": "l41bn8rq8lg0k94amsi0pikr063995c8-noto-fonts-color-emoji-2.051",
+          "nar_hash": "sha256:0rl6hp9x3lj5bywdpypw0a4g32048bg3kh9k6h8xbypq0bilmcl2",
+          "nar_size": 10674080,
+          "references": []
         },
         {
           "hash_name": "l6hpggwi60r5qp27cass14gbb6sy8vxq-perl5.42.3-TermReadKey-2.38",
@@ -6467,6 +6473,34 @@
             },
             {
               "constraint": {
+                "attr": "noto-fonts-color-emoji",
+                "context": "profiles.dev",
+                "output": null,
+                "system": "aarch64-linux",
+                "version": null
+              },
+              "package": {
+                "attr_path": "noto-fonts-color-emoji",
+                "name": "noto-fonts-color-emoji",
+                "origin": {
+                  "Channel": {
+                    "build": 347166221,
+                    "evaluation": 1829774,
+                    "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/"
+                  }
+                },
+                "outputs": {
+                  "out": "/nix/store/l41bn8rq8lg0k94amsi0pikr063995c8-noto-fonts-color-emoji-2.051"
+                },
+                "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce",
+                "store_paths": [
+                  "/nix/store/l41bn8rq8lg0k94amsi0pikr063995c8-noto-fonts-color-emoji-2.051"
+                ],
+                "version": "2.051"
+              }
+            },
+            {
+              "constraint": {
                 "attr": "nspr",
                 "context": "profiles.dev",
                 "output": null,
@@ -6920,7 +6954,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "0528acf9261b6b8abf565ce03eaac854a61fde1edebc5be265a3a79e3c181566"
+        "projectSha256": "e558b19758f718f61f5283df1bd39d2d1240c2593acb03a266a22a68c8081ef6"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -6930,12 +6964,12 @@
         "ENVE_SERVICE_DB_HOST": "127.0.0.1",
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
-        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1/fonts.conf",
+        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/dg0d3qqm22kpkcpmmvy0wrgg3hwb4f0c-playwright-browsers-1.62.1/fonts.conf",
         "LD_RUN_PATH": "$ENVE_STORE_DIR/hbn2n04k3nr7hl6c7p0006a1vlj97r47-cyrus-sasl-2.1.28/lib:$ENVE_STORE_DIR/na9inwswsrgxxqpqrz3ms78qn7pyxg44-gcc-16.2.0-lib/lib",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
         "PGUSER": "odoo",
-        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1",
+        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/dg0d3qqm22kpkcpmmvy0wrgg3hwb4f0c-playwright-browsers-1.62.1",
         "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "1",
         "PYTHONNOUSERSITE": "1",
         "UV_PYTHON_DOWNLOADS": "never",
@@ -7220,6 +7254,7 @@
             "k7dhicbxwpb574vmg3an70ay62pphnr8-glib-2.88.3-dev",
             "k8djsad91026pr50mj1cafzhnxnn7lb2-nspr-4.40",
             "kamv6nii5127y32pyprqnfk8kc824x02-libx11-1.8.13",
+            "l41bn8rq8lg0k94amsi0pikr063995c8-noto-fonts-color-emoji-2.051",
             "m64pfzf9yxpyranl4ypkgamzn5zh87s6-libxdamage-1.1.7",
             "mdhh6r4qrlclv77dnnkkdc52myixhn2d-libx11-1.8.13-dev",
             "n7yllvdnm8p1g85b1g0rfc9dicgs0rhp-expat-2.8.5",
@@ -7236,7 +7271,7 @@
             "z5jjq635b8n3yaf7i4dw1rkfv4bxfzl5-libxfixes-6.0.2-dev",
             "zvslra1w3iwm9hvrmnyrz85dvsj5bkgl-systemd-minimal-libs-261.3-dev"
           ],
-          "closure": "faxl464v757kdabfz628spfgd6apj7hw-playwright-browsers-1.62.1",
+          "closure": "dg0d3qqm22kpkcpmmvy0wrgg3hwb4f0c-playwright-browsers-1.62.1",
           "version": "1.62.1"
         },
         "postgresql": {
@@ -7348,8 +7383,8 @@
     },
     "x86_64-linux": {
       "binding": {
-        "environment_sha256": "c14a191aa2322e7a199b9ac200fcad839f84b1608e59c72c87c7a5b6dc392147",
-        "inventory_sha256": "11dff965956f7711cef6ccf0e20d6f1b4d8926206c3d3cab3e678e749fcedcb7",
+        "environment_sha256": "e8b47551e2031adab4f1ee979318392d1b8a1570380a40e22f9810c0abf7c4c6",
+        "inventory_sha256": "34e844961cc6c3b40579e12ad4e550150830abeebc36e89ed8f7121d289b8891",
         "profile": null,
         "version": 2
       },
@@ -7463,9 +7498,6 @@
             "1n27gqlnvg10l9912jvx9gfkmhhvfywp-python3.13-packaging-26.2",
             "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15"
           ]
-        },
-        {
-          "hash_name": "21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1"
         },
         {
           "hash_name": "2a4dzjm774pgqs3d9v4637b26167zj94-libpciaccess-0.19",
@@ -8142,6 +8174,9 @@
             "ainqizsc7xrldv7q4ygsbawiy31jzwzj-python3.14-pyelftools-0.32",
             "lb41b0anx1f98y9y5s9mdv97gjgsq740-python3-3.14.7"
           ]
+        },
+        {
+          "hash_name": "annjm2svpv1xzscr51ynjpgwjbrcfngr-playwright-browsers-1.62.1"
         },
         {
           "hash_name": "bnckg4d9glf76iq0v34jri959xcbljbr-perl5.42.3-Mozilla-CA-20230821",
@@ -9111,6 +9146,12 @@
           "hash_name": "n8fqcpnr5ni28l3i9svqa70wz46798v9-tzdata-2026d",
           "nar_hash": "sha256:0fpbm1mh5nz93q58m0gz9ikcslhdc5i6kldr4146x16cq1ss862s",
           "nar_size": 2131536,
+          "references": []
+        },
+        {
+          "hash_name": "na15wi41vvq97gam0yvixvm8gl0jq51k-noto-fonts-color-emoji-2.051",
+          "nar_hash": "sha256:101ibfvnq7fm71bvd6ns2md0rbv182q9qd6mbrf9gqvixvnzmc5p",
+          "nar_size": 10674096,
           "references": []
         },
         {
@@ -10963,6 +11004,34 @@
             },
             {
               "constraint": {
+                "attr": "noto-fonts-color-emoji",
+                "context": "profiles.dev",
+                "output": null,
+                "system": "x86_64-linux",
+                "version": null
+              },
+              "package": {
+                "attr_path": "noto-fonts-color-emoji",
+                "name": "noto-fonts-color-emoji",
+                "origin": {
+                  "Channel": {
+                    "build": 347166224,
+                    "evaluation": 1829774,
+                    "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/"
+                  }
+                },
+                "outputs": {
+                  "out": "/nix/store/na15wi41vvq97gam0yvixvm8gl0jq51k-noto-fonts-color-emoji-2.051"
+                },
+                "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce",
+                "store_paths": [
+                  "/nix/store/na15wi41vvq97gam0yvixvm8gl0jq51k-noto-fonts-color-emoji-2.051"
+                ],
+                "version": "2.051"
+              }
+            },
+            {
+              "constraint": {
                 "attr": "nspr",
                 "context": "profiles.dev",
                 "output": null,
@@ -11416,7 +11485,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "0528acf9261b6b8abf565ce03eaac854a61fde1edebc5be265a3a79e3c181566"
+        "projectSha256": "e558b19758f718f61f5283df1bd39d2d1240c2593acb03a266a22a68c8081ef6"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -11426,12 +11495,12 @@
         "ENVE_SERVICE_DB_HOST": "127.0.0.1",
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
-        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1/fonts.conf",
+        "FONTCONFIG_FILE": "$ENVE_STORE_DIR/annjm2svpv1xzscr51ynjpgwjbrcfngr-playwright-browsers-1.62.1/fonts.conf",
         "LD_RUN_PATH": "$ENVE_STORE_DIR/m419ayyrwpqfkgazp2iyv0x7jfj973bn-cyrus-sasl-2.1.28/lib:$ENVE_STORE_DIR/j7qx4s4mr17j1wqgvqdzj33lmrnzb387-gcc-16.2.0-lib/lib",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
         "PGUSER": "odoo",
-        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1",
+        "PLAYWRIGHT_BROWSERS_PATH": "$ENVE_STORE_DIR/annjm2svpv1xzscr51ynjpgwjbrcfngr-playwright-browsers-1.62.1",
         "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "1",
         "PYTHONNOUSERSITE": "1",
         "UV_PYTHON_DOWNLOADS": "never",
@@ -11716,6 +11785,7 @@
             "knm96d081dl0mhbbdbmi2gwqj2sn0jbh-mesa-libgbm-26.1.3",
             "l5y7fz08zvrqiinb90j1r922ymncb0sj-libxfixes-6.0.2",
             "m38wglsqnh1mrmj2cmqa3pjb6w4yjxdi-glibc-2.44-25-dev",
+            "na15wi41vvq97gam0yvixvm8gl0jq51k-noto-fonts-color-emoji-2.051",
             "nvrv5w6rhc39h8snrsw03nqs679cf7rh-libxkbcommon-1.13.2",
             "q183bjraabp3b5xaf5plkb87rq645fvy-liberation-fonts-2.1.5",
             "qcwnw71iksl68k7fipizi6wn0s1xms9v-patchelf-0.15.2",
@@ -11732,7 +11802,7 @@
             "znrm90algr0fvnnnp130am1qfg59nl1f-libx11-1.8.13",
             "zrkqwk0989k5wa1gn3cjb76jfga3d8i3-expat-2.8.5"
           ],
-          "closure": "21a7fl8icsz3fhbavpfj8pkjqn6rwmwl-playwright-browsers-1.62.1",
+          "closure": "annjm2svpv1xzscr51ynjpgwjbrcfngr-playwright-browsers-1.62.1",
           "version": "1.62.1"
         },
         "postgresql": {

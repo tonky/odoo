@@ -9,7 +9,13 @@ import (
 
 #OdooTargetScope: schema.#TargetScope & {
 	fallback: "all"
-	incidental_reads: ["**/__manifest__.py"]
+	incidental_reads: [...string] | *[
+		"**/__manifest__.py",
+		"**/README.md",
+		"**/README.rst",
+		"**/static/description/**",
+		"**/static/img/**",
+	]
 }
 
 #OdooLint: schema.#Task & {
@@ -83,6 +89,11 @@ pipeline: schema.#Pipeline & {
 				root:        meta.dir
 				depends_on:  [...string] | *meta.depends
 				watch_paths: [...string] | *["\(meta.dir)/**"]
+				workspace_scope: include: list.Concat([
+					_templates[meta.template].addon_dirs,
+					[if addon == "stock_delivery" {"addons/sale_management"}],
+					[if addon == "stock_delivery" {"addons/sale_pdf_quote_builder"}],
+				])
 				services: db: enact: {
 					template:      "test_odoo_tpl_\(meta.template)"
 					template_init: "bash setup/ci/post-start-postgres.sh \(meta.template)"
@@ -98,6 +109,32 @@ pipeline: schema.#Pipeline & {
 					shards: "auto"
 					target_scope: #OdooTargetScope & {
 						default_target: "/\(addon)"
+						let _base_incidental = [
+							"**/__manifest__.py",
+							"**/README.md",
+							"**/README.rst",
+							"**/static/description/**",
+							"**/static/img/**",
+						]
+						let _iban_incidental = [
+							if addon != "base_iban" && !list.Contains(meta.depends, "base_iban") {"addons/base_iban/**"},
+						]
+						if !strings.HasPrefix(addon, "l10n_") {
+							incidental_reads: list.Concat([
+								_base_incidental,
+								_iban_incidental,
+								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !list.Contains(meta.depends, k) {"addons/\(k)/**"}],
+							])
+						}
+						if strings.HasPrefix(addon, "l10n_") {
+							let _cc_parts = strings.Split(addon, "_")
+							let _cc_prefix = "\(_cc_parts[0])_\(_cc_parts[1])"
+							incidental_reads: list.Concat([
+								_base_incidental,
+								_iban_incidental,
+								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !strings.HasPrefix(k, _cc_prefix) && !list.Contains(meta.depends, k) {"addons/\(k)/**"}],
+							])
+						}
 						tests: [...string] | *[
 							"\(meta.dir)/tests/**/test_*.py",
 							"\(meta.dir)/migrations/tests/test_*.py",
