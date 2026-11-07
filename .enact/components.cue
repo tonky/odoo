@@ -59,6 +59,7 @@ _addons: [string]: {
 	not_run:             *[] | [...schema.#NotRun]
 	known_not_run:       *[] | [...schema.#NotRun]
 	template:            *"base" | string
+	test_install:        *[] | [...string]
 	extra_sparse_paths?: [...string]
 	test_tags?:          [...string]
 }
@@ -126,7 +127,7 @@ pipeline: schema.#Pipeline & {
 							incidental_reads: list.Concat([
 								_base_incidental,
 								_iban_incidental,
-								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !list.Contains(meta.depends, k) {"addons/\(k)/**"}],
+								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !list.Contains(meta.depends, k) && !list.Contains(meta.test_install, k) {"addons/\(k)/**"}],
 							])
 						}
 						if strings.HasPrefix(addon, "l10n_") {
@@ -135,7 +136,7 @@ pipeline: schema.#Pipeline & {
 							incidental_reads: list.Concat([
 								_base_incidental,
 								_iban_incidental,
-								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !strings.HasPrefix(k, _cc_prefix) && !list.Contains(meta.depends, k) {"addons/\(k)/**"}],
+								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !strings.HasPrefix(k, _cc_prefix) && !list.Contains(meta.depends, k) && !list.Contains(meta.test_install, k) {"addons/\(k)/**"}],
 							])
 						}
 						tests: [...string] | *[
@@ -152,9 +153,10 @@ pipeline: schema.#Pipeline & {
 					recorder: "own"
 					let excluded = strings.Join([for f in meta.known_failures {",-/\(addon):\(f.test)"}], "")
 					let max_failed = [if addon != "base" {"ODOO_TEST_MAX_FAILED_TESTS=1 "}, ""][0]
+					let install_addons = strings.Join(list.Concat([[addon], meta.test_install]), ",")
 					jobs: test: {
 						fixture: shardFixture
-						tasks: [{command: string | *"\(max_failed)bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i \(addon) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}\(excluded)"}]
+						tasks: [{command: string | *"\(max_failed)bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i \(install_addons) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}\(excluded)"}]
 					}
 				}
 			}

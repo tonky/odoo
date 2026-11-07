@@ -91,6 +91,7 @@ _addons: {
 		]
 		has_tests: true
 		imports: ["base"]
+		test_install: ["l10n_be"]
 		auto_install: true
 		template: "mail"
 	}
@@ -1586,6 +1587,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		test_install: ["l10n_au"]
 		template: "account"
 	}
 	"l10n_ar": {
@@ -2315,6 +2317,7 @@ _addons: {
 		]
 		test_depends: []
 		has_tests: true
+		test_install: ["l10n_be", "l10n_es"]
 		template: "account"
 	}
 	"l10n_fi": {
@@ -2472,6 +2475,7 @@ _addons: {
 			"web",
 		]
 		has_tests: true
+		test_install: ["l10n_sa"]
 		auto_install: true
 		template: "point_of_sale"
 	}
@@ -2987,6 +2991,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		test_install: ["l10n_jp"]
 		template: "account"
 	}
 	"l10n_ke": {
@@ -3275,6 +3280,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		test_install: ["l10n_my"]
 		template: "account"
 	}
 	"l10n_mz": {
@@ -3667,6 +3673,7 @@ _addons: {
 			"account",
 		]
 		has_tests: true
+		test_install: ["l10n_sg"]
 		template: "account"
 	}
 	"l10n_si": {
@@ -6484,6 +6491,7 @@ _addons: {
 			"stock",
 		]
 		has_tests: true
+		imports: ["sale_management"]
 		auto_install: true
 		template: "stock_account"
 	}

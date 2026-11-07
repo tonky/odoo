@@ -425,6 +425,7 @@ def apply_addons_overrides(repo_root: Path, manifests: dict) -> None:
                 "depends": [],
                 "test_deps": [],
                 "test_depends": [],
+                "test_install": [],
                 "imports": [],
                 "auto_install": False,
                 "countries": [],
@@ -548,6 +549,8 @@ def load_addons_from_cue(cue_path: Path, apply_overrides: bool = True) -> dict:
         test_deps = _parse_cue_string_list(tdeps_m.group(1)) if tdeps_m else []
         imp_m = re.search(r"imports:\s*\[(.*?)\]", block, re.DOTALL)
         imports = _parse_cue_string_list(imp_m.group(1)) if imp_m else []
+        ti_m = re.search(r"test_install:\s*\[(.*?)\]", block, re.DOTALL)
+        test_install = _parse_cue_string_list(ti_m.group(1)) if ti_m else []
         extra_sparse_m = re.search(r"extra_sparse_paths:\s*\[(.*?)\]", block, re.DOTALL)
         extra_sparse = _parse_cue_string_list(extra_sparse_m.group(1)) if extra_sparse_m else []
         test_tags_m = re.search(r"test_tags:\s*\[(.*?)\]", block, re.DOTALL)
@@ -565,6 +568,7 @@ def load_addons_from_cue(cue_path: Path, apply_overrides: bool = True) -> dict:
             "depends": deps,
             "test_deps": test_deps,
             "test_depends": test_deps,
+            "test_install": test_install,
             "imports": imports,
             "has_tests": has_tests,
             "auto_install": auto_install,
@@ -587,23 +591,30 @@ def parse_single_manifest(m_path: str, repo_root: Path):
     rel_dir = p.parent.relative_to(repo_root).as_posix()
     tests_dir = p.parent / "tests"
     test_deps = set()
+    test_installs = set()
     test_py_files = []
     if tests_dir.is_dir():
         all_py = [Path(fp) for fp in _walk_files_str(str(tests_dir), ".py")]
         for py in all_py:
             test_deps.update(extract_python_imports(py))
+            test_installs.update(extract_test_installs(py))
         test_py_files = [py for py in all_py if py.name.startswith("test_")]
     static_dir = p.parent / "static"
     if static_dir.is_dir():
         for js in _walk_files_str(str(static_dir), ".js"):
             test_deps.update(extract_js_imports(js))
     test_deps.discard(addon_name)
-    # What its code imports outside tests (`from odoo.addons.base_vat.models...` in account):
-    # odoo imports those packages when it loads the addon, installed or not.
+    # What its code imports outside tests (`from odoo.addons.base_vat.models...` in account),
+    # plus modules unconditionally installed by its `__init__.py` hook (e.g. stock_delivery's
+    # `post_init_hook` calls `env['ir.module.module']._get('sale_management').button_install()`):
+    # odoo loads those packages whenever this addon is installed, transitively.
     code_imports = set()
     for py in _walk_files_str(str(p.parent), ".py"):
         if not Path(py).is_relative_to(tests_dir):
             code_imports.update(extract_python_imports(Path(py)))
+    init_py = p.parent / "__init__.py"
+    if init_py.is_file():
+        code_imports.update(extract_hook_installs(init_py))
     code_imports.discard(addon_name)
     raw_not_run = not_run_tests(p.parent, test_py_files)
     not_run = {
@@ -617,6 +628,7 @@ def parse_single_manifest(m_path: str, repo_root: Path):
         "depends": data.get("depends", []),
         "test_deps": sorted_test_deps,
         "test_depends": sorted_test_deps,
+        "test_install": sorted(test_installs - {addon_name}),
         "imports": sorted(code_imports),
         "auto_install": data.get("auto_install", False),
         "countries": data.get("countries", []),
@@ -680,6 +692,90 @@ def index_all_manifests(repo_root: Path) -> dict:
     return manifests
 
 
+def extract_test_installs(file_path: Path) -> set[str]:
+    """Localization modules a test class requires installed via `@setup_country('<cc>')` or
+    `@setup_chart_template('<cc>...')` decorators. Classes overriding `_use_chart_template`
+    mock chart template loading (e.g. `account`'s chart-template unit tests) and do not
+    need the real localization installed."""
+    addons: set[str] = set()
+    tree = _tree(file_path)
+
+    def _scan_calls(node: ast.AST) -> None:
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Call):
+                continue
+            fn = child.func
+            fname = fn.attr if isinstance(fn, ast.Attribute) else (fn.id if isinstance(fn, ast.Name) else None)
+            if fname not in ("setup_country", "setup_chart_template"):
+                continue
+            if not (child.args and isinstance(child.args[0], ast.Constant) and isinstance(child.args[0].value, str)):
+                continue
+            val = child.args[0].value.strip()
+            if not val:
+                continue
+            cc = val.lower() if fname == "setup_country" else val.split("_")[0].lower()
+            if cc.isalpha() and len(cc) == 2:
+                addons.add(f"l10n_{cc}")
+
+    for stmt in tree.body:
+        if isinstance(stmt, ast.ClassDef):
+            overrides_chart_loader = any(
+                isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and member.name == "_use_chart_template"
+                for member in stmt.body
+            )
+            if overrides_chart_loader:
+                continue
+            _scan_calls(stmt)
+        else:
+            _scan_calls(stmt)
+    return addons
+
+
+def extract_hook_installs(init_path: Path) -> set[str]:
+    """Modules installed programmatically in an addon's `__init__.py` hook (e.g.
+    `env['ir.module.module']._get('sale_management').button_install()` in `stock_delivery`),
+    which Odoo loads whenever this addon or any transitive dependent is installed."""
+    text = init_path.read_text(encoding="utf-8", errors="ignore")
+    if "button_install" not in text and "button_immediate_install" not in text:
+        return set()
+    addons: set[str] = set()
+    tree = _tree(init_path)
+
+    def _get_mod_arg(call: ast.AST) -> str | None:
+        if (
+            isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Attribute)
+            and call.func.attr == "_get"
+            and len(call.args) == 1
+            and isinstance(call.args[0], ast.Constant)
+            and isinstance(call.args[0].value, str)
+            and call.args[0].value
+        ):
+            return call.args[0].value
+        return None
+
+    bound_vars: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            mod = _get_mod_arg(node.value)
+            if mod:
+                bound_vars[node.targets[0].id] = mod
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in ("button_install", "button_immediate_install")
+        ):
+            recv = node.func.value
+            direct = _get_mod_arg(recv)
+            if direct:
+                addons.add(direct)
+            elif isinstance(recv, ast.Name) and recv.id in bound_vars:
+                addons.add(bound_vars[recv.id])
+    return addons
+
+
 def extract_python_imports(file_path: Path) -> set:
     addons = set()
     tree = _tree(file_path)
@@ -724,6 +820,7 @@ def find_addon_dependencies(repo_root: Path, addon_dir: Path, manifests: dict) -
     if addon_name in manifests:
         deps.update(manifests[addon_name].get("depends", []))
         deps.update(manifests[addon_name].get("test_depends", []))
+        deps.update(manifests[addon_name].get("test_install", []))
         deps.update(manifests[addon_name].get("imports", []))
 
     # 1. Scan tests
@@ -772,7 +869,14 @@ def resolve_component_sparse(
                 | set(manifests[addon].get("imports", []))
             )
             for dep in all_deps:
-                if not include_l10n and dep.startswith("l10n_"):
+                if (
+                    not include_l10n
+                    and dep.startswith("l10n_")
+                    and dep not in manifests[addon].get("depends", [])
+                    and dep not in manifests[addon].get("imports", [])
+                    and not dep.endswith("_tests")
+                    and not addon.startswith("l10n_")
+                ):
                     continue
                 if dep not in closure:
                     closure.add(dep)
@@ -1037,6 +1141,14 @@ def generate_addons_cue(repo_root: Path, manifests: dict) -> str:
         if imports:
             items = ", ".join(f'"{d}"' for d in imports)
             lines.append(f"\t\timports: [{items}]")
+        # Extra data-dependency addons installed alongside this addon in `-i` during tests.
+        trans_deps = dependency_closure([name], manifests)
+        test_install = sorted(
+            d for d in m.get("test_install", []) if d in manifests and d not in trans_deps
+        )
+        if test_install:
+            items = ", ".join(f'"{d}"' for d in test_install)
+            lines.append(f"\t\ttest_install: [{items}]")
         extra_sparse = sorted(
             p.strip("/") for p in m.get("extra_sparse_paths", []) if p.strip("/") and p.strip("/") != m_dir
         )
