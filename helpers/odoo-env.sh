@@ -31,6 +31,10 @@ if [ -z "${ODOO_BROWSER_BIN:-}" ] && [ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]; the
     done
     unset _bin
 fi
+# Browser HttpCase tours (Luxon/Intl.NumberFormat) reject ICU's en-US@posix tag when
+# LANG/LC_ALL is unset, C, POSIX, or C.UTF-8 on Linux Chromium. Pin a valid BCP-47 UTF-8 locale.
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 # odoo's tests expect TMPDIR=/tmp:
 # - base's TestConfigManager asserts `screenshots == '/tmp/odoo_tests'` after clearing
 #   os.environ, whereas Python's `tempfile.gettempdir()` caches `tempfile.tempdir` when
