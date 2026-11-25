@@ -5865,7 +5865,7 @@ _addons: {
 		test_depends: []
 		has_tests: true
 		auto_install: true
-		template: "sale"
+		template: "mail"
 	}
 	"sale_edi_ubl": {
 		dir: "addons/sale_edi_ubl"

@@ -1057,6 +1057,17 @@ def install_set(seed: str, manifests: dict, countries: frozenset) -> set:
     return installed
 
 
+# Addons whose tests assert model MRO / hook ordering across sibling dependencies that a
+# larger template splits between Phase 1 (already installed) and Phase 2 (to install).
+# - sale_crm: TestResPartner.test_application_stat_info asserts [Opportunities, Sale Orders]
+#   (crm depth 8 before sale depth 10); template "sale" pre-installs sale in Phase 1 before
+#   crm loads in Phase 2, reversing res.partner's MRO. Template "mail" is a strict common
+#   ancestor of calendar, account, crm, and sale, preserving fresh-install load order.
+TEMPLATE_OVERRIDES = {
+    "sale_crm": "mail",
+}
+
+
 def closure_templates(manifests: dict, countries: frozenset) -> dict:
     """Each addon's template seed (TEMPLATE_SEEDS): the one with the largest install among
     those it depends on whose install doesn't contain it. A fork of it holds exactly what
@@ -1064,6 +1075,11 @@ def closure_templates(manifests: dict, countries: frozenset) -> dict:
     seeds = {seed: install_set(seed, manifests, countries) for seed in TEMPLATE_SEEDS if seed in manifests}
     chosen = {}
     for name in manifests:
+        override = TEMPLATE_OVERRIDES.get(name)
+        if override is not None:
+            if override != "base" and override in seeds:
+                chosen[name] = override
+            continue
         deps = dependency_closure([name], manifests) - {name}
         fits = [s for s in seeds if s in deps and name not in seeds[s]]
         if fits:
