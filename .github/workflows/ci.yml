@@ -3647,66 +3647,71 @@ jobs:
           fi
           echo "Worker checkout verified: commit=$actual_head tree=$actual_tree"
         fi
-        if [ "$ENACT_HANDOFF_READY" = true ] && [ -f "$RUNNER_TEMP/enact-reach/map.bin" ] && [ -f "$RUNNER_TEMP/enact-reach/map.age.json" ]; then
-          if command -v sha256sum >/dev/null 2>&1; then
-            map_sha=$(sha256sum "$RUNNER_TEMP/enact-reach/map.bin" | awk '{print $1}')
-            age_sha=$(sha256sum "$RUNNER_TEMP/enact-reach/map.age.json" | awk '{print $1}')
-          else
-            map_sha=$(shasum -a 256 "$RUNNER_TEMP/enact-reach/map.bin" | awk '{print $1}')
-            age_sha=$(shasum -a 256 "$RUNNER_TEMP/enact-reach/map.age.json" | awk '{print $1}')
-          fi
-          echo "Handed reach map SHA-256: $map_sha age SHA-256: $age_sha"
-          if [ "${ENACT_CONTROL_PIN_REQUIRED:-}" = true ]; then
-            if [ -n "${ENACT_PIN_REACH_MAP_SHA256:-}" ]; then
-              expected_sha=$(printf '%s' "${ENACT_PIN_REACH_MAP_SHA256#sha256:}" | tr 'A-F' 'a-f')
-              if [ "$map_sha" != "$expected_sha" ]; then
-                echo "::error::handed reach map SHA-256 mismatch in worker: expected $expected_sha, got $map_sha" >&2
-                exit 1
-              fi
-            fi
-            if [ -n "${ENACT_PIN_REACH_AGE_SHA256:-}" ]; then
-              expected_age=$(printf '%s' "${ENACT_PIN_REACH_AGE_SHA256#sha256:}" | tr 'A-F' 'a-f')
-              if [ "$age_sha" != "$expected_age" ]; then
-                echo "::error::handed reach age SHA-256 mismatch in worker: expected $expected_age, got $age_sha" >&2
-                exit 1
-              fi
-            fi
-            ctrl_pr_head="${ENACT_CONTROL_PR_HEAD_SHA:-}"
-            case "$ctrl_pr_head" in
-              ""|*[!0-9a-fA-F]*)
-                echo "::error::control worker requires 40-char hex ENACT_CONTROL_PR_HEAD_SHA from detect, got '$ctrl_pr_head'" >&2
-                exit 1
-                ;;
-            esac
-            if [ "${#ctrl_pr_head}" -ne 40 ]; then
+        if [ "${ENACT_CONTROL_PIN_REQUIRED:-}" = true ]; then
+          ctrl_pr_head="${ENACT_CONTROL_PR_HEAD_SHA:-}"
+          case "$ctrl_pr_head" in
+            ""|*[!0-9a-fA-F]*)
               echo "::error::control worker requires 40-char hex ENACT_CONTROL_PR_HEAD_SHA from detect, got '$ctrl_pr_head'" >&2
               exit 1
-            fi
-            worker_parent2=$(git cat-file -p HEAD | awk '$1=="parent"{n++; if(n==2) print $2}')
-            if [ -n "$worker_parent2" ] && [ "$worker_parent2" != "$ctrl_pr_head" ]; then
-              echo "::error::worker merge 2nd parent '$worker_parent2' does not match detect PR head '$ctrl_pr_head'" >&2
-              exit 1
-            fi
-            if ! git cat-file -e "${ctrl_pr_head}^{commit}" 2>/dev/null; then
-              git fetch --no-tags --depth=1 origin "$ctrl_pr_head"
-            fi
-            if ! git cat-file -e "${ctrl_pr_head}^{commit}" 2>/dev/null; then
-              echo "::error::worker missing PR head commit '$ctrl_pr_head' locally after fetch" >&2
-              exit 1
-            fi
-            echo "ENACT_PR_HEAD_SHA=$ctrl_pr_head" >> "$GITHUB_ENV"
-            echo "GITHUB_HEAD_SHA=$ctrl_pr_head" >> "$GITHUB_ENV"
+              ;;
+          esac
+          if [ "${#ctrl_pr_head}" -ne 40 ]; then
+            echo "::error::control worker requires 40-char hex ENACT_CONTROL_PR_HEAD_SHA from detect, got '$ctrl_pr_head'" >&2
+            exit 1
           fi
-          echo "ENACT_REACH_FILE=$RUNNER_TEMP/enact-reach/map.bin" >> "$GITHUB_ENV"
-        elif [ "${ENACT_CONTROL_PIN_REQUIRED:-}" = true ]; then
-          echo "::error::control run worker missing handed-off reach map" >&2
-          exit 1
+          worker_parent2=$(git cat-file -p HEAD | awk '$1=="parent"{n++; if(n==2) print $2}')
+          if [ -n "$worker_parent2" ] && [ "$worker_parent2" != "$ctrl_pr_head" ]; then
+            echo "::error::worker merge 2nd parent '$worker_parent2' does not match detect PR head '$ctrl_pr_head'" >&2
+            exit 1
+          fi
+          if ! git cat-file -e "${ctrl_pr_head}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$ctrl_pr_head"
+          fi
+          if ! git cat-file -e "${ctrl_pr_head}^{commit}" 2>/dev/null; then
+            echo "::error::worker missing PR head commit '$ctrl_pr_head' locally after fetch" >&2
+            exit 1
+          fi
+          echo "ENACT_PR_HEAD_SHA=$ctrl_pr_head" >> "$GITHUB_ENV"
+          echo "GITHUB_HEAD_SHA=$ctrl_pr_head" >> "$GITHUB_ENV"
+        fi
+        if [ "${ENACT_NEEDS_REACH:-true}" != false ]; then
+          if [ "$ENACT_HANDOFF_READY" = true ] && [ -f "$RUNNER_TEMP/enact-reach/map.bin" ] && [ -f "$RUNNER_TEMP/enact-reach/map.age.json" ]; then
+            if command -v sha256sum >/dev/null 2>&1; then
+              map_sha=$(sha256sum "$RUNNER_TEMP/enact-reach/map.bin" | awk '{print $1}')
+              age_sha=$(sha256sum "$RUNNER_TEMP/enact-reach/map.age.json" | awk '{print $1}')
+            else
+              map_sha=$(shasum -a 256 "$RUNNER_TEMP/enact-reach/map.bin" | awk '{print $1}')
+              age_sha=$(shasum -a 256 "$RUNNER_TEMP/enact-reach/map.age.json" | awk '{print $1}')
+            fi
+            echo "Handed reach map SHA-256: $map_sha age SHA-256: $age_sha"
+            if [ "${ENACT_CONTROL_PIN_REQUIRED:-}" = true ]; then
+              if [ -n "${ENACT_PIN_REACH_MAP_SHA256:-}" ]; then
+                expected_sha=$(printf '%s' "${ENACT_PIN_REACH_MAP_SHA256#sha256:}" | tr 'A-F' 'a-f')
+                if [ "$map_sha" != "$expected_sha" ]; then
+                  echo "::error::handed reach map SHA-256 mismatch in worker: expected $expected_sha, got $map_sha" >&2
+                  exit 1
+                fi
+              fi
+              if [ -n "${ENACT_PIN_REACH_AGE_SHA256:-}" ]; then
+                expected_age=$(printf '%s' "${ENACT_PIN_REACH_AGE_SHA256#sha256:}" | tr 'A-F' 'a-f')
+                if [ "$age_sha" != "$expected_age" ]; then
+                  echo "::error::handed reach age SHA-256 mismatch in worker: expected $expected_age, got $age_sha" >&2
+                  exit 1
+                fi
+              fi
+            fi
+            echo "ENACT_REACH_FILE=$RUNNER_TEMP/enact-reach/map.bin" >> "$GITHUB_ENV"
+          elif [ "${ENACT_CONTROL_PIN_REQUIRED:-}" = true ]; then
+            echo "::error::control run worker missing handed-off reach map" >&2
+            exit 1
+          fi
         fi
       env:
         ENACT_CONTROL_CHECKOUT_SHA: ${{ inputs.control_checkout_sha }}
         ENACT_CONTROL_PIN_REQUIRED: ${{ inputs.control_pin_required }}
         ENACT_CONTROL_PR_HEAD_SHA: ${{ needs.detect.outputs.control_pr_head_sha }}
         ENACT_HANDOFF_READY: ${{ steps.reach-native.outputs.ready == 'true' || steps.reach-verified.outputs.ready == 'true' || (env.ENACT_HOST_CACHE == '' && steps.reach-download.outcome == 'success') }}
+        ENACT_NEEDS_REACH: ${{ toJSON(matrix.needs_reach) }}
         ENACT_PIN_REACH_AGE_SHA256: ${{ inputs.pin_reach_age_sha256 }}
         ENACT_PIN_REACH_MAP_SHA256: ${{ inputs.pin_reach_map_sha256 }}
         GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}

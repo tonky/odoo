@@ -20,7 +20,12 @@ const cacheResources = async (event) => {
 
     try {
         const cache = await caches.open(cacheName);
-        await cache.add(url);
+        const response = await fetch(url, {
+            headers: { "X-Odoo-POS-SW-Prefetch": "1" },
+        });
+        if (response.status === 200) {
+            await cache.put(url, response);
+        }
     } catch (error) {
         console.info("Failed to cache resource", url, error);
     }

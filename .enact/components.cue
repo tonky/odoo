@@ -152,7 +152,7 @@ pipeline: schema.#Pipeline & {
 					}
 					recorder: "own"
 					let excluded = strings.Join([for f in meta.known_failures {",-/\(addon):\(f.test)"}], "")
-					let max_failed = [if addon != "base" {"ODOO_TEST_MAX_FAILED_TESTS=1 "}, ""][0]
+					let max_failed = [if addon != "base" {"ODOO_TEST_MAX_FAILED_TESTS=10 "}, ""][0]
 					let install_addons = strings.Join(list.Concat([[addon], meta.test_install]), ",")
 					jobs: test: {
 						fixture: shardFixture
@@ -222,7 +222,7 @@ pipeline: schema.#Pipeline & {
 				"odoo/addons/test_lint/tests/test_p[!y]*.py",
 			]
 			recorder: "own"
-			jobs: test: tasks: [{command: "ODOO_TEST_MAX_FAILED_TESTS=1 bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i test_lint -u test_lint --test-enable --stop-after-init --test-tags {targets_tags},-/test_lint:TestPyLint"}]
+			jobs: test: tasks: [{command: "ODOO_TEST_MAX_FAILED_TESTS=10 bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i test_lint -u test_lint --test-enable --stop-after-init --test-tags {targets_tags},-/test_lint:TestPyLint"}]
 			jobs: pylint: {
 				fixture: shardFixture
 				tasks: [{
