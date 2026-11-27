@@ -54,7 +54,7 @@ root = os.path.realpath(os.getcwd()) + os.sep
 # The recorders (helpers/) aren't the repository's code under test.
 own = os.path.dirname(os.path.realpath(__file__)) + os.sep
 # Programs that read nothing of the repository: the server sends them what they load.
-QUIET = ("chrome", "chrome-headless-shell", "chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "wkhtmltopdf")
+QUIET = ("chrome", "chrome-headless-shell", "headless_shell", "chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "wkhtmltopdf")
 # Programs that read only the files their arguments name (`eslint --no-ignore --no-eslintrc -c <rc> <files...>`).
 READERS = {"eslint": ()}
 

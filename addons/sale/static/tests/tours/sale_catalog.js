@@ -34,8 +34,8 @@ registry.category("web_tour.tours").add('sale_catalog', {
         },
         {
             content: "Search for the product",
-            trigger: 'input.o_searchview_input',
-            run: "press Enter",
+            trigger: '.o_searchview_autocomplete .o-dropdown-item.focus',
+            run: "click",
         },
         {
             content: "Wait for catalog rendering",
