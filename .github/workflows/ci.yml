@@ -81,6 +81,10 @@ on:
       pin_reach_map_sha256:
         description: Expected SHA-256 of handed-off reach map (map.bin) for matched controls
         required: false
+      seed_caches:
+        description: Run the jobs of seeded caches cold and save the caches (on the default branch)
+        required: false
+        default: "false"
       updated:
         description: Component(s) to emulate as updated
         required: false
@@ -1606,15 +1610,7 @@ jobs:
           addons/purchase_requisition
           addons/purchase_requisition_sale
           addons/purchase_requisition_stock
-          .gitignore
-          .weblate.json
-          CONTRIBUTING.md
-          COPYRIGHT
-          LICENSE
           MANIFEST.in
-          README.md
-          SECURITY.md
-          debian
           addons/sale_expense_margin
           addons/sale_gelato
           addons/sale_gelato_stock
@@ -2424,15 +2420,7 @@ jobs:
           addons/purchase_requisition
           addons/purchase_requisition_sale
           addons/purchase_requisition_stock
-          .gitignore
-          .weblate.json
-          CONTRIBUTING.md
-          COPYRIGHT
-          LICENSE
           MANIFEST.in
-          README.md
-          SECURITY.md
-          debian
           addons/sale_expense_margin
           addons/sale_gelato
           addons/sale_gelato_stock
@@ -2629,6 +2617,27 @@ jobs:
         ENACT_SAME_REPO_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         GITHUB_HEAD_REF: ${{ github.head_ref }}
         GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    - parallel:
+      - name: Restore Python build & venv cache
+        id: python_l1_cache
+        if: ${{ (hashFiles('pyproject.toml', 'requirements.txt') != '' && steps.runner_caches.outputs.host == '' && steps.stage_plan.outputs.stage_needs_python == 'true') && steps.stage_plan.outputs.stage_has_work == 'true' }}
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          key: ${{ runner.os }}-${{ runner.arch }}-python-v2-${{ hashFiles('uv.lock', 'pyproject.toml', 'requirements.txt', 'poetry.lock', 'enve.lock') }}
+          path: |-
+            /tmp/.cache/uv
+            /tmp/.cache/pip
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-python-v2-
+    - name: Record Restored Package Caches
+      if: ${{ (steps.runner_caches.outputs.host == '' && steps.python_l1_cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request') && steps.stage_plan.outputs.stage_has_work == 'true' }}
+      continue-on-error: true
+      run: enact ci cache-delta record
+      env:
+        ENACT_CACHE_DELTA: |-
+          python_l1_cache /tmp/.cache/uv
+          python_l1_cache /tmp/.cache/pip
+        ENACT_CACHE_HITS: python_l1_cache=${{ steps.python_l1_cache.outputs.cache-hit }}
     - name: Pull Dependencies via enve
       if: ${{ steps.stage_plan.outputs.stage_has_work == 'true' }}
       run: enact ci deps pull --remote signed
@@ -2639,12 +2648,21 @@ jobs:
         ENACT_ENVIRONMENT_DIRS: "[\".\",\".github\",\"addons/account\",\"addons/account_add_gln\",\"addons/account_check_printing\",\"addons/account_debit_note\",\"addons/account_edi\",\"addons/account_edi_proxy_client\",\"addons/account_edi_ubl_cii\",\"addons/account_fleet\",\"addons/account_payment\",\"addons/account_payment_interco\",\"addons/account_peppol\",\"addons/account_peppol_advanced_fields\",\"addons/account_peppol_response\",\"addons/account_qr_code_emv\",\"addons/account_qr_code_sepa\",\"addons/account_tax_python\",\"addons/account_test\",\"addons/account_update_tax_tags\",\"addons/analytic\",\"addons/api_doc\",\"addons/attachment_indexation\",\"addons/auth_ldap\",\"addons/auth_oauth\",\"addons/auth_passkey\",\"addons/auth_passkey_portal\",\"addons/auth_password_policy\",\"addons/auth_password_policy_portal\",\"addons/auth_password_policy_signup\",\"addons/auth_signup\",\"addons/auth_timeout\",\"addons/auth_totp\",\"addons/auth_totp_mail\",\"addons/auth_totp_portal\",\"addons/barcodes\",\"addons/barcodes_gs1_nomenclature\",\"addons/base_address_extended\",\"addons/base_automation\",\"addons/base_geolocalize\",\"addons/base_iban\",\"addons/base_import\",\"addons/base_import_module\",\"addons/base_install_request\",\"addons/base_setup\",\"addons/base_sparse_field\",\"addons/base_vat\",\"addons/board\",\"addons/bus\",\"addons/calendar\",\"addons/calendar_sms\",\"addons/certificate\",\"addons/cloud_storage\",\"addons/cloud_storage_azure\",\"addons/cloud_storage_google\",\"addons/cloud_storage_migration\",\"addons/contacts\",\"addons/crm\",\"addons/crm_iap_enrich\",\"addons/crm_iap_mine\",\"addons/crm_livechat\",\"addons/crm_mail_plugin\",\"addons/crm_sms\",\"addons/data_recycle\",\"addons/delivery\",\"addons/delivery_mondialrelay\",\"addons/delivery_stock_picking_batch\",\"addons/digest\",\"addons/event\",\"addons/event_booth\",\"addons/event_booth_sale\",\"addons/event_crm\",\"addons/event_crm_sale\",\"addons/event_product\",\"addons/event_sale\",\"addons/event_sms\",\"addons/fleet\",\"addons/gamification\",\"addons/gamification_sale_crm\",\"addons/google_account\",\"addons/google_address_autocomplete\",\"addons/google_calendar\",\"addons/google_gmail\",\"addons/google_recaptcha\",\"addons/hr\",\"addons/hr_attendance\",\"addons/hr_calendar\",\"addons/hr_expense\",\"addons/hr_fleet\",\"addons/hr_gamification\",\"addons/hr_holidays\",\"addons/hr_holidays_attendance\",\"addons/hr_holidays_homeworking\",\"addons/hr_homeworking\",\"addons/hr_homeworking_calendar\",\"addons/hr_hourly_cost\",\"addons/hr_livechat\",\"addons/hr_maintenance\",\"addons/hr_org_chart\",\"addons/hr_presence\",\"addons/hr_recruitment\",\"addons/hr_recruitment_skills\",\"addons/hr_recruitment_sms\",\"addons/hr_recruitment_survey\",\"addons/hr_skills\",\"addons/hr_skills_event\",\"addons/hr_skills_slides\",\"addons/hr_skills_survey\",\"addons/hr_timesheet\",\"addons/hr_timesheet_attendance\",\"addons/hr_work_entry\",\"addons/hr_work_entry_holidays\",\"addons/html_builder\",\"addons/html_editor\",\"addons/http_routing\",\"addons/iap\",\"addons/iap_crm\",\"addons/iap_mail\",\"addons/im_livechat\",\"addons/iot_base\",\"addons/iot_box_image\",\"addons/iot_drivers\",\"addons/l10n_account_edi_ubl_cii_tests\",\"addons/l10n_account_withholding_tax\",\"addons/l10n_account_withholding_tax_pos\",\"addons/l10n_ae\",\"addons/l10n_ae_pos\",\"addons/l10n_anz_ubl_pint\",\"addons/l10n_ar\",\"addons/l10n_ar_pos\",\"addons/l10n_ar_stock\",\"addons/l10n_ar_website_sale\",\"addons/l10n_ar_withholding\",\"addons/l10n_at\",\"addons/l10n_au\",\"addons/l10n_bd\",\"addons/l10n_be\",\"addons/l10n_be_pos_restaurant\",\"addons/l10n_be_pos_sale\",\"addons/l10n_bf\",\"addons/l10n_bg\",\"addons/l10n_bg_ledger\",\"addons/l10n_bh\",\"addons/l10n_bj\",\"addons/l10n_bo\",\"addons/l10n_br\",\"addons/l10n_br_sales\",\"addons/l10n_br_website_sale\",\"addons/l10n_ca\",\"addons/l10n_cd\",\"addons/l10n_cf\",\"addons/l10n_cg\",\"addons/l10n_ch\",\"addons/l10n_ch_pos\",\"addons/l10n_ci\",\"addons/l10n_cl\",\"addons/l10n_cm\",\"addons/l10n_cn\",\"addons/l10n_cn_city\",\"addons/l10n_co\",\"addons/l10n_co_pos\",\"addons/l10n_cr\",\"addons/l10n_cy\",\"addons/l10n_cz\",\"addons/l10n_de\",\"addons/l10n_din5008\",\"addons/l10n_din5008_expense\",\"addons/l10n_din5008_purchase\",\"addons/l10n_din5008_repair\",\"addons/l10n_din5008_sale\",\"addons/l10n_din5008_stock\",\"addons/l10n_dk\",\"addons/l10n_dk_fik\",\"addons/l10n_dk_nemhandel\",\"addons/l10n_dk_nemhandel_response\",\"addons/l10n_dk_oioubl\",\"addons/l10n_do\",\"addons/l10n_dz\",\"addons/l10n_ec\",\"addons/l10n_ec_sale\",\"addons/l10n_ec_stock\",\"addons/l10n_ee\",\"addons/l10n_eg\",\"addons/l10n_eg_edi_eta\",\"addons/l10n_es\",\"addons/l10n_es_edi_facturae\",\"addons/l10n_es_edi_sii\",\"addons/l10n_es_edi_tbai\",\"addons/l10n_es_edi_tbai_pos\",\"addons/l10n_es_edi_verifactu\",\"addons/l10n_es_edi_verifactu_pos\",\"addons/l10n_es_pos\",\"addons/l10n_et\",\"addons/l10n_eu_oss\",\"addons/l10n_fi\",\"addons/l10n_fi_sale\",\"addons/l10n_fr\",\"addons/l10n_fr_account\",\"addons/l10n_fr_facturx_chorus_pro\",\"addons/l10n_fr_hr_holidays\",\"addons/l10n_fr_hr_work_entry_holidays\",\"addons/l10n_fr_pdp\",\"addons/l10n_fr_pdp_pos\",\"addons/l10n_fr_pos_cert\",\"addons/l10n_ga\",\"addons/l10n_gcc_invoice\",\"addons/l10n_gcc_invoice_stock_account\",\"addons/l10n_gcc_pos\",\"addons/l10n_ge\",\"addons/l10n_gf\",\"addons/l10n_gn\",\"addons/l10n_gp\",\"addons/l10n_gq\",\"addons/l10n_gr\",\"addons/l10n_gr_edi\",\"addons/l10n_gr_edi_e_invoo\",\"addons/l10n_gt\",\"addons/l10n_gw\",\"addons/l10n_hk\",\"addons/l10n_hn\",\"addons/l10n_hr\",\"addons/l10n_hr_edi\",\"addons/l10n_hr_kuna\",\"addons/l10n_hu\",\"addons/l10n_hu_edi\",\"addons/l10n_hu_edi_receive\",\"addons/l10n_id\",\"addons/l10n_id_efaktur_coretax\",\"addons/l10n_id_pos\",\"addons/l10n_ie\",\"addons/l10n_il\",\"addons/l10n_in\",\"addons/l10n_in_edi\",\"addons/l10n_in_ewaybill\",\"addons/l10n_in_ewaybill_irn\",\"addons/l10n_in_ewaybill_stock\",\"addons/l10n_in_hr_holidays\",\"addons/l10n_in_pos\",\"addons/l10n_in_purchase_stock\",\"addons/l10n_in_sale\",\"addons/l10n_in_sale_stock\",\"addons/l10n_in_stock\",\"addons/l10n_iq\",\"addons/l10n_it\",\"addons/l10n_it_edi\",\"addons/l10n_it_edi_doi\",\"addons/l10n_it_edi_sale\",\"addons/l10n_it_stock_ddt\",\"addons/l10n_jo\",\"addons/l10n_jo_edi\",\"addons/l10n_jo_edi_pos\",\"addons/l10n_jp\",\"addons/l10n_jp_ubl_pint\",\"addons/l10n_ke\",\"addons/l10n_ke_edi_tremol\",\"addons/l10n_kh\",\"addons/l10n_km\",\"addons/l10n_kr\",\"addons/l10n_kw\",\"addons/l10n_kz\",\"addons/l10n_latam_base\",\"addons/l10n_latam_check\",\"addons/l10n_latam_invoice_document\",\"addons/l10n_lb_account\",\"addons/l10n_lk\",\"addons/l10n_lk_invoice\",\"addons/l10n_lt\",\"addons/l10n_lu\",\"addons/l10n_lv\",\"addons/l10n_ma\",\"addons/l10n_mc\",\"addons/l10n_ml\",\"addons/l10n_mn\",\"addons/l10n_mq\",\"addons/l10n_mr\",\"addons/l10n_mt\",\"addons/l10n_mt_pos\",\"addons/l10n_mu_account\",\"addons/l10n_mx\",\"addons/l10n_my\",\"addons/l10n_my_edi\",\"addons/l10n_my_edi_pos\",\"addons/l10n_my_ubl_pint\",\"addons/l10n_mz\",\"addons/l10n_ne\",\"addons/l10n_ng\",\"addons/l10n_nl\",\"addons/l10n_no\",\"addons/l10n_nz\",\"addons/l10n_om\",\"addons/l10n_pa\",\"addons/l10n_pe\",\"addons/l10n_pe_pos\",\"addons/l10n_ph\",\"addons/l10n_pk\",\"addons/l10n_pl\",\"addons/l10n_pl_bank_verification\",\"addons/l10n_pl_edi\",\"addons/l10n_pl_edi_jst\",\"addons/l10n_pt\",\"addons/l10n_qa\",\"addons/l10n_re\",\"addons/l10n_ro\",\"addons/l10n_ro_cpv_code\",\"addons/l10n_ro_edi\",\"addons/l10n_ro_edi_stock\",\"addons/l10n_ro_edi_stock_batch\",\"addons/l10n_rs\",\"addons/l10n_rs_edi\",\"addons/l10n_rw\",\"addons/l10n_sa\",\"addons/l10n_sa_edi\",\"addons/l10n_sa_edi_pos\",\"addons/l10n_sa_pos\",\"addons/l10n_sa_withholding_tax\",\"addons/l10n_se\",\"addons/l10n_sg\",\"addons/l10n_sg_ubl_pint\",\"addons/l10n_si\",\"addons/l10n_sk\",\"addons/l10n_sn\",\"addons/l10n_syscohada\",\"addons/l10n_td\",\"addons/l10n_test_pos_qr_payment\",\"addons/l10n_tg\",\"addons/l10n_th\",\"addons/l10n_tn\",\"addons/l10n_tr\",\"addons/l10n_tr_nilvera\",\"addons/l10n_tr_nilvera_base_vat\",\"addons/l10n_tr_nilvera_edispatch\",\"addons/l10n_tr_nilvera_einvoice\",\"addons/l10n_tr_nilvera_einvoice_extended\",\"addons/l10n_tw\",\"addons/l10n_tw_edi_ecpay\",\"addons/l10n_tw_edi_ecpay_pos\",\"addons/l10n_tw_edi_ecpay_website_sale\",\"addons/l10n_tz_account\",\"addons/l10n_ua\",\"addons/l10n_ug\",\"addons/l10n_uk\",\"addons/l10n_us\",\"addons/l10n_us_account\",\"addons/l10n_uy\",\"addons/l10n_uy_pos\",\"addons/l10n_uz\",\"addons/l10n_ve\",\"addons/l10n_vn\",\"addons/l10n_vn_edi_viettel\",\"addons/l10n_vn_edi_viettel_pos\",\"addons/l10n_yt\",\"addons/l10n_za\",\"addons/l10n_zm_account\",\"addons/link_tracker\",\"addons/loyalty\",\"addons/lunch\",\"addons/mail\",\"addons/mail_bot\",\"addons/mail_bot_hr\",\"addons/mail_group\",\"addons/mail_plugin\",\"addons/maintenance\",\"addons/marketing_card\",\"addons/mass_mailing\",\"addons/mass_mailing_crm\",\"addons/mass_mailing_crm_sms\",\"addons/mass_mailing_event\",\"addons/mass_mailing_event_sms\",\"addons/mass_mailing_event_track\",\"addons/mass_mailing_event_track_sms\",\"addons/mass_mailing_sale\",\"addons/mass_mailing_sale_sms\",\"addons/mass_mailing_slides\",\"addons/mass_mailing_sms\",\"addons/mass_mailing_themes\",\"addons/microsoft_account\",\"addons/microsoft_calendar\",\"addons/microsoft_outlook\",\"addons/mrp\",\"addons/mrp_account\",\"addons/mrp_landed_costs\",\"addons/mrp_product_expiry\",\"addons/mrp_repair\",\"addons/mrp_subcontracting\",\"addons/mrp_subcontracting_account\",\"addons/mrp_subcontracting_dropshipping\",\"addons/mrp_subcontracting_landed_costs\",\"addons/mrp_subcontracting_purchase\",\"addons/mrp_subcontracting_repair\",\"addons/onboarding\",\"addons/partner_autocomplete\",\"addons/partnership\",\"addons/payment\",\"addons/payment_adyen\",\"addons/payment_aps\",\"addons/payment_asiapay\",\"addons/payment_authorize\",\"addons/payment_buckaroo\",\"addons/payment_custom\",\"addons/payment_demo\",\"addons/payment_dpo\",\"addons/payment_ecpay\",\"addons/payment_flutterwave\",\"addons/payment_iyzico\",\"addons/payment_mercado_pago\",\"addons/payment_mollie\",\"addons/payment_nuvei\",\"addons/payment_paymob\",\"addons/payment_paypal\",\"addons/payment_payu\",\"addons/payment_razorpay\",\"addons/payment_redsys\",\"addons/payment_stripe\",\"addons/payment_toss_payments\",\"addons/payment_worldline\",\"addons/payment_xendit\",\"addons/phone_validation\",\"addons/point_of_sale\",\"addons/portal\",\"addons/portal_rating\",\"addons/pos_account_tax_python\",\"addons/pos_adyen\",\"addons/pos_cashdro\",\"addons/pos_cashmatic\",\"addons/pos_discount\",\"addons/pos_dpopay\",\"addons/pos_edi_ubl\",\"addons/pos_event\",\"addons/pos_event_sale\",\"addons/pos_glory_cash\",\"addons/pos_hr\",\"addons/pos_hr_restaurant\",\"addons/pos_imin\",\"addons/pos_loyalty\",\"addons/pos_mercado_pago\",\"addons/pos_mollie\",\"addons/pos_mrp\",\"addons/pos_online_payment\",\"addons/pos_online_payment_self_order\",\"addons/pos_pine_labs\",\"addons/pos_qfpay\",\"addons/pos_razorpay\",\"addons/pos_repair\",\"addons/pos_restaurant\",\"addons/pos_restaurant_adyen\",\"addons/pos_restaurant_loyalty\",\"addons/pos_restaurant_stripe\",\"addons/pos_safaricom\",\"addons/pos_sale\",\"addons/pos_sale_loyalty\",\"addons/pos_sale_margin\",\"addons/pos_self_order\",\"addons/pos_self_order_adyen\",\"addons/pos_self_order_pine_labs\",\"addons/pos_self_order_qfpay\",\"addons/pos_self_order_razorpay\",\"addons/pos_self_order_sale\",\"addons/pos_self_order_stripe\",\"addons/pos_self_order_viva_com\",\"addons/pos_sms\",\"addons/pos_stripe\",\"addons/pos_viva_com\",\"addons/privacy_lookup\",\"addons/product\",\"addons/product_email_template\",\"addons/product_expiry\",\"addons/product_margin\",\"addons/product_matrix\",\"addons/project\",\"addons/project_account\",\"addons/project_hr_expense\",\"addons/project_hr_skills\",\"addons/project_mail_plugin\",\"addons/project_mrp\",\"addons/project_mrp_account\",\"addons/project_mrp_sale\",\"addons/project_mrp_stock_landed_costs\",\"addons/project_purchase\",\"addons/project_purchase_stock\",\"addons/project_sale_expense\",\"addons/project_sms\",\"addons/project_stock\",\"addons/project_stock_account\",\"addons/project_stock_landed_costs\",\"addons/project_timesheet_holidays\",\"addons/project_todo\",\"addons/purchase\",\"addons/purchase_edi_ubl_bis3\",\"addons/purchase_mrp\",\"addons/purchase_product_matrix\",\"addons/purchase_repair\",\"addons/purchase_requisition\",\"addons/purchase_requisition_sale\",\"addons/purchase_requisition_stock\",\"addons/purchase_stock\",\"addons/rating\",\"addons/repair\",\"addons/resource\",\"addons/resource_mail\",\"addons/rpc\",\"addons/sale\",\"addons/sale_crm\",\"addons/sale_edi_ubl\",\"addons/sale_expense\",\"addons/sale_expense_margin\",\"addons/sale_gelato\",\"addons/sale_gelato_stock\",\"addons/sale_loyalty\",\"addons/sale_loyalty_delivery\",\"addons/sale_management\",\"addons/sale_margin\",\"addons/sale_mrp\",\"addons/sale_mrp_margin\",\"addons/sale_pdf_quote_builder\",\"addons/sale_product_matrix\",\"addons/sale_project\",\"addons/sale_project_stock\",\"addons/sale_project_stock_account\",\"addons/sale_purchase\",\"addons/sale_purchase_project\",\"addons/sale_purchase_stock\",\"addons/sale_service\",\"addons/sale_sms\",\"addons/sale_stock\",\"addons/sale_stock_margin\",\"addons/sale_stock_product_expiry\",\"addons/sale_timesheet\",\"addons/sale_timesheet_margin\",\"addons/sales_team\",\"addons/sms\",\"addons/sms_twilio\",\"addons/snailmail\",\"addons/snailmail_account\",\"addons/social_media\",\"addons/spreadsheet\",\"addons/spreadsheet_account\",\"addons/spreadsheet_dashboard\",\"addons/spreadsheet_dashboard_account\",\"addons/spreadsheet_dashboard_event_sale\",\"addons/spreadsheet_dashboard_hr_expense\",\"addons/spreadsheet_dashboard_hr_timesheet\",\"addons/spreadsheet_dashboard_im_livechat\",\"addons/spreadsheet_dashboard_pos_hr\",\"addons/spreadsheet_dashboard_pos_restaurant\",\"addons/spreadsheet_dashboard_sale\",\"addons/spreadsheet_dashboard_sale_timesheet\",\"addons/spreadsheet_dashboard_stock_account\",\"addons/spreadsheet_dashboard_website_sale\",\"addons/spreadsheet_dashboard_website_sale_slides\",\"addons/stock\",\"addons/stock_account\",\"addons/stock_delivery\",\"addons/stock_dropshipping\",\"addons/stock_fleet\",\"addons/stock_landed_costs\",\"addons/stock_maintenance\",\"addons/stock_picking_batch\",\"addons/stock_sms\",\"addons/survey\",\"addons/survey_crm\",\"addons/test_base_automation\",\"addons/test_crm_full\",\"addons/test_discuss_full\",\"addons/test_event_full\",\"addons/test_html_field_history\",\"addons/test_import_export\",\"addons/test_mail\",\"addons/test_mail_full\",\"addons/test_mail_sms\",\"addons/test_mass_mailing\",\"addons/test_resource\",\"addons/test_sale_product_configurators\",\"addons/test_sale_purchase_edi_ubl\",\"addons/test_spreadsheet\",\"addons/test_website\",\"addons/test_website_modules\",\"addons/test_website_slides_full\",\"addons/theme_default\",\"addons/transifex\",\"addons/uom\",\"addons/utm\",\"addons/web\",\"addons/web_hierarchy\",\"addons/web_tour\",\"addons/web_unsplash\",\"addons/website\",\"addons/website_blog\",\"addons/website_cf_turnstile\",\"addons/website_crm\",\"addons/website_crm_iap_reveal\",\"addons/website_crm_livechat\",\"addons/website_crm_partner_assign\",\"addons/website_crm_sms\",\"addons/website_customer\",\"addons/website_event\",\"addons/website_event_booth\",\"addons/website_event_booth_exhibitor\",\"addons/website_event_booth_sale\",\"addons/website_event_booth_sale_exhibitor\",\"addons/website_event_crm\",\"addons/website_event_exhibitor\",\"addons/website_event_sale\",\"addons/website_event_track\",\"addons/website_event_track_live\",\"addons/website_event_track_live_quiz\",\"addons/website_event_track_quiz\",\"addons/website_forum\",\"addons/website_google_map\",\"addons/website_hr_recruitment\",\"addons/website_hr_recruitment_livechat\",\"addons/website_links\",\"addons/website_livechat\",\"addons/website_mail\",\"addons/website_mail_group\",\"addons/website_mass_mailing\",\"addons/website_mass_mailing_sms\",\"addons/website_partner\",\"addons/website_payment\",\"addons/website_profile\",\"addons/website_project\",\"addons/website_sale\",\"addons/website_sale_autocomplete\",\"addons/website_sale_collect\",\"addons/website_sale_collect_wishlist\",\"addons/website_sale_comparison\",\"addons/website_sale_comparison_wishlist\",\"addons/website_sale_gelato\",\"addons/website_sale_loyalty\",\"addons/website_sale_mass_mailing\",\"addons/website_sale_mondialrelay\",\"addons/website_sale_mrp\",\"addons/website_sale_slides\",\"addons/website_sale_stock\",\"addons/website_sale_stock_wishlist\",\"addons/website_sale_wishlist\",\"addons/website_slides\",\"addons/website_slides_forum\",\"addons/website_slides_survey\",\"addons/website_sms\",\"addons/website_timesheet\",\"odoo/addons/base\",\"odoo/addons/test_access_rights\",\"odoo/addons/test_action_bindings\",\"odoo/addons/test_assetsbundle\",\"odoo/addons/test_auth_custom\",\"odoo/addons/test_convert\",\"odoo/addons/test_converter\",\"odoo/addons/test_data_module\",\"odoo/addons/test_data_module_install\",\"odoo/addons/test_http\",\"odoo/addons/test_inherit\",\"odoo/addons/test_inherit_depends\",\"odoo/addons/test_inherits\",\"odoo/addons/test_inherits_depends\",\"odoo/addons/test_lint\",\"odoo/addons/test_main_flows\",\"odoo/addons/test_mimetypes\",\"odoo/addons/test_orm\",\"odoo/addons/test_read_group\",\"odoo/addons/test_rpc\",\"odoo/addons/test_search_panel\",\"odoo/addons/test_testing_utilities\",\"odoo/addons/test_translation_import\",\"odoo/addons/test_uninstall\"]"
         ENACT_ENVIRONMENT_FILES: "[]"
         ENACT_JOB_SERVICES: db
-        ENACT_PREPARE_ENVIRONMENT_FILES: "[]"
+        ENACT_PREPARE_ENVIRONMENT_FILES: "[\"enve.cue\"]"
         ENACT_R2_BUCKET: ${{ secrets.R2_BUCKET || env.R2_BUCKET }}
         ENVE_CACHE_CONCURRENCY: "16"
     - name: Check enve Stores into the Host Cache
       if: ${{ (steps.runner_caches.outputs.host != '') && steps.stage_plan.outputs.stage_has_work == 'true' }}
       run: enact ci check-store
+    - name: Install Python Dependencies
+      id: python_install
+      if: ${{ (hashFiles('pyproject.toml', 'requirements.txt') != '' && steps.stage_plan.outputs.stage_needs_python == 'true') && steps.stage_plan.outputs.stage_has_work == 'true' }}
+      run: enact ci deps install python --manager uv
+      env:
+        ENACT_ENVIRONMENT_FILE: enve.cue
+        ENACT_PYTHON_INSTALL: uv sync --frozen --exact --quiet
+        UV_HTTP_RETRIES: "5"
+        UV_HTTP_TIMEOUT: "120"
     - name: Verify Pipeline Contracts (enact check --contracts)
       run: |-
         ENACT_BIN=""
@@ -2723,6 +2741,26 @@ jobs:
         psi=$(tr '\n' ' ' < /sys/fs/cgroup/memory.pressure 2>/dev/null || echo unavailable)
         echo "cgroup telemetry: anon=${anon} kernel=${kernel} peak=${peak} max=${limit} events(high=${high:-0},max=${max_ev:-0},oom_kill=${oom:-0}) ${sampled} psi=${psi}"
         fi
+    - name: Check Package Caches for New Entries
+      id: cache_delta
+      if: ${{ (!cancelled() && steps.runner_caches.outputs.host == '' && steps.python_l1_cache.outputs.cache-hit != 'true' && env.ENACT_SAVE_EVENT == 'true' && github.event_name != 'pull_request') && steps.stage_plan.outputs.stage_has_work == 'true' }}
+      continue-on-error: true
+      run: enact ci cache-delta check
+      env:
+        ENACT_CACHE_DELTA: |-
+          python_l1_cache /tmp/.cache/uv
+          python_l1_cache /tmp/.cache/pip
+        ENACT_CACHE_HITS: python_l1_cache=${{ steps.python_l1_cache.outputs.cache-hit }}
+        ENACT_UV_PRUNE: ${{ steps.stage_plan.outputs.stage_needs_python == 'true' && steps.python_l1_cache.outputs.cache-hit != 'true' }}
+    - name: Save Python build & venv cache
+      if: ${{ ((!cancelled() && (success() || steps.python_install.outcome == 'success') && (env.ENACT_SAVE_EVENT == 'true' && steps.stage_plan.outputs.stage_needs_python == 'true' && hashFiles('pyproject.toml', 'requirements.txt') != '' && steps.runner_caches.outputs.host == '' && steps.cache_delta.outputs.python_l1_cache == 'true')) && github.event_name != 'pull_request' && steps.python_l1_cache.outputs.cache-hit != 'true') && steps.stage_plan.outputs.stage_has_work == 'true' }}
+      continue-on-error: true
+      uses: actions/cache/save@v6
+      with:
+        key: ${{ steps.python_l1_cache.outputs.cache-primary-key }}
+        path: |-
+          /tmp/.cache/uv
+          /tmp/.cache/pip
     - name: Upload Telemetry [telemetry-stage-preflight]
       if: always()
       continue-on-error: true
@@ -3744,6 +3782,15 @@ jobs:
     - name: Check enve Stores into the Host Cache
       if: ${{ steps.runner_caches.outputs.host != '' }}
       run: enact ci check-store
+    - name: Install Python Dependencies
+      id: python_install
+      if: hashFiles('pyproject.toml', 'requirements.txt') != '' && contains(matrix.technology, 'python')
+      run: enact ci deps install python --manager uv
+      env:
+        ENACT_ENVIRONMENT_FILE: enve.cue
+        ENACT_PYTHON_INSTALL: uv sync --frozen --exact --quiet
+        UV_HTTP_RETRIES: "5"
+        UV_HTTP_TIMEOUT: "120"
     - name: Execute Component Task
       run: eval "$ENACT_MATRIX_COMMAND"
       env:
@@ -3853,7 +3900,7 @@ jobs:
           cache_templates=${{ steps.cache_templates.outputs.cache-hit }}
         ENACT_UV_PRUNE: ${{ contains(matrix.technology, 'python') && steps.python_l1_cache.outputs.cache-hit != 'true' }}
     - name: Save Python build & venv cache
-      if: (env.ENACT_SAVE_EVENT == 'true' && contains(matrix.technology, 'python') && steps.runner_caches.outputs.host == '' && hashFiles('uv.lock', 'pyproject.toml', 'requirements.txt', 'poetry.lock', 'enve.lock') != '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') && steps.cache_delta.outputs.python_l1_cache == 'true') && github.event_name != 'pull_request' && steps.python_l1_cache.outputs.cache-hit != 'true'
+      if: (!cancelled() && (success() || steps.python_install.outcome == 'success') && (env.ENACT_SAVE_EVENT == 'true' && contains(matrix.technology, 'python') && steps.runner_caches.outputs.host == '' && hashFiles('uv.lock', 'pyproject.toml', 'requirements.txt', 'poetry.lock', 'enve.lock') != '' && (matrix.shard_index == '' || matrix.shard_index == 1 || matrix.shard_index == '1') && steps.cache_delta.outputs.python_l1_cache == 'true')) && github.event_name != 'pull_request' && steps.python_l1_cache.outputs.cache-hit != 'true'
       continue-on-error: true
       uses: actions/cache/save@v6
       with:
@@ -3869,3 +3916,1764 @@ jobs:
         with:
           key: ${{ steps.cache_templates.outputs.cache-primary-key }}
           path: .enact/state/templates
+  warm-hosted-caches:
+    name: Warm Hosted L1 Caches
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch || github.event_name == 'workflow_dispatch' && inputs.seed_caches == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+    - name: Probe Runner Caches
+      id: runner_caches
+      run: |
+        set -euo pipefail
+        host="${ENACT_HOST_CACHE:-}"
+        if [ -n "$host" ] && ! { [ -d "$host/repo" ] && [ -w "$host/repo" ]; }; then
+            echo "::warning::ENACT_HOST_CACHE=$host has no writable repo/ directory; using GitHub's cache"
+            host=""
+        fi
+        if [ -n "$host" ]; then
+            mkdir -p "$host/repo/git" "$host/repo/outputs"
+            echo "ENACT_GIT_MIRROR=$host/repo/git/${GITHUB_REPOSITORY##*/}.git" >> "$GITHUB_ENV"
+            echo "ENACT_OUTPUTS_CACHE=$host/repo/outputs" >> "$GITHUB_ENV"
+        fi
+        echo "ENACT_HOST_CACHE=$host" >> "$GITHUB_ENV"
+        printf 'host=%s\n' "$host" >> "$GITHUB_OUTPUT"
+        printf 'Host cache: %s\n' "${host:-none}"
+    - name: Checkout Repository (sparse) from the Host Mirror
+      id: host_checkout
+      if: ${{ steps.runner_caches.outputs.host != '' }}
+      continue-on-error: true
+      run: |
+        set -euo pipefail
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        mirror="$ENACT_GIT_MIRROR"
+        target_sha="$GITHUB_SHA"
+        scored_control=0
+        if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${ENACT_CONTROL_PIN_REQUIRED:-}" = "true" ]; then
+            scored_control=1
+        fi
+        if [ -n "${ENACT_CONTROL_CHECKOUT_SHA:-}" ]; then
+            if [ "$scored_control" -ne 1 ]; then
+                echo "::error::control_checkout_sha override is refused outside scored-control workflow_dispatch (control_pin_required=true)" >&2
+                exit 1
+            fi
+            case "$ENACT_CONTROL_CHECKOUT_SHA" in
+                *[!0-9a-fA-F]*)
+                    echo "::error::ENACT_CONTROL_CHECKOUT_SHA must be 40-char hex, got '$ENACT_CONTROL_CHECKOUT_SHA'" >&2
+                    exit 1
+                    ;;
+            esac
+            if [ "${#ENACT_CONTROL_CHECKOUT_SHA}" -ne 40 ]; then
+                echo "::error::ENACT_CONTROL_CHECKOUT_SHA must be 40-char hex, got '$ENACT_CONTROL_CHECKOUT_SHA'" >&2
+                exit 1
+            fi
+            target_sha="$ENACT_CONTROL_CHECKOUT_SHA"
+        elif [ "$scored_control" -eq 1 ]; then
+            echo "::error::scored-control dispatch requires non-empty control_checkout_sha" >&2
+            exit 1
+        fi
+        export GIT_CONFIG_COUNT=2
+        export GIT_CONFIG_KEY_0=safe.directory
+        export GIT_CONFIG_VALUE_0="$GITHUB_WORKSPACE"
+        export GIT_CONFIG_KEY_1=safe.directory
+        export GIT_CONFIG_VALUE_1="$mirror"
+        header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$ENACT_GIT_TOKEN" | base64 | tr -d '\n')"
+        base_ref="${GITHUB_BASE_REF:-${ENACT_BASE_REF:-}}"
+        depth="${ENACT_HOST_FETCH_DEPTH:-50}"
+        fetch_args=(--no-tags)
+        if [ "$depth" != "0" ]; then
+            fetch_args+=("--depth=$depth")
+        fi
+        refs=()
+        case "${GITHUB_REF:-}" in
+            refs/heads/*|refs/pull/*|refs/tags/*) refs+=("+$GITHUB_REF:$GITHUB_REF") ;;
+        esac
+        if [ -n "$base_ref" ] && [ "refs/heads/$base_ref" != "${GITHUB_REF:-}" ]; then
+            refs+=("+refs/heads/$base_ref:refs/heads/$base_ref")
+        fi
+        (
+            flock 9
+            if [ ! -f "$mirror/HEAD" ]; then
+                git init -q --bare "$mirror"
+                git -C "$mirror" config uploadpack.allowAnySHA1InWant true
+                git -C "$mirror" config gc.auto 0
+            fi
+            ref_current=""
+            case "${GITHUB_REF:-}" in
+                refs/heads/*|refs/pull/*|refs/tags/*) ref_current=$(git -C "$mirror" rev-parse --verify -q "$GITHUB_REF^{commit}" 2>/dev/null || true) ;;
+                *) ref_current="$target_sha" ;;
+            esac
+            base_missing=0
+            if [ -n "$base_ref" ] && ! git -C "$mirror" rev-parse --verify -q "refs/heads/$base_ref^{commit}" >/dev/null 2>&1; then
+                base_missing=1
+            fi
+            if [ -z "$(find "$mirror/HEAD" -mmin -1 2>/dev/null || true)" ] || [ "$ref_current" != "$target_sha" ] || [ "$base_missing" = 1 ] || ! git -C "$mirror" cat-file -e "$target_sha^{commit}" 2>/dev/null; then
+                if [ "${#refs[@]}" -gt 0 ]; then
+                    git -C "$mirror" -c "http.extraheader=$header" fetch -q "${fetch_args[@]}" "$url" "${refs[@]}" \
+                        || git -C "$mirror" -c "http.extraheader=$header" fetch -q "${fetch_args[@]}" "$url" "$target_sha"
+                else
+                    git -C "$mirror" -c "http.extraheader=$header" fetch -q "${fetch_args[@]}" "$url" "$target_sha"
+                fi
+                if ! git -C "$mirror" cat-file -e "$target_sha^{commit}" 2>/dev/null; then
+                    git -C "$mirror" -c "http.extraheader=$header" fetch -q "${fetch_args[@]}" "$url" "$target_sha"
+                fi
+            fi
+            touch "$mirror" "$mirror/HEAD" 2>/dev/null || true
+        ) 9>"$mirror.lock"
+        cd "$GITHUB_WORKSPACE"
+        trap 'rm -rf "$GITHUB_WORKSPACE/.git"' ERR
+        find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        git init -q .
+        echo "$mirror/objects" > .git/objects/info/alternates
+        [ ! -f "$mirror/shallow" ] || cp "$mirror/shallow" .git/shallow
+        git remote add origin "$url"
+        git config --local "http.$GITHUB_SERVER_URL/.extraheader" "$header"
+        git config --local gc.auto 0
+        mirror_branches=()
+        case "${GITHUB_REF:-}" in
+            refs/heads/*) mirror_branches+=("${GITHUB_REF#refs/heads/}") ;;
+        esac
+        if [ -n "$base_ref" ] && [ "refs/heads/$base_ref" != "${GITHUB_REF:-}" ]; then
+            mirror_branches+=("$base_ref")
+        fi
+        if [ "${#mirror_branches[@]}" -gt 0 ]; then
+            for ref_branch in "${mirror_branches[@]}"; do
+                ref_sha=$(git -C "$mirror" rev-parse --verify -q "refs/heads/$ref_branch^{commit}" 2>/dev/null || true)
+                if [ -n "$ref_sha" ]; then
+                    git update-ref "refs/remotes/origin/$ref_branch" "$ref_sha"
+                fi
+            done
+        fi
+        if [ -n "${ENACT_SPARSE_CONE:-}" ]; then
+            raw_cone=()
+            while IFS= read -r entry; do
+                entry="${entry#"${entry%%[![:space:]]*}"}"
+                entry="${entry%"${entry##*[![:space:]]}"}"
+                [ -n "$entry" ] && raw_cone+=("$entry")
+            done <<<"$ENACT_SPARSE_CONE"
+            cone=()
+            to_check=()
+            if [ "${#raw_cone[@]}" -gt 0 ]; then
+                for entry in "${raw_cone[@]}"; do
+                    case "$entry" in
+                        */.enact-direct-files)
+                            cone+=("$entry")
+                            ;;
+                        *)
+                            to_check+=("$entry")
+                            ;;
+                    esac
+                done
+            fi
+            if [ "${#to_check[@]}" -gt 0 ]; then
+                idx=0
+                while IFS= read -r kind; do
+                    entry="${to_check[$idx]}"
+                    idx=$((idx + 1))
+                    if [ "$kind" = "blob" ]; then
+                        case "$entry" in
+                            */*) cone+=("${entry%/*}/.enact-direct-files") ;;
+                        esac
+                    else
+                        cone+=("$entry")
+                    fi
+                done < <(
+                    for entry in "${to_check[@]}"; do
+                        printf '%s:%s\n' "${target_sha:-$GITHUB_SHA}" "$entry"
+                    done | git cat-file --batch-check='%(objecttype)'
+                )
+            fi
+            if [ "${#cone[@]}" -gt 0 ]; then
+                git sparse-checkout set --cone "${cone[@]}"
+            fi
+        fi
+        if [ -n "${ENACT_CONTROL_CHECKOUT_SHA:-}" ]; then
+            git checkout -q --force --detach "$target_sha"
+        else
+            case "${GITHUB_REF:-}" in
+                refs/heads/*) git checkout -q --force -B "${GITHUB_REF#refs/heads/}" "$target_sha" ;;
+                *) git checkout -q --force --detach "$target_sha" ;;
+            esac
+        fi
+        checked_commit=$(git rev-parse HEAD)
+        checked_tree=$(git rev-parse "HEAD^{tree}")
+        if [ "$checked_commit" != "$target_sha" ]; then
+            echo "::error::host checkout commit mismatch: expected $target_sha, got $checked_commit" >&2
+            exit 1
+        fi
+        echo "Checked out $checked_commit (tree $checked_tree) through the host mirror"
+      env:
+        ENACT_CONTROL_CHECKOUT_SHA: ${{ inputs.control_checkout_sha }}
+        ENACT_CONTROL_PIN_REQUIRED: ${{ inputs.control_pin_required }}
+        ENACT_GIT_TOKEN: ${{ github.token }}
+        ENACT_SPARSE_CONE: |-
+          .enact
+          cue.mod
+          .github
+          bin
+          enve.cue
+          enve.lock
+          odoo-bin
+          requirements.txt
+          setup.py
+          setup.cfg
+          pyproject.toml
+          Justfile
+          oxlint.json
+          ruff.toml
+          uv.lock
+          helpers
+          odoo
+          setup
+          addons/api_doc
+          addons/auth_passkey
+          addons/auth_totp
+          addons/base_import
+          addons/base_import_module
+          addons/base_setup
+          addons/bus
+          addons/html_editor
+          addons/http_routing
+          addons/iap
+          addons/rpc
+          addons/web
+          addons/web_tour
+          addons/web_unsplash
+          addons/account
+          addons/auth_signup
+          addons/auth_totp_mail
+          addons/base_install_request
+          addons/google_gmail
+          addons/iap_mail
+          addons/mail
+          addons/mail_bot
+          addons/microsoft_outlook
+          addons/partner_autocomplete
+          addons/phone_validation
+          addons/privacy_lookup
+          addons/sms
+          addons/snailmail
+          odoo/addons/base
+          addons/analytic
+          addons/digest
+          addons/onboarding
+          addons/portal
+          addons/product
+          addons/resource
+          addons/uom
+          addons/account_add_gln
+          addons/account_check_printing
+          addons/account_edi_ubl_cii
+          addons/account_payment
+          addons/auth_passkey_portal
+          addons/auth_totp_portal
+          addons/base_vat
+          addons/l10n_us
+          addons/l10n_us_account
+          addons/payment
+          addons/payment_mercado_pago
+          addons/payment_stripe
+          addons/resource_mail
+          addons/snailmail_account
+          addons/spreadsheet
+          addons/spreadsheet_account
+          addons/spreadsheet_dashboard
+          addons/spreadsheet_dashboard_account
+          addons/account_debit_note
+          addons/account_edi
+          addons/account_edi_proxy_client
+          addons/certificate
+          addons/account_fleet
+          addons/fleet
+          addons/account_payment_interco
+          addons/account_peppol
+          addons/account_peppol_advanced_fields
+          addons/account_peppol_response
+          addons/account_qr_code_emv
+          addons/account_qr_code_sepa
+          addons/base_iban
+          addons/account_tax_python
+          addons/account_test
+          addons/account_update_tax_tags
+          addons/attachment_indexation
+          addons/auth_ldap
+          addons/auth_oauth
+          addons/auth_password_policy
+          addons/auth_password_policy_portal
+          addons/auth_password_policy_signup
+          addons/auth_timeout
+          addons/barcodes
+          addons/barcodes_gs1_nomenclature
+          addons/base_address_extended
+          addons/contacts
+          addons/base_automation
+          addons/base_geolocalize
+          addons/base_sparse_field
+          addons/board
+          addons/calendar
+          addons/calendar_sms
+          addons/cloud_storage
+          addons/cloud_storage_azure
+          addons/cloud_storage_google
+          addons/cloud_storage_migration
+          addons/crm
+          addons/sales_team
+          addons/utm
+          addons/crm_iap_enrich
+          addons/iap_crm
+          addons/crm_iap_mine
+          addons/crm_livechat
+          addons/im_livechat
+          addons/rating
+          addons/crm_mail_plugin
+          addons/mail_plugin
+          addons/crm_sms
+          addons/data_recycle
+          addons/delivery
+          addons/sale
+          addons/sale_edi_ubl
+          addons/sale_sms
+          addons/spreadsheet_dashboard_sale
+          addons/payment_custom
+          addons/delivery_mondialrelay
+          addons/sale_management
+          addons/sale_pdf_quote_builder
+          addons/sale_stock
+          addons/spreadsheet_dashboard_stock_account
+          addons/stock
+          addons/stock_account
+          addons/stock_delivery
+          addons/stock_sms
+          addons/delivery_stock_picking_batch
+          addons/stock_picking_batch
+          addons/event
+          addons/event_booth
+          addons/event_booth_sale
+          addons/event_product
+          addons/event_sale
+          addons/event_crm
+          addons/event_crm_sale
+          addons/event_sms
+          addons/gamification
+          addons/gamification_sale_crm
+          addons/sale_crm
+          addons/google_account
+          addons/google_address_autocomplete
+          addons/google_calendar
+          addons/google_recaptcha
+          addons/hr
+          addons/hr_attendance
+          addons/hr_homeworking
+          addons/hr_org_chart
+          addons/hr_skills
+          addons/mail_bot_hr
+          addons/web_hierarchy
+          addons/hr_calendar
+          addons/hr_expense
+          addons/hr_fleet
+          addons/hr_gamification
+          addons/hr_holidays
+          addons/hr_holidays_attendance
+          addons/hr_holidays_homeworking
+          addons/hr_homeworking_calendar
+          addons/hr_hourly_cost
+          addons/hr_livechat
+          addons/hr_maintenance
+          addons/maintenance
+          addons/hr_presence
+          addons/hr_recruitment
+          addons/hr_recruitment_skills
+          addons/hr_recruitment_sms
+          addons/hr_recruitment_survey
+          addons/survey
+          addons/hr_skills_event
+          addons/hr_skills_slides
+          addons/html_builder
+          addons/social_media
+          addons/website
+          addons/website_mail
+          addons/website_sms
+          addons/portal_rating
+          addons/website_partner
+          addons/website_profile
+          addons/website_slides
+          addons/hr_skills_survey
+          addons/hr_timesheet
+          addons/project
+          addons/hr_timesheet_attendance
+          addons/hr_work_entry
+          addons/hr_work_entry_holidays
+          addons/iot_base
+          addons/iot_box_image
+          addons/iot_drivers
+          addons/l10n_account_edi_ubl_cii_tests
+          addons/l10n_au
+          addons/l10n_be
+          addons/l10n_de
+          addons/l10n_din5008
+          addons/l10n_fr
+          addons/l10n_fr_account
+          addons/l10n_nl
+          addons/l10n_account_withholding_tax
+          addons/l10n_account_withholding_tax_pos
+          addons/point_of_sale
+          addons/l10n_ae
+          addons/l10n_gcc_invoice
+          addons/l10n_ae_pos
+          addons/l10n_gcc_pos
+          addons/pos_online_payment
+          addons/l10n_anz_ubl_pint
+          addons/l10n_ar
+          addons/l10n_latam_base
+          addons/l10n_latam_invoice_document
+          addons/l10n_ar_pos
+          addons/l10n_ar_stock
+          addons/l10n_ar_website_sale
+          addons/spreadsheet_dashboard_website_sale
+          addons/website_payment
+          addons/website_sale
+          addons/website_sale_comparison
+          addons/website_sale_comparison_wishlist
+          addons/website_sale_wishlist
+          addons/l10n_ar_withholding
+          addons/l10n_latam_check
+          addons/l10n_at
+          addons/l10n_bd
+          addons/l10n_be_pos_restaurant
+          addons/pos_restaurant
+          addons/l10n_be_pos_sale
+          addons/pos_sale
+          addons/l10n_bf
+          addons/l10n_syscohada
+          addons/l10n_bg
+          addons/l10n_bg_ledger
+          addons/l10n_bh
+          addons/l10n_bj
+          addons/l10n_bo
+          addons/l10n_br
+          addons/l10n_br_sales
+          addons/l10n_br_website_sale
+          addons/l10n_ca
+          addons/l10n_cd
+          addons/l10n_cf
+          addons/l10n_cg
+          addons/l10n_ch
+          addons/l10n_ch_pos
+          addons/l10n_ci
+          addons/l10n_cl
+          addons/l10n_cm
+          addons/l10n_cn
+          addons/l10n_cn_city
+          addons/l10n_co
+          addons/l10n_co_pos
+          addons/l10n_cr
+          addons/l10n_cy
+          addons/l10n_cz
+          addons/l10n_din5008_expense
+          addons/l10n_din5008_purchase
+          addons/purchase
+          addons/l10n_din5008_repair
+          addons/repair
+          addons/l10n_din5008_sale
+          addons/l10n_din5008_stock
+          addons/l10n_dk
+          addons/l10n_dk_fik
+          addons/l10n_dk_nemhandel
+          addons/l10n_dk_nemhandel_response
+          addons/l10n_dk_oioubl
+          addons/l10n_do
+          addons/l10n_dz
+          addons/l10n_ec
+          addons/l10n_ec_sale
+          addons/l10n_ec_stock
+          addons/l10n_ee
+          addons/l10n_eg
+          addons/l10n_eg_edi_eta
+          addons/l10n_es
+          addons/l10n_es_edi_facturae
+          addons/l10n_es_edi_sii
+          addons/l10n_es_edi_tbai
+          addons/l10n_es_edi_tbai_pos
+          addons/l10n_es_edi_verifactu
+          addons/l10n_es_edi_verifactu_pos
+          addons/l10n_es_pos
+          addons/l10n_et
+          addons/l10n_eu_oss
+          addons/l10n_fi
+          addons/l10n_fi_sale
+          addons/l10n_fr_facturx_chorus_pro
+          addons/l10n_fr_hr_holidays
+          addons/l10n_fr_hr_work_entry_holidays
+          addons/l10n_fr_pdp
+          addons/l10n_fr_pdp_pos
+          addons/l10n_fr_pos_cert
+          addons/l10n_ga
+          addons/l10n_gcc_invoice_stock_account
+          addons/l10n_ge
+          addons/l10n_gf
+          addons/l10n_gn
+          addons/l10n_gp
+          addons/l10n_gq
+          addons/l10n_gr
+          addons/l10n_gr_edi
+          addons/l10n_gr_edi_e_invoo
+          addons/l10n_gt
+          addons/l10n_gw
+          addons/l10n_hk
+          addons/l10n_hn
+          addons/l10n_hr
+          addons/l10n_hr_edi
+          addons/l10n_hr_kuna
+          addons/l10n_hu
+          addons/l10n_hu_edi
+          addons/l10n_hu_edi_receive
+          addons/l10n_id
+          addons/l10n_id_efaktur_coretax
+          addons/l10n_id_pos
+          addons/l10n_ie
+          addons/l10n_il
+          addons/l10n_in
+          addons/l10n_in_edi
+          addons/l10n_in_ewaybill
+          addons/l10n_in_ewaybill_irn
+          addons/l10n_in_ewaybill_stock
+          addons/l10n_in_stock
+          addons/l10n_in_hr_holidays
+          addons/l10n_in_pos
+          addons/l10n_in_purchase_stock
+          addons/purchase_stock
+          addons/l10n_in_sale
+          addons/l10n_in_sale_stock
+          addons/l10n_iq
+          addons/l10n_it
+          addons/l10n_it_edi
+          addons/l10n_it_edi_doi
+          addons/l10n_it_edi_sale
+          addons/l10n_it_stock_ddt
+          addons/l10n_jo
+          addons/l10n_jo_edi
+          addons/l10n_jo_edi_pos
+          addons/pos_edi_ubl
+          addons/l10n_jp
+          addons/l10n_jp_ubl_pint
+          addons/l10n_ke
+          addons/l10n_ke_edi_tremol
+          addons/l10n_kh
+          addons/l10n_km
+          addons/l10n_kr
+          addons/l10n_kw
+          addons/l10n_kz
+          addons/l10n_lb_account
+          addons/l10n_lk
+          addons/l10n_lk_invoice
+          addons/l10n_lt
+          addons/l10n_lu
+          addons/l10n_lv
+          addons/l10n_ma
+          addons/l10n_mc
+          addons/l10n_ml
+          addons/l10n_mn
+          addons/l10n_mq
+          addons/l10n_mr
+          addons/l10n_mt
+          addons/l10n_mt_pos
+          addons/l10n_mu_account
+          addons/l10n_mx
+          addons/l10n_my
+          addons/l10n_my_edi
+          addons/l10n_my_ubl_pint
+          addons/l10n_my_edi_pos
+          addons/l10n_mz
+          addons/l10n_ne
+          addons/l10n_ng
+          addons/l10n_no
+          addons/l10n_nz
+          addons/l10n_om
+          addons/l10n_pa
+          addons/l10n_pe
+          addons/l10n_pe_pos
+          addons/l10n_ph
+          addons/l10n_pk
+          addons/l10n_pl
+          addons/l10n_pl_bank_verification
+          addons/l10n_pl_edi
+          addons/l10n_pl_edi_jst
+          addons/l10n_pt
+          addons/l10n_qa
+          addons/l10n_re
+          addons/l10n_ro
+          addons/l10n_ro_cpv_code
+          addons/l10n_ro_edi
+          addons/l10n_ro_edi_stock
+          addons/l10n_ro_edi_stock_batch
+          addons/l10n_rs
+          addons/l10n_rs_edi
+          addons/l10n_rw
+          addons/l10n_sa
+          addons/l10n_sa_edi
+          addons/l10n_sa_edi_pos
+          addons/l10n_sa_pos
+          addons/l10n_sa_withholding_tax
+          addons/l10n_se
+          addons/l10n_sg
+          addons/l10n_sg_ubl_pint
+          addons/l10n_si
+          addons/l10n_sk
+          addons/l10n_sn
+          addons/l10n_td
+          addons/l10n_test_pos_qr_payment
+          addons/l10n_tg
+          addons/l10n_th
+          addons/l10n_tn
+          addons/l10n_tr
+          addons/l10n_tr_nilvera
+          addons/l10n_tr_nilvera_base_vat
+          addons/l10n_tr_nilvera_edispatch
+          addons/l10n_tr_nilvera_einvoice
+          addons/l10n_tr_nilvera_einvoice_extended
+          addons/l10n_tw
+          addons/l10n_tw_edi_ecpay
+          addons/l10n_tw_edi_ecpay_pos
+          addons/l10n_tw_edi_ecpay_website_sale
+          addons/l10n_tz_account
+          addons/l10n_ua
+          addons/l10n_ug
+          addons/l10n_uk
+          addons/l10n_uy
+          addons/l10n_uy_pos
+          addons/l10n_uz
+          addons/l10n_ve
+          addons/l10n_vn
+          addons/l10n_vn_edi_viettel
+          addons/l10n_vn_edi_viettel_pos
+          addons/l10n_yt
+          addons/l10n_za
+          addons/l10n_zm_account
+          addons/link_tracker
+          addons/loyalty
+          addons/lunch
+          addons/mail_group
+          addons/marketing_card
+          addons/mass_mailing
+          addons/mass_mailing_crm
+          addons/mass_mailing_crm_sms
+          addons/mass_mailing_sms
+          addons/mass_mailing_event
+          addons/mass_mailing_event_sms
+          addons/mass_mailing_event_track
+          addons/website_event
+          addons/website_event_track
+          addons/mass_mailing_event_track_sms
+          addons/mass_mailing_sale
+          addons/mass_mailing_sale_sms
+          addons/mass_mailing_slides
+          addons/mass_mailing_themes
+          addons/microsoft_account
+          addons/microsoft_calendar
+          addons/mrp
+          addons/mrp_account
+          addons/mrp_landed_costs
+          addons/stock_landed_costs
+          addons/mrp_product_expiry
+          addons/product_expiry
+          addons/mrp_repair
+          addons/mrp_subcontracting
+          addons/mrp_subcontracting_account
+          addons/mrp_subcontracting_dropshipping
+          addons/sale_purchase
+          addons/sale_purchase_stock
+          addons/stock_dropshipping
+          addons/mrp_subcontracting_landed_costs
+          addons/mrp_subcontracting_purchase
+          addons/purchase_mrp
+          addons/mrp_subcontracting_repair
+          addons/partnership
+          addons/payment_adyen
+          addons/payment_aps
+          addons/payment_asiapay
+          addons/payment_authorize
+          addons/payment_buckaroo
+          addons/payment_demo
+          addons/payment_dpo
+          addons/payment_ecpay
+          addons/payment_flutterwave
+          addons/payment_iyzico
+          addons/payment_mollie
+          addons/payment_nuvei
+          addons/payment_paymob
+          addons/payment_paypal
+          addons/payment_payu
+          addons/payment_razorpay
+          addons/payment_redsys
+          addons/payment_toss_payments
+          addons/payment_worldline
+          addons/payment_xendit
+          addons/pos_account_tax_python
+          addons/pos_adyen
+          addons/pos_cashdro
+          addons/pos_cashmatic
+          addons/pos_discount
+          addons/pos_dpopay
+          addons/pos_event
+          addons/pos_event_sale
+          addons/pos_glory_cash
+          addons/pos_hr
+          addons/pos_hr_restaurant
+          addons/pos_imin
+          addons/pos_loyalty
+          addons/pos_mercado_pago
+          addons/pos_mollie
+          addons/pos_mrp
+          addons/pos_online_payment_self_order
+          addons/pos_self_order
+          addons/pos_pine_labs
+          addons/pos_qfpay
+          addons/pos_razorpay
+          addons/pos_repair
+          addons/pos_restaurant_adyen
+          addons/pos_restaurant_loyalty
+          addons/pos_restaurant_stripe
+          addons/pos_stripe
+          addons/pos_safaricom
+          addons/pos_sale_loyalty
+          addons/pos_sale_margin
+          addons/sale_margin
+          addons/pos_self_order_adyen
+          addons/pos_self_order_pine_labs
+          addons/pos_self_order_qfpay
+          addons/pos_self_order_razorpay
+          addons/pos_self_order_sale
+          addons/pos_self_order_stripe
+          addons/pos_self_order_viva_com
+          addons/pos_viva_com
+          addons/pos_sms
+          addons/product_email_template
+          addons/product_margin
+          addons/product_matrix
+          addons/project_account
+          addons/project_hr_expense
+          addons/project_hr_skills
+          addons/project_mail_plugin
+          addons/project_mrp
+          addons/project_mrp_account
+          addons/project_mrp_sale
+          addons/sale_mrp
+          addons/sale_project
+          addons/sale_service
+          addons/project_mrp_stock_landed_costs
+          addons/project_purchase
+          addons/project_purchase_stock
+          addons/project_stock
+          addons/project_sale_expense
+          addons/sale_expense
+          addons/project_sms
+          addons/project_stock_account
+          addons/project_stock_landed_costs
+          addons/project_timesheet_holidays
+          addons/project_todo
+          addons/purchase_edi_ubl_bis3
+          addons/purchase_product_matrix
+          addons/purchase_repair
+          addons/purchase_requisition
+          addons/purchase_requisition_sale
+          addons/purchase_requisition_stock
+          MANIFEST.in
+          addons/sale_expense_margin
+          addons/sale_gelato
+          addons/sale_gelato_stock
+          addons/sale_loyalty
+          addons/sale_loyalty_delivery
+          addons/sale_mrp_margin
+          addons/sale_stock_margin
+          addons/sale_product_matrix
+          addons/sale_project_stock
+          addons/sale_project_stock_account
+          addons/sale_purchase_project
+          addons/sale_stock_product_expiry
+          addons/sale_timesheet
+          addons/sale_timesheet_margin
+          addons/sms_twilio
+          addons/spreadsheet_dashboard_event_sale
+          addons/spreadsheet_dashboard_hr_expense
+          addons/spreadsheet_dashboard_hr_timesheet
+          addons/spreadsheet_dashboard_im_livechat
+          addons/spreadsheet_dashboard_pos_hr
+          addons/spreadsheet_dashboard_pos_restaurant
+          addons/spreadsheet_dashboard_sale_timesheet
+          addons/spreadsheet_dashboard_website_sale_slides
+          addons/website_sale_slides
+          addons/stock_fleet
+          addons/stock_maintenance
+          addons/survey_crm
+          odoo/addons/test_access_rights
+          odoo/addons/test_action_bindings
+          odoo/addons/test_assetsbundle
+          odoo/addons/test_auth_custom
+          addons/test_base_automation
+          odoo/addons/test_convert
+          odoo/addons/test_converter
+          addons/test_crm_full
+          addons/website_crm
+          addons/website_crm_iap_reveal
+          addons/website_crm_livechat
+          addons/website_crm_partner_assign
+          addons/website_google_map
+          addons/website_livechat
+          odoo/addons/test_data_module
+          odoo/addons/test_data_module_install
+          addons/test_discuss_full
+          addons/test_event_full
+          addons/website_event_booth
+          addons/website_event_booth_sale
+          addons/website_event_booth_sale_exhibitor
+          addons/website_event_exhibitor
+          addons/website_event_sale
+          addons/website_event_track_live
+          addons/website_event_track_quiz
+          addons/test_html_field_history
+          odoo/addons/test_http
+          addons/test_import_export
+          odoo/addons/test_inherit
+          odoo/addons/test_orm
+          odoo/addons/test_inherit_depends
+          odoo/addons/test_inherits
+          odoo/addons/test_inherits_depends
+          odoo/addons/test_lint
+          addons/test_mail
+          addons/test_mail_full
+          addons/test_mail_sms
+          addons/test_mass_mailing
+          odoo/addons/test_main_flows
+          odoo/addons/test_mimetypes
+          odoo/addons/test_read_group
+          addons/test_resource
+          odoo/addons/test_rpc
+          addons/test_sale_product_configurators
+          addons/test_sale_purchase_edi_ubl
+          odoo/addons/test_search_panel
+          addons/test_spreadsheet
+          odoo/addons/test_testing_utilities
+          odoo/addons/test_translation_import
+          odoo/addons/test_uninstall
+          addons/test_website
+          addons/theme_default
+          addons/test_website_modules
+          addons/website_blog
+          addons/test_website_slides_full
+          addons/website_forum
+          addons/website_slides_forum
+          addons/website_slides_survey
+          addons/transifex
+          addons/website_cf_turnstile
+          addons/website_crm_sms
+          addons/website_customer
+          addons/website_event_booth_exhibitor
+          addons/website_event_crm
+          addons/website_event_track_live_quiz
+          addons/website_hr_recruitment
+          addons/website_hr_recruitment_livechat
+          addons/website_links
+          addons/website_mail_group
+          addons/website_mass_mailing
+          addons/website_mass_mailing_sms
+          addons/website_project
+          addons/website_sale_autocomplete
+          addons/website_sale_collect
+          addons/website_sale_stock
+          addons/website_sale_collect_wishlist
+          addons/website_sale_gelato
+          addons/website_sale_loyalty
+          addons/website_sale_mass_mailing
+          addons/website_sale_mondialrelay
+          addons/website_sale_mrp
+          addons/website_sale_stock_wishlist
+          addons/website_timesheet
+    - name: Checkout Repository (sparse)
+      id: sparse_checkout
+      if: ${{ steps.runner_caches.outputs.host == '' || steps.host_checkout.outcome == 'failure' }}
+      run: |
+        set -euo pipefail
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        target_sha="$GITHUB_SHA"
+        scored_control=0
+        if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${ENACT_CONTROL_PIN_REQUIRED:-}" = "true" ]; then
+            scored_control=1
+        fi
+        if [ -n "${ENACT_CONTROL_CHECKOUT_SHA:-}" ]; then
+            if [ "$scored_control" -ne 1 ]; then
+                echo "::error::control_checkout_sha override is refused outside scored-control workflow_dispatch (control_pin_required=true)" >&2
+                exit 1
+            fi
+            case "$ENACT_CONTROL_CHECKOUT_SHA" in
+                *[!0-9a-fA-F]*)
+                    echo "::error::ENACT_CONTROL_CHECKOUT_SHA must be 40-char hex, got '$ENACT_CONTROL_CHECKOUT_SHA'" >&2
+                    exit 1
+                    ;;
+            esac
+            if [ "${#ENACT_CONTROL_CHECKOUT_SHA}" -ne 40 ]; then
+                echo "::error::ENACT_CONTROL_CHECKOUT_SHA must be 40-char hex, got '$ENACT_CONTROL_CHECKOUT_SHA'" >&2
+                exit 1
+            fi
+            target_sha="$ENACT_CONTROL_CHECKOUT_SHA"
+        elif [ "$scored_control" -eq 1 ]; then
+            echo "::error::scored-control dispatch requires non-empty control_checkout_sha" >&2
+            exit 1
+        fi
+        export GIT_CONFIG_COUNT=1
+        export GIT_CONFIG_KEY_0=safe.directory
+        export GIT_CONFIG_VALUE_0="$GITHUB_WORKSPACE"
+        header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$ENACT_GIT_TOKEN" | base64 | tr -d '\n')"
+        cd "$GITHUB_WORKSPACE"
+        # shellcheck disable=SC2015
+        find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        git init -q .
+        git remote add origin "$url"
+        git config --local "http.$GITHUB_SERVER_URL/.extraheader" "$header"
+        git config --local protocol.version 2
+        git config --local fetch.parallel 0
+        git config --local checkout.workers 0
+        git config --local index.threads 0
+        git config --local advice.detachedHead false
+        git config --local gc.auto 0
+        cone=()
+        while IFS= read -r entry; do
+            entry="${entry#"${entry%%[![:space:]]*}"}"
+            entry="${entry%"${entry##*[![:space:]]}"}"
+            [ -n "$entry" ] && cone+=("$entry")
+        done <<<"${ENACT_SPARSE_CONE:-}"
+        depth="${ENACT_FETCH_DEPTH:-1}"
+        fetch_args=(--no-tags --no-recurse-submodules)
+        if [ "$depth" != "0" ]; then
+            fetch_args+=("--depth=$depth")
+        fi
+        narrow_cone=0
+        if [ "${#cone[@]}" -gt 0 ] && [ "${#cone[@]}" -le 8 ]; then
+            narrow_cone=1
+            for entry in "${cone[@]}"; do
+                case "$entry" in
+                    . | ./ | .. | ../*)
+                        narrow_cone=0
+                        break
+                        ;;
+                    .* | cue.mod | cue.mod/* | bin | bin/* | */*)
+                        ;;
+                    *)
+                        narrow_cone=0
+                        break
+                        ;;
+                esac
+            done
+        fi
+        if [ "$narrow_cone" = 1 ]; then
+            fetch_args+=(--filter=blob:none)
+        fi
+        if [ -n "${ENACT_CONTROL_CHECKOUT_SHA:-}" ]; then
+            git fetch -q "${fetch_args[@]}" origin "$target_sha"
+        else
+            git fetch -q "${fetch_args[@]}" origin "$target_sha" 2>/dev/null \
+                || git fetch -q "${fetch_args[@]}" origin "$GITHUB_REF"
+        fi
+        if [ "${#cone[@]}" -gt 0 ]; then
+            normalized=()
+            for entry in "${cone[@]}"; do
+                case "$entry" in
+                    */.enact-direct-files)
+                        normalized+=("$entry")
+                        ;;
+                    *)
+                        kind=$(git cat-file -t "$target_sha:$entry" 2>/dev/null || true)
+                        if [ "$kind" = "blob" ]; then
+                            case "$entry" in
+                                */*) normalized+=("${entry%/*}/.enact-direct-files") ;;
+                            esac
+                        else
+                            normalized+=("$entry")
+                        fi
+                        ;;
+                esac
+            done
+            if [ "${#normalized[@]}" -gt 0 ]; then
+                git sparse-checkout set --cone "${normalized[@]}"
+            fi
+        fi
+        if [ -n "${ENACT_CONTROL_CHECKOUT_SHA:-}" ]; then
+            git checkout -q --force --detach "$target_sha"
+        else
+            case "$GITHUB_REF" in
+                refs/heads/*) git checkout -q --force -B "${GITHUB_REF#refs/heads/}" "$target_sha" ;;
+                *) git checkout -q --force --detach "$target_sha" ;;
+            esac
+        fi
+        checked_commit=$(git rev-parse HEAD)
+        checked_tree=$(git rev-parse "HEAD^{tree}")
+        if [ "$checked_commit" != "$target_sha" ]; then
+            echo "::error::shallow sparse checkout commit mismatch: expected $target_sha, got $checked_commit" >&2
+            exit 1
+        fi
+        echo "Checked out $checked_commit (tree $checked_tree) (shallow sparse)"
+      env:
+        ENACT_CONTROL_CHECKOUT_SHA: ${{ inputs.control_checkout_sha }}
+        ENACT_CONTROL_PIN_REQUIRED: ${{ inputs.control_pin_required }}
+        ENACT_FETCH_DEPTH: "1"
+        ENACT_GIT_TOKEN: ${{ github.token }}
+        ENACT_SPARSE_CONE: |-
+          .enact
+          cue.mod
+          .github
+          bin
+          enve.cue
+          enve.lock
+          odoo-bin
+          requirements.txt
+          setup.py
+          setup.cfg
+          pyproject.toml
+          Justfile
+          oxlint.json
+          ruff.toml
+          uv.lock
+          helpers
+          odoo
+          setup
+          addons/api_doc
+          addons/auth_passkey
+          addons/auth_totp
+          addons/base_import
+          addons/base_import_module
+          addons/base_setup
+          addons/bus
+          addons/html_editor
+          addons/http_routing
+          addons/iap
+          addons/rpc
+          addons/web
+          addons/web_tour
+          addons/web_unsplash
+          addons/account
+          addons/auth_signup
+          addons/auth_totp_mail
+          addons/base_install_request
+          addons/google_gmail
+          addons/iap_mail
+          addons/mail
+          addons/mail_bot
+          addons/microsoft_outlook
+          addons/partner_autocomplete
+          addons/phone_validation
+          addons/privacy_lookup
+          addons/sms
+          addons/snailmail
+          odoo/addons/base
+          addons/analytic
+          addons/digest
+          addons/onboarding
+          addons/portal
+          addons/product
+          addons/resource
+          addons/uom
+          addons/account_add_gln
+          addons/account_check_printing
+          addons/account_edi_ubl_cii
+          addons/account_payment
+          addons/auth_passkey_portal
+          addons/auth_totp_portal
+          addons/base_vat
+          addons/l10n_us
+          addons/l10n_us_account
+          addons/payment
+          addons/payment_mercado_pago
+          addons/payment_stripe
+          addons/resource_mail
+          addons/snailmail_account
+          addons/spreadsheet
+          addons/spreadsheet_account
+          addons/spreadsheet_dashboard
+          addons/spreadsheet_dashboard_account
+          addons/account_debit_note
+          addons/account_edi
+          addons/account_edi_proxy_client
+          addons/certificate
+          addons/account_fleet
+          addons/fleet
+          addons/account_payment_interco
+          addons/account_peppol
+          addons/account_peppol_advanced_fields
+          addons/account_peppol_response
+          addons/account_qr_code_emv
+          addons/account_qr_code_sepa
+          addons/base_iban
+          addons/account_tax_python
+          addons/account_test
+          addons/account_update_tax_tags
+          addons/attachment_indexation
+          addons/auth_ldap
+          addons/auth_oauth
+          addons/auth_password_policy
+          addons/auth_password_policy_portal
+          addons/auth_password_policy_signup
+          addons/auth_timeout
+          addons/barcodes
+          addons/barcodes_gs1_nomenclature
+          addons/base_address_extended
+          addons/contacts
+          addons/base_automation
+          addons/base_geolocalize
+          addons/base_sparse_field
+          addons/board
+          addons/calendar
+          addons/calendar_sms
+          addons/cloud_storage
+          addons/cloud_storage_azure
+          addons/cloud_storage_google
+          addons/cloud_storage_migration
+          addons/crm
+          addons/sales_team
+          addons/utm
+          addons/crm_iap_enrich
+          addons/iap_crm
+          addons/crm_iap_mine
+          addons/crm_livechat
+          addons/im_livechat
+          addons/rating
+          addons/crm_mail_plugin
+          addons/mail_plugin
+          addons/crm_sms
+          addons/data_recycle
+          addons/delivery
+          addons/sale
+          addons/sale_edi_ubl
+          addons/sale_sms
+          addons/spreadsheet_dashboard_sale
+          addons/payment_custom
+          addons/delivery_mondialrelay
+          addons/sale_management
+          addons/sale_pdf_quote_builder
+          addons/sale_stock
+          addons/spreadsheet_dashboard_stock_account
+          addons/stock
+          addons/stock_account
+          addons/stock_delivery
+          addons/stock_sms
+          addons/delivery_stock_picking_batch
+          addons/stock_picking_batch
+          addons/event
+          addons/event_booth
+          addons/event_booth_sale
+          addons/event_product
+          addons/event_sale
+          addons/event_crm
+          addons/event_crm_sale
+          addons/event_sms
+          addons/gamification
+          addons/gamification_sale_crm
+          addons/sale_crm
+          addons/google_account
+          addons/google_address_autocomplete
+          addons/google_calendar
+          addons/google_recaptcha
+          addons/hr
+          addons/hr_attendance
+          addons/hr_homeworking
+          addons/hr_org_chart
+          addons/hr_skills
+          addons/mail_bot_hr
+          addons/web_hierarchy
+          addons/hr_calendar
+          addons/hr_expense
+          addons/hr_fleet
+          addons/hr_gamification
+          addons/hr_holidays
+          addons/hr_holidays_attendance
+          addons/hr_holidays_homeworking
+          addons/hr_homeworking_calendar
+          addons/hr_hourly_cost
+          addons/hr_livechat
+          addons/hr_maintenance
+          addons/maintenance
+          addons/hr_presence
+          addons/hr_recruitment
+          addons/hr_recruitment_skills
+          addons/hr_recruitment_sms
+          addons/hr_recruitment_survey
+          addons/survey
+          addons/hr_skills_event
+          addons/hr_skills_slides
+          addons/html_builder
+          addons/social_media
+          addons/website
+          addons/website_mail
+          addons/website_sms
+          addons/portal_rating
+          addons/website_partner
+          addons/website_profile
+          addons/website_slides
+          addons/hr_skills_survey
+          addons/hr_timesheet
+          addons/project
+          addons/hr_timesheet_attendance
+          addons/hr_work_entry
+          addons/hr_work_entry_holidays
+          addons/iot_base
+          addons/iot_box_image
+          addons/iot_drivers
+          addons/l10n_account_edi_ubl_cii_tests
+          addons/l10n_au
+          addons/l10n_be
+          addons/l10n_de
+          addons/l10n_din5008
+          addons/l10n_fr
+          addons/l10n_fr_account
+          addons/l10n_nl
+          addons/l10n_account_withholding_tax
+          addons/l10n_account_withholding_tax_pos
+          addons/point_of_sale
+          addons/l10n_ae
+          addons/l10n_gcc_invoice
+          addons/l10n_ae_pos
+          addons/l10n_gcc_pos
+          addons/pos_online_payment
+          addons/l10n_anz_ubl_pint
+          addons/l10n_ar
+          addons/l10n_latam_base
+          addons/l10n_latam_invoice_document
+          addons/l10n_ar_pos
+          addons/l10n_ar_stock
+          addons/l10n_ar_website_sale
+          addons/spreadsheet_dashboard_website_sale
+          addons/website_payment
+          addons/website_sale
+          addons/website_sale_comparison
+          addons/website_sale_comparison_wishlist
+          addons/website_sale_wishlist
+          addons/l10n_ar_withholding
+          addons/l10n_latam_check
+          addons/l10n_at
+          addons/l10n_bd
+          addons/l10n_be_pos_restaurant
+          addons/pos_restaurant
+          addons/l10n_be_pos_sale
+          addons/pos_sale
+          addons/l10n_bf
+          addons/l10n_syscohada
+          addons/l10n_bg
+          addons/l10n_bg_ledger
+          addons/l10n_bh
+          addons/l10n_bj
+          addons/l10n_bo
+          addons/l10n_br
+          addons/l10n_br_sales
+          addons/l10n_br_website_sale
+          addons/l10n_ca
+          addons/l10n_cd
+          addons/l10n_cf
+          addons/l10n_cg
+          addons/l10n_ch
+          addons/l10n_ch_pos
+          addons/l10n_ci
+          addons/l10n_cl
+          addons/l10n_cm
+          addons/l10n_cn
+          addons/l10n_cn_city
+          addons/l10n_co
+          addons/l10n_co_pos
+          addons/l10n_cr
+          addons/l10n_cy
+          addons/l10n_cz
+          addons/l10n_din5008_expense
+          addons/l10n_din5008_purchase
+          addons/purchase
+          addons/l10n_din5008_repair
+          addons/repair
+          addons/l10n_din5008_sale
+          addons/l10n_din5008_stock
+          addons/l10n_dk
+          addons/l10n_dk_fik
+          addons/l10n_dk_nemhandel
+          addons/l10n_dk_nemhandel_response
+          addons/l10n_dk_oioubl
+          addons/l10n_do
+          addons/l10n_dz
+          addons/l10n_ec
+          addons/l10n_ec_sale
+          addons/l10n_ec_stock
+          addons/l10n_ee
+          addons/l10n_eg
+          addons/l10n_eg_edi_eta
+          addons/l10n_es
+          addons/l10n_es_edi_facturae
+          addons/l10n_es_edi_sii
+          addons/l10n_es_edi_tbai
+          addons/l10n_es_edi_tbai_pos
+          addons/l10n_es_edi_verifactu
+          addons/l10n_es_edi_verifactu_pos
+          addons/l10n_es_pos
+          addons/l10n_et
+          addons/l10n_eu_oss
+          addons/l10n_fi
+          addons/l10n_fi_sale
+          addons/l10n_fr_facturx_chorus_pro
+          addons/l10n_fr_hr_holidays
+          addons/l10n_fr_hr_work_entry_holidays
+          addons/l10n_fr_pdp
+          addons/l10n_fr_pdp_pos
+          addons/l10n_fr_pos_cert
+          addons/l10n_ga
+          addons/l10n_gcc_invoice_stock_account
+          addons/l10n_ge
+          addons/l10n_gf
+          addons/l10n_gn
+          addons/l10n_gp
+          addons/l10n_gq
+          addons/l10n_gr
+          addons/l10n_gr_edi
+          addons/l10n_gr_edi_e_invoo
+          addons/l10n_gt
+          addons/l10n_gw
+          addons/l10n_hk
+          addons/l10n_hn
+          addons/l10n_hr
+          addons/l10n_hr_edi
+          addons/l10n_hr_kuna
+          addons/l10n_hu
+          addons/l10n_hu_edi
+          addons/l10n_hu_edi_receive
+          addons/l10n_id
+          addons/l10n_id_efaktur_coretax
+          addons/l10n_id_pos
+          addons/l10n_ie
+          addons/l10n_il
+          addons/l10n_in
+          addons/l10n_in_edi
+          addons/l10n_in_ewaybill
+          addons/l10n_in_ewaybill_irn
+          addons/l10n_in_ewaybill_stock
+          addons/l10n_in_stock
+          addons/l10n_in_hr_holidays
+          addons/l10n_in_pos
+          addons/l10n_in_purchase_stock
+          addons/purchase_stock
+          addons/l10n_in_sale
+          addons/l10n_in_sale_stock
+          addons/l10n_iq
+          addons/l10n_it
+          addons/l10n_it_edi
+          addons/l10n_it_edi_doi
+          addons/l10n_it_edi_sale
+          addons/l10n_it_stock_ddt
+          addons/l10n_jo
+          addons/l10n_jo_edi
+          addons/l10n_jo_edi_pos
+          addons/pos_edi_ubl
+          addons/l10n_jp
+          addons/l10n_jp_ubl_pint
+          addons/l10n_ke
+          addons/l10n_ke_edi_tremol
+          addons/l10n_kh
+          addons/l10n_km
+          addons/l10n_kr
+          addons/l10n_kw
+          addons/l10n_kz
+          addons/l10n_lb_account
+          addons/l10n_lk
+          addons/l10n_lk_invoice
+          addons/l10n_lt
+          addons/l10n_lu
+          addons/l10n_lv
+          addons/l10n_ma
+          addons/l10n_mc
+          addons/l10n_ml
+          addons/l10n_mn
+          addons/l10n_mq
+          addons/l10n_mr
+          addons/l10n_mt
+          addons/l10n_mt_pos
+          addons/l10n_mu_account
+          addons/l10n_mx
+          addons/l10n_my
+          addons/l10n_my_edi
+          addons/l10n_my_ubl_pint
+          addons/l10n_my_edi_pos
+          addons/l10n_mz
+          addons/l10n_ne
+          addons/l10n_ng
+          addons/l10n_no
+          addons/l10n_nz
+          addons/l10n_om
+          addons/l10n_pa
+          addons/l10n_pe
+          addons/l10n_pe_pos
+          addons/l10n_ph
+          addons/l10n_pk
+          addons/l10n_pl
+          addons/l10n_pl_bank_verification
+          addons/l10n_pl_edi
+          addons/l10n_pl_edi_jst
+          addons/l10n_pt
+          addons/l10n_qa
+          addons/l10n_re
+          addons/l10n_ro
+          addons/l10n_ro_cpv_code
+          addons/l10n_ro_edi
+          addons/l10n_ro_edi_stock
+          addons/l10n_ro_edi_stock_batch
+          addons/l10n_rs
+          addons/l10n_rs_edi
+          addons/l10n_rw
+          addons/l10n_sa
+          addons/l10n_sa_edi
+          addons/l10n_sa_edi_pos
+          addons/l10n_sa_pos
+          addons/l10n_sa_withholding_tax
+          addons/l10n_se
+          addons/l10n_sg
+          addons/l10n_sg_ubl_pint
+          addons/l10n_si
+          addons/l10n_sk
+          addons/l10n_sn
+          addons/l10n_td
+          addons/l10n_test_pos_qr_payment
+          addons/l10n_tg
+          addons/l10n_th
+          addons/l10n_tn
+          addons/l10n_tr
+          addons/l10n_tr_nilvera
+          addons/l10n_tr_nilvera_base_vat
+          addons/l10n_tr_nilvera_edispatch
+          addons/l10n_tr_nilvera_einvoice
+          addons/l10n_tr_nilvera_einvoice_extended
+          addons/l10n_tw
+          addons/l10n_tw_edi_ecpay
+          addons/l10n_tw_edi_ecpay_pos
+          addons/l10n_tw_edi_ecpay_website_sale
+          addons/l10n_tz_account
+          addons/l10n_ua
+          addons/l10n_ug
+          addons/l10n_uk
+          addons/l10n_uy
+          addons/l10n_uy_pos
+          addons/l10n_uz
+          addons/l10n_ve
+          addons/l10n_vn
+          addons/l10n_vn_edi_viettel
+          addons/l10n_vn_edi_viettel_pos
+          addons/l10n_yt
+          addons/l10n_za
+          addons/l10n_zm_account
+          addons/link_tracker
+          addons/loyalty
+          addons/lunch
+          addons/mail_group
+          addons/marketing_card
+          addons/mass_mailing
+          addons/mass_mailing_crm
+          addons/mass_mailing_crm_sms
+          addons/mass_mailing_sms
+          addons/mass_mailing_event
+          addons/mass_mailing_event_sms
+          addons/mass_mailing_event_track
+          addons/website_event
+          addons/website_event_track
+          addons/mass_mailing_event_track_sms
+          addons/mass_mailing_sale
+          addons/mass_mailing_sale_sms
+          addons/mass_mailing_slides
+          addons/mass_mailing_themes
+          addons/microsoft_account
+          addons/microsoft_calendar
+          addons/mrp
+          addons/mrp_account
+          addons/mrp_landed_costs
+          addons/stock_landed_costs
+          addons/mrp_product_expiry
+          addons/product_expiry
+          addons/mrp_repair
+          addons/mrp_subcontracting
+          addons/mrp_subcontracting_account
+          addons/mrp_subcontracting_dropshipping
+          addons/sale_purchase
+          addons/sale_purchase_stock
+          addons/stock_dropshipping
+          addons/mrp_subcontracting_landed_costs
+          addons/mrp_subcontracting_purchase
+          addons/purchase_mrp
+          addons/mrp_subcontracting_repair
+          addons/partnership
+          addons/payment_adyen
+          addons/payment_aps
+          addons/payment_asiapay
+          addons/payment_authorize
+          addons/payment_buckaroo
+          addons/payment_demo
+          addons/payment_dpo
+          addons/payment_ecpay
+          addons/payment_flutterwave
+          addons/payment_iyzico
+          addons/payment_mollie
+          addons/payment_nuvei
+          addons/payment_paymob
+          addons/payment_paypal
+          addons/payment_payu
+          addons/payment_razorpay
+          addons/payment_redsys
+          addons/payment_toss_payments
+          addons/payment_worldline
+          addons/payment_xendit
+          addons/pos_account_tax_python
+          addons/pos_adyen
+          addons/pos_cashdro
+          addons/pos_cashmatic
+          addons/pos_discount
+          addons/pos_dpopay
+          addons/pos_event
+          addons/pos_event_sale
+          addons/pos_glory_cash
+          addons/pos_hr
+          addons/pos_hr_restaurant
+          addons/pos_imin
+          addons/pos_loyalty
+          addons/pos_mercado_pago
+          addons/pos_mollie
+          addons/pos_mrp
+          addons/pos_online_payment_self_order
+          addons/pos_self_order
+          addons/pos_pine_labs
+          addons/pos_qfpay
+          addons/pos_razorpay
+          addons/pos_repair
+          addons/pos_restaurant_adyen
+          addons/pos_restaurant_loyalty
+          addons/pos_restaurant_stripe
+          addons/pos_stripe
+          addons/pos_safaricom
+          addons/pos_sale_loyalty
+          addons/pos_sale_margin
+          addons/sale_margin
+          addons/pos_self_order_adyen
+          addons/pos_self_order_pine_labs
+          addons/pos_self_order_qfpay
+          addons/pos_self_order_razorpay
+          addons/pos_self_order_sale
+          addons/pos_self_order_stripe
+          addons/pos_self_order_viva_com
+          addons/pos_viva_com
+          addons/pos_sms
+          addons/product_email_template
+          addons/product_margin
+          addons/product_matrix
+          addons/project_account
+          addons/project_hr_expense
+          addons/project_hr_skills
+          addons/project_mail_plugin
+          addons/project_mrp
+          addons/project_mrp_account
+          addons/project_mrp_sale
+          addons/sale_mrp
+          addons/sale_project
+          addons/sale_service
+          addons/project_mrp_stock_landed_costs
+          addons/project_purchase
+          addons/project_purchase_stock
+          addons/project_stock
+          addons/project_sale_expense
+          addons/sale_expense
+          addons/project_sms
+          addons/project_stock_account
+          addons/project_stock_landed_costs
+          addons/project_timesheet_holidays
+          addons/project_todo
+          addons/purchase_edi_ubl_bis3
+          addons/purchase_product_matrix
+          addons/purchase_repair
+          addons/purchase_requisition
+          addons/purchase_requisition_sale
+          addons/purchase_requisition_stock
+          MANIFEST.in
+          addons/sale_expense_margin
+          addons/sale_gelato
+          addons/sale_gelato_stock
+          addons/sale_loyalty
+          addons/sale_loyalty_delivery
+          addons/sale_mrp_margin
+          addons/sale_stock_margin
+          addons/sale_product_matrix
+          addons/sale_project_stock
+          addons/sale_project_stock_account
+          addons/sale_purchase_project
+          addons/sale_stock_product_expiry
+          addons/sale_timesheet
+          addons/sale_timesheet_margin
+          addons/sms_twilio
+          addons/spreadsheet_dashboard_event_sale
+          addons/spreadsheet_dashboard_hr_expense
+          addons/spreadsheet_dashboard_hr_timesheet
+          addons/spreadsheet_dashboard_im_livechat
+          addons/spreadsheet_dashboard_pos_hr
+          addons/spreadsheet_dashboard_pos_restaurant
+          addons/spreadsheet_dashboard_sale_timesheet
+          addons/spreadsheet_dashboard_website_sale_slides
+          addons/website_sale_slides
+          addons/stock_fleet
+          addons/stock_maintenance
+          addons/survey_crm
+          odoo/addons/test_access_rights
+          odoo/addons/test_action_bindings
+          odoo/addons/test_assetsbundle
+          odoo/addons/test_auth_custom
+          addons/test_base_automation
+          odoo/addons/test_convert
+          odoo/addons/test_converter
+          addons/test_crm_full
+          addons/website_crm
+          addons/website_crm_iap_reveal
+          addons/website_crm_livechat
+          addons/website_crm_partner_assign
+          addons/website_google_map
+          addons/website_livechat
+          odoo/addons/test_data_module
+          odoo/addons/test_data_module_install
+          addons/test_discuss_full
+          addons/test_event_full
+          addons/website_event_booth
+          addons/website_event_booth_sale
+          addons/website_event_booth_sale_exhibitor
+          addons/website_event_exhibitor
+          addons/website_event_sale
+          addons/website_event_track_live
+          addons/website_event_track_quiz
+          addons/test_html_field_history
+          odoo/addons/test_http
+          addons/test_import_export
+          odoo/addons/test_inherit
+          odoo/addons/test_orm
+          odoo/addons/test_inherit_depends
+          odoo/addons/test_inherits
+          odoo/addons/test_inherits_depends
+          odoo/addons/test_lint
+          addons/test_mail
+          addons/test_mail_full
+          addons/test_mail_sms
+          addons/test_mass_mailing
+          odoo/addons/test_main_flows
+          odoo/addons/test_mimetypes
+          odoo/addons/test_read_group
+          addons/test_resource
+          odoo/addons/test_rpc
+          addons/test_sale_product_configurators
+          addons/test_sale_purchase_edi_ubl
+          odoo/addons/test_search_panel
+          addons/test_spreadsheet
+          odoo/addons/test_testing_utilities
+          odoo/addons/test_translation_import
+          odoo/addons/test_uninstall
+          addons/test_website
+          addons/theme_default
+          addons/test_website_modules
+          addons/website_blog
+          addons/test_website_slides_full
+          addons/website_forum
+          addons/website_slides_forum
+          addons/website_slides_survey
+          addons/transifex
+          addons/website_cf_turnstile
+          addons/website_crm_sms
+          addons/website_customer
+          addons/website_event_booth_exhibitor
+          addons/website_event_crm
+          addons/website_event_track_live_quiz
+          addons/website_hr_recruitment
+          addons/website_hr_recruitment_livechat
+          addons/website_links
+          addons/website_mail_group
+          addons/website_mass_mailing
+          addons/website_mass_mailing_sms
+          addons/website_project
+          addons/website_sale_autocomplete
+          addons/website_sale_collect
+          addons/website_sale_stock
+          addons/website_sale_collect_wishlist
+          addons/website_sale_gelato
+          addons/website_sale_loyalty
+          addons/website_sale_mass_mailing
+          addons/website_sale_mondialrelay
+          addons/website_sale_mrp
+          addons/website_sale_stock_wishlist
+          addons/website_timesheet
+    - name: Install committed enact & enve builds
+      run: |
+        P="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/^darwin$/macos/')-$(uname -m | sed 's/^arm64$/aarch64/')"
+        E="${GITHUB_WORKSPACE:-$PWD}/bin/$P/enact"
+        [ -f "$E" ] || E="${GITHUB_WORKSPACE:-$PWD}/bin/enact"
+        [ -f "$E" ] || E="$(command -v enact || echo "$HOME/.cargo/bin/enact")"
+        chmod +x "$E" 2>/dev/null || true
+        "$E" --version >/dev/null 2>&1 || { echo "::error title=No enact for $P::$E does not run on this $P runner; commit its build as bin/$P/enact"; exit 1; }
+        "$E" ci install-binaries
+    - name: Ensure enve & enact CLI on PATH
+      id: setup-runner
+      run: enact ci setup-runner
+    - parallel:
+      - name: Restore Python build & venv cache
+        id: python_l1_cache
+        if: hashFiles('pyproject.toml', 'requirements.txt') != '' && steps.runner_caches.outputs.host == ''
+        continue-on-error: true
+        uses: actions/cache/restore@v6
+        with:
+          key: ${{ runner.os }}-${{ runner.arch }}-python-v2-${{ hashFiles('uv.lock', 'pyproject.toml', 'requirements.txt', 'poetry.lock', 'enve.lock') }}
+          path: |-
+            /tmp/.cache/uv
+            /tmp/.cache/pip
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-python-v2-
+    - name: Record Restored Package Caches
+      if: steps.runner_caches.outputs.host == '' && steps.python_l1_cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+      continue-on-error: true
+      run: enact ci cache-delta record
+      env:
+        ENACT_CACHE_DELTA: |-
+          python_l1_cache /tmp/.cache/uv
+          python_l1_cache /tmp/.cache/pip
+        ENACT_CACHE_HITS: python_l1_cache=${{ steps.python_l1_cache.outputs.cache-hit }}
+    - name: Pull Dependencies via enve
+      if: ${{ steps.python_l1_cache.outputs.cache-hit != 'true' && hashFiles('pyproject.toml', 'requirements.txt') != '' }}
+      run: enact ci deps pull --remote signed
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.R2_READ_ACCESS_KEY_ID || env.R2_READ_ACCESS_KEY_ID }}
+        AWS_REGION: auto
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READ_SECRET_ACCESS_KEY || env.R2_READ_SECRET_ACCESS_KEY }}
+        ENACT_ENVIRONMENT_DIRS: "[\".\",\".github\",\"addons/account\",\"addons/account_add_gln\",\"addons/account_check_printing\",\"addons/account_debit_note\",\"addons/account_edi\",\"addons/account_edi_proxy_client\",\"addons/account_edi_ubl_cii\",\"addons/account_fleet\",\"addons/account_payment\",\"addons/account_payment_interco\",\"addons/account_peppol\",\"addons/account_peppol_advanced_fields\",\"addons/account_peppol_response\",\"addons/account_qr_code_emv\",\"addons/account_qr_code_sepa\",\"addons/account_tax_python\",\"addons/account_test\",\"addons/account_update_tax_tags\",\"addons/analytic\",\"addons/api_doc\",\"addons/attachment_indexation\",\"addons/auth_ldap\",\"addons/auth_oauth\",\"addons/auth_passkey\",\"addons/auth_passkey_portal\",\"addons/auth_password_policy\",\"addons/auth_password_policy_portal\",\"addons/auth_password_policy_signup\",\"addons/auth_signup\",\"addons/auth_timeout\",\"addons/auth_totp\",\"addons/auth_totp_mail\",\"addons/auth_totp_portal\",\"addons/barcodes\",\"addons/barcodes_gs1_nomenclature\",\"addons/base_address_extended\",\"addons/base_automation\",\"addons/base_geolocalize\",\"addons/base_iban\",\"addons/base_import\",\"addons/base_import_module\",\"addons/base_install_request\",\"addons/base_setup\",\"addons/base_sparse_field\",\"addons/base_vat\",\"addons/board\",\"addons/bus\",\"addons/calendar\",\"addons/calendar_sms\",\"addons/certificate\",\"addons/cloud_storage\",\"addons/cloud_storage_azure\",\"addons/cloud_storage_google\",\"addons/cloud_storage_migration\",\"addons/contacts\",\"addons/crm\",\"addons/crm_iap_enrich\",\"addons/crm_iap_mine\",\"addons/crm_livechat\",\"addons/crm_mail_plugin\",\"addons/crm_sms\",\"addons/data_recycle\",\"addons/delivery\",\"addons/delivery_mondialrelay\",\"addons/delivery_stock_picking_batch\",\"addons/digest\",\"addons/event\",\"addons/event_booth\",\"addons/event_booth_sale\",\"addons/event_crm\",\"addons/event_crm_sale\",\"addons/event_product\",\"addons/event_sale\",\"addons/event_sms\",\"addons/fleet\",\"addons/gamification\",\"addons/gamification_sale_crm\",\"addons/google_account\",\"addons/google_address_autocomplete\",\"addons/google_calendar\",\"addons/google_gmail\",\"addons/google_recaptcha\",\"addons/hr\",\"addons/hr_attendance\",\"addons/hr_calendar\",\"addons/hr_expense\",\"addons/hr_fleet\",\"addons/hr_gamification\",\"addons/hr_holidays\",\"addons/hr_holidays_attendance\",\"addons/hr_holidays_homeworking\",\"addons/hr_homeworking\",\"addons/hr_homeworking_calendar\",\"addons/hr_hourly_cost\",\"addons/hr_livechat\",\"addons/hr_maintenance\",\"addons/hr_org_chart\",\"addons/hr_presence\",\"addons/hr_recruitment\",\"addons/hr_recruitment_skills\",\"addons/hr_recruitment_sms\",\"addons/hr_recruitment_survey\",\"addons/hr_skills\",\"addons/hr_skills_event\",\"addons/hr_skills_slides\",\"addons/hr_skills_survey\",\"addons/hr_timesheet\",\"addons/hr_timesheet_attendance\",\"addons/hr_work_entry\",\"addons/hr_work_entry_holidays\",\"addons/html_builder\",\"addons/html_editor\",\"addons/http_routing\",\"addons/iap\",\"addons/iap_crm\",\"addons/iap_mail\",\"addons/im_livechat\",\"addons/iot_base\",\"addons/iot_box_image\",\"addons/iot_drivers\",\"addons/l10n_account_edi_ubl_cii_tests\",\"addons/l10n_account_withholding_tax\",\"addons/l10n_account_withholding_tax_pos\",\"addons/l10n_ae\",\"addons/l10n_ae_pos\",\"addons/l10n_anz_ubl_pint\",\"addons/l10n_ar\",\"addons/l10n_ar_pos\",\"addons/l10n_ar_stock\",\"addons/l10n_ar_website_sale\",\"addons/l10n_ar_withholding\",\"addons/l10n_at\",\"addons/l10n_au\",\"addons/l10n_bd\",\"addons/l10n_be\",\"addons/l10n_be_pos_restaurant\",\"addons/l10n_be_pos_sale\",\"addons/l10n_bf\",\"addons/l10n_bg\",\"addons/l10n_bg_ledger\",\"addons/l10n_bh\",\"addons/l10n_bj\",\"addons/l10n_bo\",\"addons/l10n_br\",\"addons/l10n_br_sales\",\"addons/l10n_br_website_sale\",\"addons/l10n_ca\",\"addons/l10n_cd\",\"addons/l10n_cf\",\"addons/l10n_cg\",\"addons/l10n_ch\",\"addons/l10n_ch_pos\",\"addons/l10n_ci\",\"addons/l10n_cl\",\"addons/l10n_cm\",\"addons/l10n_cn\",\"addons/l10n_cn_city\",\"addons/l10n_co\",\"addons/l10n_co_pos\",\"addons/l10n_cr\",\"addons/l10n_cy\",\"addons/l10n_cz\",\"addons/l10n_de\",\"addons/l10n_din5008\",\"addons/l10n_din5008_expense\",\"addons/l10n_din5008_purchase\",\"addons/l10n_din5008_repair\",\"addons/l10n_din5008_sale\",\"addons/l10n_din5008_stock\",\"addons/l10n_dk\",\"addons/l10n_dk_fik\",\"addons/l10n_dk_nemhandel\",\"addons/l10n_dk_nemhandel_response\",\"addons/l10n_dk_oioubl\",\"addons/l10n_do\",\"addons/l10n_dz\",\"addons/l10n_ec\",\"addons/l10n_ec_sale\",\"addons/l10n_ec_stock\",\"addons/l10n_ee\",\"addons/l10n_eg\",\"addons/l10n_eg_edi_eta\",\"addons/l10n_es\",\"addons/l10n_es_edi_facturae\",\"addons/l10n_es_edi_sii\",\"addons/l10n_es_edi_tbai\",\"addons/l10n_es_edi_tbai_pos\",\"addons/l10n_es_edi_verifactu\",\"addons/l10n_es_edi_verifactu_pos\",\"addons/l10n_es_pos\",\"addons/l10n_et\",\"addons/l10n_eu_oss\",\"addons/l10n_fi\",\"addons/l10n_fi_sale\",\"addons/l10n_fr\",\"addons/l10n_fr_account\",\"addons/l10n_fr_facturx_chorus_pro\",\"addons/l10n_fr_hr_holidays\",\"addons/l10n_fr_hr_work_entry_holidays\",\"addons/l10n_fr_pdp\",\"addons/l10n_fr_pdp_pos\",\"addons/l10n_fr_pos_cert\",\"addons/l10n_ga\",\"addons/l10n_gcc_invoice\",\"addons/l10n_gcc_invoice_stock_account\",\"addons/l10n_gcc_pos\",\"addons/l10n_ge\",\"addons/l10n_gf\",\"addons/l10n_gn\",\"addons/l10n_gp\",\"addons/l10n_gq\",\"addons/l10n_gr\",\"addons/l10n_gr_edi\",\"addons/l10n_gr_edi_e_invoo\",\"addons/l10n_gt\",\"addons/l10n_gw\",\"addons/l10n_hk\",\"addons/l10n_hn\",\"addons/l10n_hr\",\"addons/l10n_hr_edi\",\"addons/l10n_hr_kuna\",\"addons/l10n_hu\",\"addons/l10n_hu_edi\",\"addons/l10n_hu_edi_receive\",\"addons/l10n_id\",\"addons/l10n_id_efaktur_coretax\",\"addons/l10n_id_pos\",\"addons/l10n_ie\",\"addons/l10n_il\",\"addons/l10n_in\",\"addons/l10n_in_edi\",\"addons/l10n_in_ewaybill\",\"addons/l10n_in_ewaybill_irn\",\"addons/l10n_in_ewaybill_stock\",\"addons/l10n_in_hr_holidays\",\"addons/l10n_in_pos\",\"addons/l10n_in_purchase_stock\",\"addons/l10n_in_sale\",\"addons/l10n_in_sale_stock\",\"addons/l10n_in_stock\",\"addons/l10n_iq\",\"addons/l10n_it\",\"addons/l10n_it_edi\",\"addons/l10n_it_edi_doi\",\"addons/l10n_it_edi_sale\",\"addons/l10n_it_stock_ddt\",\"addons/l10n_jo\",\"addons/l10n_jo_edi\",\"addons/l10n_jo_edi_pos\",\"addons/l10n_jp\",\"addons/l10n_jp_ubl_pint\",\"addons/l10n_ke\",\"addons/l10n_ke_edi_tremol\",\"addons/l10n_kh\",\"addons/l10n_km\",\"addons/l10n_kr\",\"addons/l10n_kw\",\"addons/l10n_kz\",\"addons/l10n_latam_base\",\"addons/l10n_latam_check\",\"addons/l10n_latam_invoice_document\",\"addons/l10n_lb_account\",\"addons/l10n_lk\",\"addons/l10n_lk_invoice\",\"addons/l10n_lt\",\"addons/l10n_lu\",\"addons/l10n_lv\",\"addons/l10n_ma\",\"addons/l10n_mc\",\"addons/l10n_ml\",\"addons/l10n_mn\",\"addons/l10n_mq\",\"addons/l10n_mr\",\"addons/l10n_mt\",\"addons/l10n_mt_pos\",\"addons/l10n_mu_account\",\"addons/l10n_mx\",\"addons/l10n_my\",\"addons/l10n_my_edi\",\"addons/l10n_my_edi_pos\",\"addons/l10n_my_ubl_pint\",\"addons/l10n_mz\",\"addons/l10n_ne\",\"addons/l10n_ng\",\"addons/l10n_nl\",\"addons/l10n_no\",\"addons/l10n_nz\",\"addons/l10n_om\",\"addons/l10n_pa\",\"addons/l10n_pe\",\"addons/l10n_pe_pos\",\"addons/l10n_ph\",\"addons/l10n_pk\",\"addons/l10n_pl\",\"addons/l10n_pl_bank_verification\",\"addons/l10n_pl_edi\",\"addons/l10n_pl_edi_jst\",\"addons/l10n_pt\",\"addons/l10n_qa\",\"addons/l10n_re\",\"addons/l10n_ro\",\"addons/l10n_ro_cpv_code\",\"addons/l10n_ro_edi\",\"addons/l10n_ro_edi_stock\",\"addons/l10n_ro_edi_stock_batch\",\"addons/l10n_rs\",\"addons/l10n_rs_edi\",\"addons/l10n_rw\",\"addons/l10n_sa\",\"addons/l10n_sa_edi\",\"addons/l10n_sa_edi_pos\",\"addons/l10n_sa_pos\",\"addons/l10n_sa_withholding_tax\",\"addons/l10n_se\",\"addons/l10n_sg\",\"addons/l10n_sg_ubl_pint\",\"addons/l10n_si\",\"addons/l10n_sk\",\"addons/l10n_sn\",\"addons/l10n_syscohada\",\"addons/l10n_td\",\"addons/l10n_test_pos_qr_payment\",\"addons/l10n_tg\",\"addons/l10n_th\",\"addons/l10n_tn\",\"addons/l10n_tr\",\"addons/l10n_tr_nilvera\",\"addons/l10n_tr_nilvera_base_vat\",\"addons/l10n_tr_nilvera_edispatch\",\"addons/l10n_tr_nilvera_einvoice\",\"addons/l10n_tr_nilvera_einvoice_extended\",\"addons/l10n_tw\",\"addons/l10n_tw_edi_ecpay\",\"addons/l10n_tw_edi_ecpay_pos\",\"addons/l10n_tw_edi_ecpay_website_sale\",\"addons/l10n_tz_account\",\"addons/l10n_ua\",\"addons/l10n_ug\",\"addons/l10n_uk\",\"addons/l10n_us\",\"addons/l10n_us_account\",\"addons/l10n_uy\",\"addons/l10n_uy_pos\",\"addons/l10n_uz\",\"addons/l10n_ve\",\"addons/l10n_vn\",\"addons/l10n_vn_edi_viettel\",\"addons/l10n_vn_edi_viettel_pos\",\"addons/l10n_yt\",\"addons/l10n_za\",\"addons/l10n_zm_account\",\"addons/link_tracker\",\"addons/loyalty\",\"addons/lunch\",\"addons/mail\",\"addons/mail_bot\",\"addons/mail_bot_hr\",\"addons/mail_group\",\"addons/mail_plugin\",\"addons/maintenance\",\"addons/marketing_card\",\"addons/mass_mailing\",\"addons/mass_mailing_crm\",\"addons/mass_mailing_crm_sms\",\"addons/mass_mailing_event\",\"addons/mass_mailing_event_sms\",\"addons/mass_mailing_event_track\",\"addons/mass_mailing_event_track_sms\",\"addons/mass_mailing_sale\",\"addons/mass_mailing_sale_sms\",\"addons/mass_mailing_slides\",\"addons/mass_mailing_sms\",\"addons/mass_mailing_themes\",\"addons/microsoft_account\",\"addons/microsoft_calendar\",\"addons/microsoft_outlook\",\"addons/mrp\",\"addons/mrp_account\",\"addons/mrp_landed_costs\",\"addons/mrp_product_expiry\",\"addons/mrp_repair\",\"addons/mrp_subcontracting\",\"addons/mrp_subcontracting_account\",\"addons/mrp_subcontracting_dropshipping\",\"addons/mrp_subcontracting_landed_costs\",\"addons/mrp_subcontracting_purchase\",\"addons/mrp_subcontracting_repair\",\"addons/onboarding\",\"addons/partner_autocomplete\",\"addons/partnership\",\"addons/payment\",\"addons/payment_adyen\",\"addons/payment_aps\",\"addons/payment_asiapay\",\"addons/payment_authorize\",\"addons/payment_buckaroo\",\"addons/payment_custom\",\"addons/payment_demo\",\"addons/payment_dpo\",\"addons/payment_ecpay\",\"addons/payment_flutterwave\",\"addons/payment_iyzico\",\"addons/payment_mercado_pago\",\"addons/payment_mollie\",\"addons/payment_nuvei\",\"addons/payment_paymob\",\"addons/payment_paypal\",\"addons/payment_payu\",\"addons/payment_razorpay\",\"addons/payment_redsys\",\"addons/payment_stripe\",\"addons/payment_toss_payments\",\"addons/payment_worldline\",\"addons/payment_xendit\",\"addons/phone_validation\",\"addons/point_of_sale\",\"addons/portal\",\"addons/portal_rating\",\"addons/pos_account_tax_python\",\"addons/pos_adyen\",\"addons/pos_cashdro\",\"addons/pos_cashmatic\",\"addons/pos_discount\",\"addons/pos_dpopay\",\"addons/pos_edi_ubl\",\"addons/pos_event\",\"addons/pos_event_sale\",\"addons/pos_glory_cash\",\"addons/pos_hr\",\"addons/pos_hr_restaurant\",\"addons/pos_imin\",\"addons/pos_loyalty\",\"addons/pos_mercado_pago\",\"addons/pos_mollie\",\"addons/pos_mrp\",\"addons/pos_online_payment\",\"addons/pos_online_payment_self_order\",\"addons/pos_pine_labs\",\"addons/pos_qfpay\",\"addons/pos_razorpay\",\"addons/pos_repair\",\"addons/pos_restaurant\",\"addons/pos_restaurant_adyen\",\"addons/pos_restaurant_loyalty\",\"addons/pos_restaurant_stripe\",\"addons/pos_safaricom\",\"addons/pos_sale\",\"addons/pos_sale_loyalty\",\"addons/pos_sale_margin\",\"addons/pos_self_order\",\"addons/pos_self_order_adyen\",\"addons/pos_self_order_pine_labs\",\"addons/pos_self_order_qfpay\",\"addons/pos_self_order_razorpay\",\"addons/pos_self_order_sale\",\"addons/pos_self_order_stripe\",\"addons/pos_self_order_viva_com\",\"addons/pos_sms\",\"addons/pos_stripe\",\"addons/pos_viva_com\",\"addons/privacy_lookup\",\"addons/product\",\"addons/product_email_template\",\"addons/product_expiry\",\"addons/product_margin\",\"addons/product_matrix\",\"addons/project\",\"addons/project_account\",\"addons/project_hr_expense\",\"addons/project_hr_skills\",\"addons/project_mail_plugin\",\"addons/project_mrp\",\"addons/project_mrp_account\",\"addons/project_mrp_sale\",\"addons/project_mrp_stock_landed_costs\",\"addons/project_purchase\",\"addons/project_purchase_stock\",\"addons/project_sale_expense\",\"addons/project_sms\",\"addons/project_stock\",\"addons/project_stock_account\",\"addons/project_stock_landed_costs\",\"addons/project_timesheet_holidays\",\"addons/project_todo\",\"addons/purchase\",\"addons/purchase_edi_ubl_bis3\",\"addons/purchase_mrp\",\"addons/purchase_product_matrix\",\"addons/purchase_repair\",\"addons/purchase_requisition\",\"addons/purchase_requisition_sale\",\"addons/purchase_requisition_stock\",\"addons/purchase_stock\",\"addons/rating\",\"addons/repair\",\"addons/resource\",\"addons/resource_mail\",\"addons/rpc\",\"addons/sale\",\"addons/sale_crm\",\"addons/sale_edi_ubl\",\"addons/sale_expense\",\"addons/sale_expense_margin\",\"addons/sale_gelato\",\"addons/sale_gelato_stock\",\"addons/sale_loyalty\",\"addons/sale_loyalty_delivery\",\"addons/sale_management\",\"addons/sale_margin\",\"addons/sale_mrp\",\"addons/sale_mrp_margin\",\"addons/sale_pdf_quote_builder\",\"addons/sale_product_matrix\",\"addons/sale_project\",\"addons/sale_project_stock\",\"addons/sale_project_stock_account\",\"addons/sale_purchase\",\"addons/sale_purchase_project\",\"addons/sale_purchase_stock\",\"addons/sale_service\",\"addons/sale_sms\",\"addons/sale_stock\",\"addons/sale_stock_margin\",\"addons/sale_stock_product_expiry\",\"addons/sale_timesheet\",\"addons/sale_timesheet_margin\",\"addons/sales_team\",\"addons/sms\",\"addons/sms_twilio\",\"addons/snailmail\",\"addons/snailmail_account\",\"addons/social_media\",\"addons/spreadsheet\",\"addons/spreadsheet_account\",\"addons/spreadsheet_dashboard\",\"addons/spreadsheet_dashboard_account\",\"addons/spreadsheet_dashboard_event_sale\",\"addons/spreadsheet_dashboard_hr_expense\",\"addons/spreadsheet_dashboard_hr_timesheet\",\"addons/spreadsheet_dashboard_im_livechat\",\"addons/spreadsheet_dashboard_pos_hr\",\"addons/spreadsheet_dashboard_pos_restaurant\",\"addons/spreadsheet_dashboard_sale\",\"addons/spreadsheet_dashboard_sale_timesheet\",\"addons/spreadsheet_dashboard_stock_account\",\"addons/spreadsheet_dashboard_website_sale\",\"addons/spreadsheet_dashboard_website_sale_slides\",\"addons/stock\",\"addons/stock_account\",\"addons/stock_delivery\",\"addons/stock_dropshipping\",\"addons/stock_fleet\",\"addons/stock_landed_costs\",\"addons/stock_maintenance\",\"addons/stock_picking_batch\",\"addons/stock_sms\",\"addons/survey\",\"addons/survey_crm\",\"addons/test_base_automation\",\"addons/test_crm_full\",\"addons/test_discuss_full\",\"addons/test_event_full\",\"addons/test_html_field_history\",\"addons/test_import_export\",\"addons/test_mail\",\"addons/test_mail_full\",\"addons/test_mail_sms\",\"addons/test_mass_mailing\",\"addons/test_resource\",\"addons/test_sale_product_configurators\",\"addons/test_sale_purchase_edi_ubl\",\"addons/test_spreadsheet\",\"addons/test_website\",\"addons/test_website_modules\",\"addons/test_website_slides_full\",\"addons/theme_default\",\"addons/transifex\",\"addons/uom\",\"addons/utm\",\"addons/web\",\"addons/web_hierarchy\",\"addons/web_tour\",\"addons/web_unsplash\",\"addons/website\",\"addons/website_blog\",\"addons/website_cf_turnstile\",\"addons/website_crm\",\"addons/website_crm_iap_reveal\",\"addons/website_crm_livechat\",\"addons/website_crm_partner_assign\",\"addons/website_crm_sms\",\"addons/website_customer\",\"addons/website_event\",\"addons/website_event_booth\",\"addons/website_event_booth_exhibitor\",\"addons/website_event_booth_sale\",\"addons/website_event_booth_sale_exhibitor\",\"addons/website_event_crm\",\"addons/website_event_exhibitor\",\"addons/website_event_sale\",\"addons/website_event_track\",\"addons/website_event_track_live\",\"addons/website_event_track_live_quiz\",\"addons/website_event_track_quiz\",\"addons/website_forum\",\"addons/website_google_map\",\"addons/website_hr_recruitment\",\"addons/website_hr_recruitment_livechat\",\"addons/website_links\",\"addons/website_livechat\",\"addons/website_mail\",\"addons/website_mail_group\",\"addons/website_mass_mailing\",\"addons/website_mass_mailing_sms\",\"addons/website_partner\",\"addons/website_payment\",\"addons/website_profile\",\"addons/website_project\",\"addons/website_sale\",\"addons/website_sale_autocomplete\",\"addons/website_sale_collect\",\"addons/website_sale_collect_wishlist\",\"addons/website_sale_comparison\",\"addons/website_sale_comparison_wishlist\",\"addons/website_sale_gelato\",\"addons/website_sale_loyalty\",\"addons/website_sale_mass_mailing\",\"addons/website_sale_mondialrelay\",\"addons/website_sale_mrp\",\"addons/website_sale_slides\",\"addons/website_sale_stock\",\"addons/website_sale_stock_wishlist\",\"addons/website_sale_wishlist\",\"addons/website_slides\",\"addons/website_slides_forum\",\"addons/website_slides_survey\",\"addons/website_sms\",\"addons/website_timesheet\",\"odoo/addons/base\",\"odoo/addons/test_access_rights\",\"odoo/addons/test_action_bindings\",\"odoo/addons/test_assetsbundle\",\"odoo/addons/test_auth_custom\",\"odoo/addons/test_convert\",\"odoo/addons/test_converter\",\"odoo/addons/test_data_module\",\"odoo/addons/test_data_module_install\",\"odoo/addons/test_http\",\"odoo/addons/test_inherit\",\"odoo/addons/test_inherit_depends\",\"odoo/addons/test_inherits\",\"odoo/addons/test_inherits_depends\",\"odoo/addons/test_lint\",\"odoo/addons/test_main_flows\",\"odoo/addons/test_mimetypes\",\"odoo/addons/test_orm\",\"odoo/addons/test_read_group\",\"odoo/addons/test_rpc\",\"odoo/addons/test_search_panel\",\"odoo/addons/test_testing_utilities\",\"odoo/addons/test_translation_import\",\"odoo/addons/test_uninstall\"]"
+        ENACT_ENVIRONMENT_FILES: "[]"
+        ENACT_JOB_SERVICES: db
+        ENACT_PREPARE_ENVIRONMENT_FILES: "[\"enve.cue\"]"
+        ENACT_R2_BUCKET: ${{ secrets.R2_BUCKET || env.R2_BUCKET }}
+        ENVE_CACHE_CONCURRENCY: "16"
+    - name: Check enve Stores into the Host Cache
+      if: ${{ steps.runner_caches.outputs.host != '' && steps.python_l1_cache.outputs.cache-hit != 'true' && hashFiles('pyproject.toml', 'requirements.txt') != '' }}
+      run: enact ci check-store
+    - name: Install Python Dependencies
+      id: python_install
+      if: ${{ steps.python_l1_cache.outputs.cache-hit != 'true' && hashFiles('pyproject.toml', 'requirements.txt') != '' }}
+      run: enact ci deps install python --manager uv
+      env:
+        ENACT_ENVIRONMENT_FILE: enve.cue
+        ENACT_PYTHON_INSTALL: uv sync --frozen --exact --quiet
+        UV_HTTP_RETRIES: "5"
+        UV_HTTP_TIMEOUT: "120"
+    - name: Check Package Caches for New Entries
+      id: cache_delta
+      if: ${{ !cancelled() && steps.runner_caches.outputs.host == '' && steps.python_l1_cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request' }}
+      continue-on-error: true
+      run: enact ci cache-delta check
+      env:
+        ENACT_CACHE_DELTA: |-
+          python_l1_cache /tmp/.cache/uv
+          python_l1_cache /tmp/.cache/pip
+        ENACT_CACHE_HITS: python_l1_cache=${{ steps.python_l1_cache.outputs.cache-hit }}
+        ENACT_UV_PRUNE: ${{ steps.python_l1_cache.outputs.cache-hit != 'true' }}
+    - parallel:
+      - name: Save Python build & venv cache
+        if: (!cancelled() && (success() || steps.python_install.outcome == 'success') && (github.event_name != 'pull_request' && hashFiles('pyproject.toml', 'requirements.txt') != '' && steps.runner_caches.outputs.host == '' && steps.cache_delta.outputs.python_l1_cache == 'true')) && github.event_name != 'pull_request' && steps.python_l1_cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          key: ${{ steps.python_l1_cache.outputs.cache-primary-key }}
+          path: |-
+            /tmp/.cache/uv
+            /tmp/.cache/pip

@@ -4,10 +4,12 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 source "${here}/odoo-env.sh"
 
+enact="${ENACT_EXE:-${ENACT_BIN:-$(command -v enact || echo enact)}}"
+
 release() {
     local status=0
     if [[ -n "${ODOO_SHARD_HTTP_PORT:-}" ]]; then
-        "${ENACT_EXE:-${ENACT_BIN:-enact}}" helper free-ports --owner "${ENACT_FIXTURE_OWNER_PID:-${PPID}}" \
+        "${enact}" helper free-ports --owner "${ENACT_FIXTURE_OWNER_PID:-${PPID}}" \
             --release "${ODOO_SHARD_HTTP_PORT}" 1 || status=$?
     fi
     [[ -z "${ODOO_SHARD_FILESTORE:-}" ]] || rm -rf -- "${ODOO_SHARD_FILESTORE}"
@@ -16,7 +18,7 @@ release() {
 
 if [[ "${1:-}" == release ]]; then release; exit; fi
 [[ "${1:-}" == acquire ]] || { echo 'usage: odoo-fixture.sh acquire [--shell] | release' >&2; exit 2; }
-ODOO_SHARD_HTTP_PORT="$(PORTS_OWNER="${ENACT_FIXTURE_OWNER_PID:-${PPID}}" bash "${here}/free-port.sh")"
+ODOO_SHARD_HTTP_PORT="$("${enact}" helper free-ports --count 1 --owner "${ENACT_FIXTURE_OWNER_PID:-${PPID}}" ${FREE_PORTS_RANGE:+--range "${FREE_PORTS_RANGE}"})"
 export ODOO_SHARD_HTTP_PORT
 export ODOO_SHARD_FILESTORE=""
 trap 'status=$?; if (( status != 0 )); then release >&2 || true; fi' EXIT
@@ -26,7 +28,17 @@ if [[ -n "${ENACT_SHARD_TEMPLATE:-}" ]]; then
     mkdir -p "${ODOO_DATA_DIR}/filestore"
     template="${ENACT_TEMPLATE_DIR:-${ODOO_DATA_DIR}}/filestore/${ENACT_SHARD_TEMPLATE}"
     if [[ -d "${template}" ]]; then
-        cp -R "${template}" "${ODOO_SHARD_FILESTORE}"
+        if [[ "$(uname -s)" == Darwin ]]; then
+            cp -cR "${template}" "${ODOO_SHARD_FILESTORE}" 2>/dev/null || {
+                rm -rf -- "${ODOO_SHARD_FILESTORE}"
+                cp -R "${template}" "${ODOO_SHARD_FILESTORE}"
+            }
+        else
+            cp -a --reflink=auto "${template}" "${ODOO_SHARD_FILESTORE}" 2>/dev/null || {
+                rm -rf -- "${ODOO_SHARD_FILESTORE}"
+                cp -R "${template}" "${ODOO_SHARD_FILESTORE}"
+            }
+        fi
     elif [[ -n "${ENACT_TEMPLATE_DIR:-}" ]]; then
         echo "odoo-shard: the template's file store ${template} is missing" >&2
         exit 1

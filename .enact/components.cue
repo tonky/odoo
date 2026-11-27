@@ -7,15 +7,20 @@ import (
 	"enact.dev/schema"
 )
 
+let _baseIncidental = [
+	"**/__manifest__.py",
+	"**/README.md",
+	"**/README.rst",
+	"**/static/description/**",
+	"**/static/img/**",
+]
+
+let _l10nAddons = [for k, _ in _addons if strings.HasPrefix(k, "l10n_") {k}]
+let _l10nGlobs = [for k in _l10nAddons {"addons/\(k)/**"}]
+
 #OdooTargetScope: schema.#TargetScope & {
-	fallback: "all"
-	incidental_reads: [...string] | *[
-		"**/__manifest__.py",
-		"**/README.md",
-		"**/README.rst",
-		"**/static/description/**",
-		"**/static/img/**",
-	]
+	fallback:         "all"
+	incidental_reads: [...string] | *_baseIncidental
 }
 
 #OdooLint: schema.#Task & {
@@ -24,11 +29,12 @@ import (
 }
 
 let shardFixture = {
-	setup: "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh acquire"
-	release: "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh release"
+	setup:     "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh acquire"
+	release:   "bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh release"
+	services:  ["db"]
 	allow_env: ["ODOO_SHARD_HTTP_PORT", "ODOO_SHARD_FILESTORE"]
-	inputs: ["helpers/odoo-shard.sh", "helpers/odoo-fixture.sh", "helpers/odoo-env.sh", "helpers/free-port.sh"]
-	timeout: "120s"
+	inputs:    ["helpers/odoo-shard.sh", "helpers/odoo-fixture.sh", "helpers/odoo-env.sh"]
+	timeout:   "120s"
 }
 
 #OdooAddonBase: schema.#Component & {
@@ -56,12 +62,10 @@ let shardFixture = {
 }
 
 _addons: [string]: {
-	not_run:             *[] | [...schema.#NotRun]
-	known_not_run:       *[] | [...schema.#NotRun]
-	template:            *"base" | string
-	test_install:        *[] | [...string]
-	extra_sparse_paths?: [...string]
-	test_tags?:          [...string]
+	not_run:       *[] | [...schema.#NotRun]
+	known_not_run: *[] | [...schema.#NotRun]
+	template:      *"base" | string
+	test_install:  *[] | [...string]
 }
 _templates: [string]: addon_dirs: [...string]
 
@@ -78,12 +82,11 @@ pipeline: schema.#Pipeline & {
 			"addons/bus", "addons/html_editor", "addons/http_routing", "addons/iap", "addons/rpc",
 			"addons/web", "addons/web_tour", "addons/web_unsplash",
 		]
+		ignore: [
+			"README.md", "CONTRIBUTING.md", "COPYRIGHT", "LICENSE", "SECURITY.md",
+			".weblate.json", ".gitignore", "debian/**",
+		]
 		hooks: post: ["bin/odoo-scope sparse -c {component_root}"]
-	}
-	triggers: {
-		pull_request: {branches: ["master", "19.0", "saas-19.4", "perf/ci-showcase"], paths: []}
-		push: {branches: ["master", "19.0", "saas-19.4", "perf/ci-showcase"], paths: ["**/*"]}
-		schedule: []
 	}
 	components: {
 		for addon, meta in _addons {
@@ -103,7 +106,9 @@ pipeline: schema.#Pipeline & {
 					template_init: "bash setup/ci/post-start-postgres.sh \(meta.template)"
 					template_inputs: {
 						include: list.Concat([[
-							"odoo-bin", "helpers/odoo-runner.sh", "helpers/odoo-env.sh",
+							"odoo-bin", "uv.lock", "pyproject.toml", "enve.lock",
+							"setup/ci/post-start-postgres.sh",
+							"helpers/odoo-runner.sh", "helpers/odoo-env.sh",
 							"helpers/odoo-manifests.sh", "odoo/**",
 						], _templates[meta.template].addon_dirs])
 						exclude: ["**/tests/**", "odoo/addons/test_*/**"]
@@ -113,30 +118,32 @@ pipeline: schema.#Pipeline & {
 					shards: "auto"
 					target_scope: #OdooTargetScope & {
 						default_target: "/\(addon)"
-						let _base_incidental = [
-							"**/__manifest__.py",
-							"**/README.md",
-							"**/README.rst",
-							"**/static/description/**",
-							"**/static/img/**",
-						]
 						let _iban_incidental = [
 							if addon != "base_iban" && !list.Contains(meta.depends, "base_iban") {"addons/base_iban/**"},
 						]
-						if !strings.HasPrefix(addon, "l10n_") {
+						let _l10n_deps = [for d in meta.depends if strings.HasPrefix(d, "l10n_") {d}]
+						let _l10n_ti = [for d in meta.test_install if strings.HasPrefix(d, "l10n_") {d}]
+						if !strings.HasPrefix(addon, "l10n_") && len(_l10n_deps) == 0 && len(_l10n_ti) == 0 {
 							incidental_reads: list.Concat([
-								_base_incidental,
+								_baseIncidental,
 								_iban_incidental,
-								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !list.Contains(meta.depends, k) && !list.Contains(meta.test_install, k) {"addons/\(k)/**"}],
+								_l10nGlobs,
+							])
+						}
+						if !strings.HasPrefix(addon, "l10n_") && (len(_l10n_deps) > 0 || len(_l10n_ti) > 0) {
+							incidental_reads: list.Concat([
+								_baseIncidental,
+								_iban_incidental,
+								[for k in _l10nAddons if !list.Contains(_l10n_deps, k) && !list.Contains(_l10n_ti, k) {"addons/\(k)/**"}],
 							])
 						}
 						if strings.HasPrefix(addon, "l10n_") {
 							let _cc_parts = strings.Split(addon, "_")
 							let _cc_prefix = "\(_cc_parts[0])_\(_cc_parts[1])"
 							incidental_reads: list.Concat([
-								_base_incidental,
+								_baseIncidental,
 								_iban_incidental,
-								[for k, _ in _addons if strings.HasPrefix(k, "l10n_") && !strings.HasPrefix(k, _cc_prefix) && !list.Contains(meta.depends, k) && !list.Contains(meta.test_install, k) {"addons/\(k)/**"}],
+								[for k in _l10nAddons if !strings.HasPrefix(k, _cc_prefix) && !list.Contains(_l10n_deps, k) && !list.Contains(_l10n_ti, k) {"addons/\(k)/**"}],
 							])
 						}
 						tests: [...string] | *[
@@ -151,13 +158,17 @@ pipeline: schema.#Pipeline & {
 						]
 					}
 					recorder: "own"
-					let excluded = strings.Join([for f in meta.known_failures {",-/\(addon):\(f.test)"}], "")
+					let excluded = strings.Join([for f in meta.known_failures if f.os == "all" {",-/\(addon):\(f.test)"}], "")
+					let darwin_excluded = strings.Join([for f in meta.known_failures if f.os == "darwin" {",-/\(addon):\(f.test)"}], "")
 					let max_failed = [if addon != "base" {"ODOO_TEST_MAX_FAILED_TESTS=10 "}, ""][0]
 					let install_addons = strings.Join(list.Concat([[addon], meta.test_install]), ",")
 					jobs: test: {
 						fixture: shardFixture
 						tasks: [{
 							command: string | *"\(max_failed)bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i \(install_addons) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}\(excluded)"
+							if darwin_excluded != "" {
+								env: ODOO_DARWIN_EXCLUDE_TAGS: darwin_excluded
+							}
 							if addon == "point_of_sale" {
 								timeout: "25m"
 							}
@@ -192,6 +203,7 @@ pipeline: schema.#Pipeline & {
 			description: "Odoo discussions, activities, and communication gateways"
 			title:       "Odoo Discussions & Activity Gateway"
 			domain:      "communication"
+			resources:   {cpus: 2.0, memory_mb: 4096}
 			tags:        ["mail", "discuss"]
 		}
 		"account": {
@@ -205,6 +217,7 @@ pipeline: schema.#Pipeline & {
 			description: "Odoo Sales quotations, pricing rules, and sales orders"
 			title:       "Odoo Sales & Quotation Management"
 			domain:      "commerce"
+			resources:   {cpus: 2.0, memory_mb: 4096}
 			tags:        ["sale", "crm"]
 		}
 		"stock": {
@@ -214,6 +227,15 @@ pipeline: schema.#Pipeline & {
 			tags:        ["stock", "inventory"]
 		}
 		"point_of_sale": {
+			resources: {cpus: 2.0, memory_mb: 4096}
+		}
+		"pos_restaurant": {
+			resources: {cpus: 2.0, memory_mb: 4096}
+		}
+		"website": {
+			resources: {cpus: 2.0, memory_mb: 4096}
+		}
+		"website_sale": {
 			resources: {cpus: 2.0, memory_mb: 4096}
 		}
 		"test_lint": {
@@ -237,13 +259,28 @@ pipeline: schema.#Pipeline & {
 			title:       "Odoo Platform Entrypoints & Packaging"
 			root:        "."
 			watch_paths: [
-				".gitignore", ".weblate.json", "CONTRIBUTING.md", "COPYRIGHT", "Justfile",
-				"LICENSE", "MANIFEST.in", "README.md", "SECURITY.md", "enve.cue", "enve.lock",
-				"odoo-bin", "oxlint.json", "pyproject.toml", "requirements.txt", "ruff.toml",
-				"setup.cfg", "setup.py", "uv.lock", "setup/**", "helpers/**", "debian/**",
+				"Justfile", "MANIFEST.in", "enve.cue", "enve.lock",
+				"odoo-bin", "pyproject.toml", "requirements.txt",
+				"setup.cfg", "setup.py", "uv.lock", "setup/**", "helpers/**",
 				"bin/**", ".enact/**", ".github/**", "cue.mod/**",
 			]
 			lint: #OdooLint
+		}
+		"lint_config": {
+			description: "Repository-wide Python and JavaScript linter configuration"
+			title:       "Linter Configuration"
+			root:        "."
+			watch_paths: ["oxlint.json", "ruff.toml"]
+			depends_on:  ["root"]
+			jobs: lint: {
+				direct:    true
+				services:  false
+				resources: {cpus: 2.0, memory_mb: 2048}
+				tasks: [{
+					name:    "verify-lint-config"
+					command: "ruff check --config ruff.toml --exit-zero odoo-bin && oxlint -c oxlint.json addons/web/static/src/start.js"
+				}]
+			}
 		}
 		"ci": {
 			description: "CI/CD pipelines, schemas, and automation workflows"

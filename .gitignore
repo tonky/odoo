@@ -52,7 +52,6 @@ package.json
 !/bin/enact
 !/bin/enve
 !/bin/odoo-scope
-!/bin/trace-runner
 /build/
 /dist/
 /include/

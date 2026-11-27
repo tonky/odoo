@@ -40,15 +40,15 @@ import os
 import runpy
 import sys
 
-if _core_path := os.environ.get("ENACT_FOOTPRINT_CORE"):
-    import importlib.util as _iu
+_core_path = os.environ.get("ENACT_FOOTPRINT_CORE")
+if not _core_path:
+    raise RuntimeError("ENACT_FOOTPRINT_CORE is not set; odoo-footprint.py requires enact_footprint.py")
+import importlib.util as _iu
 
-    _spec = _iu.spec_from_file_location("enact_footprint", _core_path)
-    core = _iu.module_from_spec(_spec)
-    sys.modules["enact_footprint"] = core
-    _spec.loader.exec_module(core)
-else:
-    import enact_footprint as core  # helpers/, this script's directory
+_spec = _iu.spec_from_file_location("enact_footprint", _core_path)
+core = _iu.module_from_spec(_spec)
+sys.modules["enact_footprint"] = core
+_spec.loader.exec_module(core)
 
 root = os.path.realpath(os.getcwd()) + os.sep
 # The recorders (helpers/) aren't the repository's code under test.

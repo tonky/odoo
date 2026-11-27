@@ -11,7 +11,6 @@ profiles: dev: schema.#Profile & {
 	tools: [
 		pkgs.python & {version: "3.12"},
 		pkgs.uv,
-		{pname: "python313Packages.pytest"},
 		pkgs.postgresql_16,
 		{pname: "ruff"},
 		{pname: "oxlint"},
@@ -71,6 +70,8 @@ profiles: dev: schema.#Profile & {
 		port:    5436
 	}
 	environment: {
+		LANG:                 "en_US.UTF-8"
+		LC_ALL:               "en_US.UTF-8"
 		PGHOST:               "127.0.0.1"
 		PGPORT:               "${ENVE_SERVICE_DB_PORT}"
 		PGUSER:               "odoo"

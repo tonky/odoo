@@ -22,10 +22,29 @@ fi
 # Sync the shared root .venv under a lock so concurrent template builds or shards in one
 # checkout never race `uv run --exact` on `.venv/lib` (mirrors helpers/odoo-pylint.sh).
 enact helper lock odoo-venv -- uv sync --frozen --exact --quiet
+args=("$@")
+if [ "$(uname -s)" = Darwin ] && [ -n "${ODOO_DARWIN_EXCLUDE_TAGS:-}" ]; then
+    patched=()
+    append_next=0
+    for arg in "${args[@]}"; do
+        if [ "${append_next}" = 1 ]; then
+            patched+=("${arg}${ODOO_DARWIN_EXCLUDE_TAGS}")
+            append_next=0
+        elif [ "${arg}" = "--test-tags" ]; then
+            patched+=("${arg}")
+            append_next=1
+        elif [[ "${arg}" == --test-tags=* ]]; then
+            patched+=("${arg}${ODOO_DARWIN_EXCLUDE_TAGS}")
+        else
+            patched+=("${arg}")
+        fi
+    done
+    args=("${patched[@]}")
+fi
 # A failed tour's screenshot and Chrome log go to the CI job's temp dir (the job uploads them,
 # .enact/ci.cue diagnostic_paths), else the data dir: odoo's default is the host's /tmp/odoo_tests.
 odoo=(uv run --frozen --no-sync python ${recorders[@]+"${recorders[@]}"} odoo-bin --data-dir="${ODOO_DATA_DIR}"
-    --screenshots="${RUNNER_TEMP:-${ODOO_DATA_DIR}}/odoo_tests" "$@")
+    --screenshots="${RUNNER_TEMP:-${ODOO_DATA_DIR}}/odoo_tests" "${args[@]}")
 case " $* " in
     *" --test-enable "*) ;;
     *) exec "${odoo[@]}" ;;

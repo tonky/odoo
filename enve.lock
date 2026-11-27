@@ -2,8 +2,8 @@
   "platforms": {
     "aarch64-darwin": {
       "binding": {
-        "environment_sha256": "e8b47551e2031adab4f1ee979318392d1b8a1570380a40e22f9810c0abf7c4c6",
-        "inventory_sha256": "19d2b8193575362b37f06403caf8177a837a3bccd96b2ba8061bf8082f0bff4e",
+        "environment_sha256": "1d3e05888d1742e8fdbef62b1dc38c7d41d6ea1d8af57646f7f7b424b4f587b9",
+        "inventory_sha256": "45caed0d53e9d3c98a18a0b11201ba8957e75e8e180b4fd1446168e868c43689",
         "profile": null,
         "version": 2
       },
@@ -265,15 +265,6 @@
           "nar_size": 69304,
           "references": [
             "5hblqnsn8g7bx80bmfvsma04hxxmxc4k-brotli-1.2.0-lib"
-          ]
-        },
-        {
-          "hash_name": "543p4ryfaa07vycw2p4mc9q8prcpy2pm-python3.13-iniconfig-2.3.0",
-          "nar_hash": "sha256:0xpc6xskgcvrjl053zry8jsd6xrm2bqprbj18f0asfwrgixsp1x0",
-          "nar_size": 60072,
-          "references": [
-            "543p4ryfaa07vycw2p4mc9q8prcpy2pm-python3.13-iniconfig-2.3.0",
-            "ydlh8id2c98nnlhiy87hwhalg501p1j5-python3-3.13.15"
           ]
         },
         {
@@ -607,20 +598,6 @@
           ]
         },
         {
-          "hash_name": "biljjdj71a2rsk1mza945y9j87fw8v5d-python3.13-pytest-9.1.1",
-          "nar_hash": "sha256:10jsfnw58p7hs3x6r9l9in4i7r1ppqdk00cbsm3yikkavc95wnmv",
-          "nar_size": 4702544,
-          "references": [
-            "543p4ryfaa07vycw2p4mc9q8prcpy2pm-python3.13-iniconfig-2.3.0",
-            "biljjdj71a2rsk1mza945y9j87fw8v5d-python3.13-pytest-9.1.1",
-            "f0b9dbw2gl596cm03pvdsss72381qhlp-bash-5.3p15",
-            "gj6fxqd0v61s0pm66csvdpxxrmjglx5n-python3.13-packaging-26.2",
-            "ia28jwzc8ma9ij74fb0xhjy1a7c6sqi5-python3.13-pluggy-1.6.0",
-            "vnv5l4yfzcdhcvw2xk1qzxs3kplypkfj-python3.13-pygments-2.20.0",
-            "ydlh8id2c98nnlhiy87hwhalg501p1j5-python3-3.13.15"
-          ]
-        },
-        {
           "hash_name": "blaj3i2byzlk193qx8mw94qg4rj52632-openldap-2.6.13",
           "nar_hash": "sha256:0qlp1yx4cw12d6dyk3lg1li4yy4kdsmr1wkm5ql4r7249cfi7cgd",
           "nar_size": 4164320,
@@ -817,15 +794,6 @@
           ]
         },
         {
-          "hash_name": "gj6fxqd0v61s0pm66csvdpxxrmjglx5n-python3.13-packaging-26.2",
-          "nar_hash": "sha256:0v677d3pka1af1iqhwkh7dszg2d2wbkyq6g1yrzbbn8x472scry2",
-          "nar_size": 1177344,
-          "references": [
-            "gj6fxqd0v61s0pm66csvdpxxrmjglx5n-python3.13-packaging-26.2",
-            "ydlh8id2c98nnlhiy87hwhalg501p1j5-python3-3.13.15"
-          ]
-        },
-        {
           "hash_name": "gm0jkahs095d7xym5rzas9ngk64aadvf-cue-0.17.1",
           "nar_hash": "sha256:17rbzscdfkrqgbcszkgx2xbnj224kwlqzmxw0fi7nbyhiniq18w8",
           "nar_size": 23401936,
@@ -938,15 +906,6 @@
             "ji7chjspdr4nxh0wys6n9klf13l9cxjb-apple-sdk-14.4",
             "pp0azykqgazflz5s78alb0cnfn8mm7aq-cctools-binutils-darwin-1010.6",
             "r1glp00746l4rxg5yb6147xlk8yjcgsw-expand-response-params"
-          ]
-        },
-        {
-          "hash_name": "ia28jwzc8ma9ij74fb0xhjy1a7c6sqi5-python3.13-pluggy-1.6.0",
-          "nar_hash": "sha256:11z2wqdxq6d126p11jai4pp76ryicvch996nw434v1ma9h7zchi0",
-          "nar_size": 216304,
-          "references": [
-            "ia28jwzc8ma9ij74fb0xhjy1a7c6sqi5-python3.13-pluggy-1.6.0",
-            "ydlh8id2c98nnlhiy87hwhalg501p1j5-python3-3.13.15"
           ]
         },
         {
@@ -1618,16 +1577,6 @@
           ]
         },
         {
-          "hash_name": "vnv5l4yfzcdhcvw2xk1qzxs3kplypkfj-python3.13-pygments-2.20.0",
-          "nar_hash": "sha256:1vn7lc9zm9wn3j2bbb8z7v8jszxmfzk776ni0zay4hgdxhlfp37h",
-          "nar_size": 12474776,
-          "references": [
-            "f0b9dbw2gl596cm03pvdsss72381qhlp-bash-5.3p15",
-            "vnv5l4yfzcdhcvw2xk1qzxs3kplypkfj-python3.13-pygments-2.20.0",
-            "ydlh8id2c98nnlhiy87hwhalg501p1j5-python3-3.13.15"
-          ]
-        },
-        {
           "hash_name": "wg3yvh21vv809iid97fb4h296vf9ajyq-libidn2-2.3.8",
           "nar_hash": "sha256:116lagfc71bnnb4j8n2qq7y3jv7did1rmb17yqcn5vfzj2d50hmb",
           "nar_size": 242520,
@@ -1767,30 +1716,6 @@
           "references": [
             "phb97pafnka8z1qpj12is214rshpql65-zlib-1.3.2",
             "y44vpziwbzfm8020dzlqqbybyyy7lb6g-file-5.48"
-          ]
-        },
-        {
-          "hash_name": "ydlh8id2c98nnlhiy87hwhalg501p1j5-python3-3.13.15",
-          "nar_hash": "sha256:1a7yw647njkprczn21vdcv6751vcqff2ii61y9n7fslmnymlvmpc",
-          "nar_size": 115795280,
-          "references": [
-            "0fz1gcmyam04pahr91fzjph2c5mi6rv0-bzip2-1.0.8",
-            "0k4r9hnfbnyngn5f3j31siddfs0iglwl-sqlite-3.53.3",
-            "2xyjpks2z1i91klny38h789j483fpz4x-libffi-40",
-            "9496m45iskps77ngzq2i16a7snig4dx9-xz-5.8.4",
-            "c1jd49qp0wc5a9nzm2k6m7lw127z8v8x-mailcap-2.1.54",
-            "f0b9dbw2gl596cm03pvdsss72381qhlp-bash-5.3p15",
-            "ji7chjspdr4nxh0wys6n9klf13l9cxjb-apple-sdk-14.4",
-            "m1kwp7bxnlri7nm9x9x8br0d4zlr95f9-openssl-3.5.8",
-            "n9925m4950mn5i2bmlh50lds2ih6yg1v-ncurses-6.6",
-            "phb97pafnka8z1qpj12is214rshpql65-zlib-1.3.2",
-            "q34491gza1y1ghi36zj4c5zg2p5q02xc-readline-8.3p3",
-            "rhri8qncla0wkx4wpl10a48lxai3ng5b-tzdata-2026d",
-            "rj5p6rhnxpx4cprpx8y1yqpmh6npmbl3-gdbm-1.26-lib",
-            "v1zb8pqd25hsj0wd748nfczsa8ygciba-clang-wrapper-21.1.8",
-            "vj96qf8wawcr0i9wvg191ij0n7y59dg4-expat-2.8.5",
-            "xr5dvsavhkvb7bn1ga0mal6dgd7lb6rf-mpdecimal-4.0.1",
-            "ydlh8id2c98nnlhiy87hwhalg501p1j5-python3-3.13.15"
           ]
         },
         {
@@ -2349,36 +2274,6 @@
             },
             {
               "constraint": {
-                "attr": "python313Packages.pytest",
-                "context": "profiles.dev",
-                "output": null,
-                "system": "aarch64-darwin",
-                "version": null
-              },
-              "package": {
-                "attr_path": "python313Packages.pytest",
-                "name": "pytest",
-                "origin": {
-                  "Channel": {
-                    "build": 347219837,
-                    "evaluation": 1829774,
-                    "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/"
-                  }
-                },
-                "outputs": {
-                  "dist": "/nix/store/9qv3im10kyx9b3r2jl9s92gnkyj95p76-python3.13-pytest-9.1.1-dist",
-                  "out": "/nix/store/biljjdj71a2rsk1mza945y9j87fw8v5d-python3.13-pytest-9.1.1",
-                  "testout": "/nix/store/4w3igq69s8whfnaj82186gyxiaqj1v7f-python3.13-pytest-9.1.1-testout"
-                },
-                "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce",
-                "store_paths": [
-                  "/nix/store/biljjdj71a2rsk1mza945y9j87fw8v5d-python3.13-pytest-9.1.1"
-                ],
-                "version": "9.1.1"
-              }
-            },
-            {
-              "constraint": {
                 "attr": "rtlcss",
                 "context": "profiles.dev",
                 "output": null,
@@ -2498,7 +2393,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "e558b19758f718f61f5283df1bd39d2d1240c2593acb03a266a22a68c8081ef6"
+        "projectSha256": "c60a6b9c1b230a28c2fec150a0eb354c5a1add180b0a3bb0d7ff2f8467586ac0"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -2509,6 +2404,8 @@
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
         "FONTCONFIG_FILE": "$ENVE_STORE_DIR/zmvmqwnaj4wf16fljr1ps6hbi1wamrha-playwright-browsers-1.62.1/fonts.conf",
+        "LANG": "en_US.UTF-8",
+        "LC_ALL": "en_US.UTF-8",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
         "PGUSER": "odoo",
@@ -2789,21 +2686,6 @@
           },
           "version": "3.12.15"
         },
-        "python313Packages.pytest": {
-          "closure": "biljjdj71a2rsk1mza945y9j87fw8v5d-python3.13-pytest-9.1.1",
-          "outputs": [
-            "biljjdj71a2rsk1mza945y9j87fw8v5d-python3.13-pytest-9.1.1"
-          ],
-          "source": {
-            "attr": "python313Packages.pytest",
-            "build": 347219837,
-            "evaluation": 1829774,
-            "kind": "channel",
-            "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/",
-            "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce"
-          },
-          "version": "9.1.1"
-        },
         "rtlcss": {
           "closure": "0gdjy1c3jf7vn8ja6m65axyfs8iwyd2g-rtlcss-4.1.0",
           "outputs": [
@@ -2853,8 +2735,8 @@
     },
     "aarch64-linux": {
       "binding": {
-        "environment_sha256": "e8b47551e2031adab4f1ee979318392d1b8a1570380a40e22f9810c0abf7c4c6",
-        "inventory_sha256": "31f22257be3622f3b8ae8848e5c3cc91b598f19d89ae6c5beeabcddc740deb96",
+        "environment_sha256": "1d3e05888d1742e8fdbef62b1dc38c7d41d6ea1d8af57646f7f7b424b4f587b9",
+        "inventory_sha256": "0e6920a566353432be244be2c589de7a429cb61596470f2a686bdb1c96be7c2f",
         "profile": null,
         "version": 2
       },
@@ -2994,15 +2876,6 @@
             "1sk0j24qkhwn98g47fhkhmxdw30lvkwn-libxcb-1.17.0",
             "1zwawn88anm0bh4b53wa9f309hjncgx1-libxdmcp-1.1.5",
             "hx9wvdx2l59iahwf9nmrx7rwkm6cymgs-glibc-2.44-25"
-          ]
-        },
-        {
-          "hash_name": "1wgl8nyrggqpb7a2rws8gbx2f80gdxy4-python3.13-iniconfig-2.3.0",
-          "nar_hash": "sha256:0d42msz20xczwvqqjs3kx5xj5ssxdfkf832vnaymfx3dzh96fl9y",
-          "nar_size": 60072,
-          "references": [
-            "1wgl8nyrggqpb7a2rws8gbx2f80gdxy4-python3.13-iniconfig-2.3.0",
-            "v3n38bhgkjylj7wxk2shklk6yavasxnh-python3-3.13.15"
           ]
         },
         {
@@ -3406,15 +3279,6 @@
             "6ma05qr0g2l0cjy05iqqxblnkh5fz5s1-gtest-1.18.0",
             "hx9wvdx2l59iahwf9nmrx7rwkm6cymgs-glibc-2.44-25",
             "na9inwswsrgxxqpqrz3ms78qn7pyxg44-gcc-16.2.0-lib"
-          ]
-        },
-        {
-          "hash_name": "6mc016hhypg7ilrp6b0b51fhz8nc2yqf-python3.13-packaging-26.2",
-          "nar_hash": "sha256:16v205gyv48k9zkl71ikf9phx4v4ac531ix8r5943jv5i7cm4sdg",
-          "nar_size": 1177344,
-          "references": [
-            "6mc016hhypg7ilrp6b0b51fhz8nc2yqf-python3.13-packaging-26.2",
-            "v3n38bhgkjylj7wxk2shklk6yavasxnh-python3-3.13.15"
           ]
         },
         {
@@ -3931,16 +3795,6 @@
           "references": [
             "phkl7194mcixrzbkmiy6pq9mynm5c6bc-nodejs-slim-24.21.0",
             "wgxz9zr5a70v52nkqinbarf56f1c5jsi-bash-interactive-5.3p15"
-          ]
-        },
-        {
-          "hash_name": "cpq937j2r3gqf134c0xjfj2drkl0mml0-python3.13-pygments-2.20.0",
-          "nar_hash": "sha256:1bx5dvcn8npdnp9ycsiamqa3w6zc0h5vsii5hd1px1zldczgzfkd",
-          "nar_size": 12474776,
-          "references": [
-            "cpq937j2r3gqf134c0xjfj2drkl0mml0-python3.13-pygments-2.20.0",
-            "mwhkh9l5j5z6mkk83k22rjhx6lxgqh85-bash-5.3p15",
-            "v3n38bhgkjylj7wxk2shklk6yavasxnh-python3-3.13.15"
           ]
         },
         {
@@ -4666,15 +4520,6 @@
           ]
         },
         {
-          "hash_name": "kizg9dj7jjcvha8vxllpjwq2jcw5sjq4-python3.13-pluggy-1.6.0",
-          "nar_hash": "sha256:0243ybwsgfzng7hj8i098wbfkvvp2zms8si0rh25pvwn6yi96pw3",
-          "nar_size": 216304,
-          "references": [
-            "kizg9dj7jjcvha8vxllpjwq2jcw5sjq4-python3.13-pluggy-1.6.0",
-            "v3n38bhgkjylj7wxk2shklk6yavasxnh-python3-3.13.15"
-          ]
-        },
-        {
           "hash_name": "kj6aff4gmz3snpp35rl3gysbl9srd81a-git-2.55.0",
           "nar_hash": "sha256:03c4g1xwkhqd710q2nzmf8gj34l8hylv2893hcph4ys3gr7a0knc",
           "nar_size": 58474824,
@@ -5067,20 +4912,6 @@
           ]
         },
         {
-          "hash_name": "pifmzkiaiv3i9i6bmkq900wz85cwid0b-python3.13-pytest-9.1.1",
-          "nar_hash": "sha256:1ap2lw1yq2qvsr72j0b7kz55d274bna7bi0lk3bs5gfc8hw4n2b6",
-          "nar_size": 4702544,
-          "references": [
-            "1wgl8nyrggqpb7a2rws8gbx2f80gdxy4-python3.13-iniconfig-2.3.0",
-            "6mc016hhypg7ilrp6b0b51fhz8nc2yqf-python3.13-packaging-26.2",
-            "cpq937j2r3gqf134c0xjfj2drkl0mml0-python3.13-pygments-2.20.0",
-            "kizg9dj7jjcvha8vxllpjwq2jcw5sjq4-python3.13-pluggy-1.6.0",
-            "mwhkh9l5j5z6mkk83k22rjhx6lxgqh85-bash-5.3p15",
-            "pifmzkiaiv3i9i6bmkq900wz85cwid0b-python3.13-pytest-9.1.1",
-            "v3n38bhgkjylj7wxk2shklk6yavasxnh-python3-3.13.15"
-          ]
-        },
-        {
           "hash_name": "pjpkdh7hx8jgcwam3hjrvxj3j9d917i8-ada-4.0.0-dev",
           "nar_hash": "sha256:1ipyirxalwq3a37db7irq21wfaz49xifirbk66ppxv18sc4f7zlh",
           "nar_size": 458848,
@@ -5284,31 +5115,6 @@
           "references": [
             "d3qrlana9mib7vby23573v6pzdk4r5vn-perl5.42.3-HTTP-Message-7.02",
             "sxj7mkrp32f8ld9ajivpzid4h9v2m20x-perl5.42.3-HTTP-Negotiate-6.01"
-          ]
-        },
-        {
-          "hash_name": "v3n38bhgkjylj7wxk2shklk6yavasxnh-python3-3.13.15",
-          "nar_hash": "sha256:18954v2crd4ds55xi04pryyp5g028v3ybw63ssn3frqizskazqnn",
-          "nar_size": 138290728,
-          "references": [
-            "2lyx0wc6ccabpdwpviksww3x5xhsmnvk-sqlite-3.53.3",
-            "3anfddw01ai5ykdf393s3pbia6agx3df-bzip2-1.0.8",
-            "4av0n5zs4n8vk5allf6s4lig68crwl92-readline-8.3p3",
-            "5g0149dc72bz1rdxjc10qnr4vdh9yp1x-tzdata-2026d",
-            "5l2pjvrbxby6yrl2k3g07sp28j2bxrzv-ncurses-6.6",
-            "7d907izyink96xhqazkbw4wicvgkm76c-zlib-1.3.2",
-            "932xczyyw1mkrappjd5pn1rh3i09xyx6-libffi-3.8.0",
-            "d8aaaq83sdrzsqyxx19qfc14slcrdjix-xz-5.8.4",
-            "db07pw9avlwysb3v68cfp9cijg2mmfns-openssl-3.5.8",
-            "hx9wvdx2l59iahwf9nmrx7rwkm6cymgs-glibc-2.44-25",
-            "jiscfdlw4w8kmwfk8kwk5f72q66ncdz4-mpdecimal-4.0.1",
-            "lngldcdpyc39i41g3zrsf7n9rh7mn2gs-util-linux-minimal-2.42.3-lib",
-            "mwhkh9l5j5z6mkk83k22rjhx6lxgqh85-bash-5.3p15",
-            "n7yllvdnm8p1g85b1g0rfc9dicgs0rhp-expat-2.8.5",
-            "n9arsp4izcszcydsggkbrlbxbzzr3dnr-gdbm-1.26-lib",
-            "na9inwswsrgxxqpqrz3ms78qn7pyxg44-gcc-16.2.0-lib",
-            "v3n38bhgkjylj7wxk2shklk6yavasxnh-python3-3.13.15",
-            "xpzpw9ik1hwrb2dvsybgi5pwb3xmf5rl-mailcap-2.1.54"
           ]
         },
         {
@@ -6747,36 +6553,6 @@
             },
             {
               "constraint": {
-                "attr": "python313Packages.pytest",
-                "context": "profiles.dev",
-                "output": null,
-                "system": "aarch64-linux",
-                "version": null
-              },
-              "package": {
-                "attr_path": "python313Packages.pytest",
-                "name": "pytest",
-                "origin": {
-                  "Channel": {
-                    "build": 347219838,
-                    "evaluation": 1829774,
-                    "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/"
-                  }
-                },
-                "outputs": {
-                  "dist": "/nix/store/sric65k4v0c99afmx3z8q641hy62gh8h-python3.13-pytest-9.1.1-dist",
-                  "out": "/nix/store/pifmzkiaiv3i9i6bmkq900wz85cwid0b-python3.13-pytest-9.1.1",
-                  "testout": "/nix/store/b1n0ibwiins480saj9pv8agpfhdcsb0c-python3.13-pytest-9.1.1-testout"
-                },
-                "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce",
-                "store_paths": [
-                  "/nix/store/pifmzkiaiv3i9i6bmkq900wz85cwid0b-python3.13-pytest-9.1.1"
-                ],
-                "version": "9.1.1"
-              }
-            },
-            {
-              "constraint": {
                 "attr": "rtlcss",
                 "context": "profiles.dev",
                 "output": null,
@@ -6954,7 +6730,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "e558b19758f718f61f5283df1bd39d2d1240c2593acb03a266a22a68c8081ef6"
+        "projectSha256": "c60a6b9c1b230a28c2fec150a0eb354c5a1add180b0a3bb0d7ff2f8467586ac0"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -6965,6 +6741,8 @@
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
         "FONTCONFIG_FILE": "$ENVE_STORE_DIR/dg0d3qqm22kpkcpmmvy0wrgg3hwb4f0c-playwright-browsers-1.62.1/fonts.conf",
+        "LANG": "en_US.UTF-8",
+        "LC_ALL": "en_US.UTF-8",
         "LD_RUN_PATH": "$ENVE_STORE_DIR/hbn2n04k3nr7hl6c7p0006a1vlj97r47-cyrus-sasl-2.1.28/lib:$ENVE_STORE_DIR/na9inwswsrgxxqpqrz3ms78qn7pyxg44-gcc-16.2.0-lib/lib",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
@@ -7304,21 +7082,6 @@
           },
           "version": "3.12.15"
         },
-        "python313Packages.pytest": {
-          "closure": "pifmzkiaiv3i9i6bmkq900wz85cwid0b-python3.13-pytest-9.1.1",
-          "outputs": [
-            "pifmzkiaiv3i9i6bmkq900wz85cwid0b-python3.13-pytest-9.1.1"
-          ],
-          "source": {
-            "attr": "python313Packages.pytest",
-            "build": 347219838,
-            "evaluation": 1829774,
-            "kind": "channel",
-            "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/",
-            "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce"
-          },
-          "version": "9.1.1"
-        },
         "rtlcss": {
           "closure": "0dqpl203xns16cfcjg7l2kjff2w6ysdz-rtlcss-4.1.0",
           "outputs": [
@@ -7383,26 +7146,12 @@
     },
     "x86_64-linux": {
       "binding": {
-        "environment_sha256": "e8b47551e2031adab4f1ee979318392d1b8a1570380a40e22f9810c0abf7c4c6",
-        "inventory_sha256": "34e844961cc6c3b40579e12ad4e550150830abeebc36e89ed8f7121d289b8891",
+        "environment_sha256": "1d3e05888d1742e8fdbef62b1dc38c7d41d6ea1d8af57646f7f7b424b4f587b9",
+        "inventory_sha256": "f8f65975797ec19358fea65412912847acfea0dec98f25b57593f12312be43f8",
         "profile": null,
         "version": 2
       },
       "closures": [
-        {
-          "hash_name": "09gx6dvrkrg4i3wmnssk8c5qfzb3h5nr-python3.13-pytest-9.1.1",
-          "nar_hash": "sha256:1d7vzghnxcf3bp7zsgrpcznzzjq36nsmphaifwn9b6b8c5j0zmxj",
-          "nar_size": 4702544,
-          "references": [
-            "09gx6dvrkrg4i3wmnssk8c5qfzb3h5nr-python3.13-pytest-9.1.1",
-            "10dxp0qxqxxsyiljrh2kp0xqhz6arhcx-bash-5.3p15",
-            "1la7isifhs61f1sdgfwazzc2xbp4nxzb-python3.13-pluggy-1.6.0",
-            "1n27gqlnvg10l9912jvx9gfkmhhvfywp-python3.13-packaging-26.2",
-            "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15",
-            "f3wnk50ch80wx0vna98j5y1qxyvdwwaj-python3.13-iniconfig-2.3.0",
-            "jbrcwv4cwk4a7vh8xn50yacvppxd30ww-python3.13-pygments-2.20.0"
-          ]
-        },
         {
           "hash_name": "0a9k0r3wf695ibidnygdx6kkx8zhdhhg-kmod-31-lib",
           "nar_hash": "sha256:184v0f29hwc2nq2ni4zly8ww3kpb8wdh2qm4bmsrgfcgd7nadjvm",
@@ -7471,15 +7220,6 @@
           ]
         },
         {
-          "hash_name": "1la7isifhs61f1sdgfwazzc2xbp4nxzb-python3.13-pluggy-1.6.0",
-          "nar_hash": "sha256:15pqv8kwgpgqp9yqn2l7h585a247rdsm094dc1f8dmxgi7x7601r",
-          "nar_size": 216304,
-          "references": [
-            "1la7isifhs61f1sdgfwazzc2xbp4nxzb-python3.13-pluggy-1.6.0",
-            "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15"
-          ]
-        },
-        {
           "hash_name": "1mv3qz005gkbalxfghk4y3s8ayv4d2dl-bash-interactive-5.3p15",
           "nar_hash": "sha256:0lm29zg6s3izx5740j22ilh6ncinh47rvg0xf532mvgg1p8vcnfm",
           "nar_size": 7444560,
@@ -7488,15 +7228,6 @@
             "h4wfwic161kxrr74jlzla5lsm28hgary-glibc-2.44-25",
             "hzqwc6pv8sb9qrwivc4h42cr811gs1mk-ncurses-6.6",
             "xnam05aa3vc7aqbbdixpwcdb8dpv71xn-readline-8.3p3"
-          ]
-        },
-        {
-          "hash_name": "1n27gqlnvg10l9912jvx9gfkmhhvfywp-python3.13-packaging-26.2",
-          "nar_hash": "sha256:1zbwxpj2dn9ncsvsdms0sswvq52hsdz4lq1vgsxjv3pkx9adbvs8",
-          "nar_size": 1177344,
-          "references": [
-            "1n27gqlnvg10l9912jvx9gfkmhhvfywp-python3.13-packaging-26.2",
-            "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15"
           ]
         },
         {
@@ -7663,31 +7394,6 @@
             "ffl0cic7f8zjkwrjvd8ikzbkbiij690a-libselinux-3.10",
             "h4wfwic161kxrr74jlzla5lsm28hgary-glibc-2.44-25",
             "pi2b23y3gv6zgcziwbgnihf8gam1cmlp-libffi-3.8.0"
-          ]
-        },
-        {
-          "hash_name": "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15",
-          "nar_hash": "sha256:1p50ha1nv6hqmjf2knr79f8k9rshq7snp54mwr10nzhc39falfbq",
-          "nar_size": 134709784,
-          "references": [
-            "10dxp0qxqxxsyiljrh2kp0xqhz6arhcx-bash-5.3p15",
-            "328fx8r0jb6l2ai4cli7fhp8g26fbfnh-util-linux-minimal-2.42.3-lib",
-            "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15",
-            "67v4318ajiy9ia2wz14hqj7idy5181is-gdbm-1.26-lib",
-            "9j086va2zn7ifgdc3h3jlqbi2c23j1x5-mailcap-2.1.54",
-            "9x0m6s73sg89fv5awb95vsac2mbns8n0-sqlite-3.53.3",
-            "cq65g1vyyiklplv6n2fgrjwxa6b4xfs9-mpdecimal-4.0.1",
-            "cxd8d2vg70c3pa31v2473hphaa1v0j44-openssl-3.5.8",
-            "h4wfwic161kxrr74jlzla5lsm28hgary-glibc-2.44-25",
-            "hzqwc6pv8sb9qrwivc4h42cr811gs1mk-ncurses-6.6",
-            "j7qx4s4mr17j1wqgvqdzj33lmrnzb387-gcc-16.2.0-lib",
-            "mpqgjnlmzy3c5hslbgyc3s7zfz3m32lg-bzip2-1.0.8",
-            "n8fqcpnr5ni28l3i9svqa70wz46798v9-tzdata-2026d",
-            "pi2b23y3gv6zgcziwbgnihf8gam1cmlp-libffi-3.8.0",
-            "vkwq2iap75p0srizppc3jl2j5b1lxpln-xz-5.8.4",
-            "wgw25d181h0qks7qsfp1bh7c5nd3f0s7-zlib-1.3.2",
-            "xnam05aa3vc7aqbbdixpwcdb8dpv71xn-readline-8.3p3",
-            "zrkqwk0989k5wa1gn3cjb76jfga3d8i3-expat-2.8.5"
           ]
         },
         {
@@ -8375,15 +8081,6 @@
           ]
         },
         {
-          "hash_name": "f3wnk50ch80wx0vna98j5y1qxyvdwwaj-python3.13-iniconfig-2.3.0",
-          "nar_hash": "sha256:1w4r42ba96phi2q6ir9b8mkb9nbs8z960kh2x2v3l486xk66v3sz",
-          "nar_size": 60072,
-          "references": [
-            "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15",
-            "f3wnk50ch80wx0vna98j5y1qxyvdwwaj-python3.13-iniconfig-2.3.0"
-          ]
-        },
-        {
           "hash_name": "f5afhg8xsl7h8w5a6c3gc471i0ff651v-perl5.42.3-Compress-Raw-Bzip2-2.218",
           "nar_hash": "sha256:1agjw5hwca7syh1vdhl7wvf5wqpvk1cxjaj3r3gxrm3fynq88z8i",
           "nar_size": 58048,
@@ -8698,16 +8395,6 @@
             "h4wfwic161kxrr74jlzla5lsm28hgary-glibc-2.44-25",
             "j7qx4s4mr17j1wqgvqdzj33lmrnzb387-gcc-16.2.0-lib",
             "q2mkz6ca1alqfqf750dygvakmq8kjrwz-gcc-16.2.0-libgcc"
-          ]
-        },
-        {
-          "hash_name": "jbrcwv4cwk4a7vh8xn50yacvppxd30ww-python3.13-pygments-2.20.0",
-          "nar_hash": "sha256:1vg03w2zx05yf33y3l39vjwml27r2sm4ibfn8axm5xz4cgglfm8g",
-          "nar_size": 12474776,
-          "references": [
-            "10dxp0qxqxxsyiljrh2kp0xqhz6arhcx-bash-5.3p15",
-            "3gzjs8czrk47y7cpmr44jc568vqpb2p5-python3-3.13.15",
-            "jbrcwv4cwk4a7vh8xn50yacvppxd30ww-python3.13-pygments-2.20.0"
           ]
         },
         {
@@ -11278,36 +10965,6 @@
             },
             {
               "constraint": {
-                "attr": "python313Packages.pytest",
-                "context": "profiles.dev",
-                "output": null,
-                "system": "x86_64-linux",
-                "version": null
-              },
-              "package": {
-                "attr_path": "python313Packages.pytest",
-                "name": "pytest",
-                "origin": {
-                  "Channel": {
-                    "build": 347219839,
-                    "evaluation": 1829774,
-                    "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/"
-                  }
-                },
-                "outputs": {
-                  "dist": "/nix/store/19ramyzbq91idn21bwr0lbfyyvplfzr8-python3.13-pytest-9.1.1-dist",
-                  "out": "/nix/store/09gx6dvrkrg4i3wmnssk8c5qfzb3h5nr-python3.13-pytest-9.1.1",
-                  "testout": "/nix/store/fl13bfqk0ciyxjdph91hiybgby3fiybg-python3.13-pytest-9.1.1-testout"
-                },
-                "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce",
-                "store_paths": [
-                  "/nix/store/09gx6dvrkrg4i3wmnssk8c5qfzb3h5nr-python3.13-pytest-9.1.1"
-                ],
-                "version": "9.1.1"
-              }
-            },
-            {
-              "constraint": {
                 "attr": "rtlcss",
                 "context": "profiles.dev",
                 "output": null,
@@ -11485,7 +11142,7 @@
           }
         },
         "lockSourcePath": "enve.lock",
-        "projectSha256": "e558b19758f718f61f5283df1bd39d2d1240c2593acb03a266a22a68c8081ef6"
+        "projectSha256": "c60a6b9c1b230a28c2fec150a0eb354c5a1add180b0a3bb0d7ff2f8467586ac0"
       },
       "environment": {
         "DATABASE_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
@@ -11496,6 +11153,8 @@
         "ENVE_SERVICE_DB_PORT": "5436",
         "ENVE_SERVICE_DB_URL": "postgresql://odoo@127.0.0.1:5436/postgres",
         "FONTCONFIG_FILE": "$ENVE_STORE_DIR/annjm2svpv1xzscr51ynjpgwjbrcfngr-playwright-browsers-1.62.1/fonts.conf",
+        "LANG": "en_US.UTF-8",
+        "LC_ALL": "en_US.UTF-8",
         "LD_RUN_PATH": "$ENVE_STORE_DIR/m419ayyrwpqfkgazp2iyv0x7jfj973bn-cyrus-sasl-2.1.28/lib:$ENVE_STORE_DIR/j7qx4s4mr17j1wqgvqdzj33lmrnzb387-gcc-16.2.0-lib/lib",
         "PGHOST": "127.0.0.1",
         "PGPORT": "${ENVE_SERVICE_DB_PORT}",
@@ -11834,21 +11493,6 @@
             "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce"
           },
           "version": "3.12.15"
-        },
-        "python313Packages.pytest": {
-          "closure": "09gx6dvrkrg4i3wmnssk8c5qfzb3h5nr-python3.13-pytest-9.1.1",
-          "outputs": [
-            "09gx6dvrkrg4i3wmnssk8c5qfzb3h5nr-python3.13-pytest-9.1.1"
-          ],
-          "source": {
-            "attr": "python313Packages.pytest",
-            "build": 347219839,
-            "evaluation": 1829774,
-            "kind": "channel",
-            "release": "nixpkgs/nixpkgs-26.11pre1084597.73e728ddb6b7/",
-            "rev": "73e728ddb6b7a12d18808f510813a13ee1fe4cce"
-          },
-          "version": "9.1.1"
         },
         "rtlcss": {
           "closure": "v3ynvgali7g96wnhwhvrg299biy2kqfq-rtlcss-4.1.0",

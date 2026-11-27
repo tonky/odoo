@@ -376,15 +376,6 @@ def not_run_tests(addon_dir: Path, test_py_files: list | None = None) -> dict:
     return found
 
 
-def _parse_cue_string_list(raw: str) -> list[str]:
-    out = []
-    for token in raw.replace("\n", ",").split(","):
-        clean = token.strip().strip('"').strip("'").strip()
-        if clean and not clean.startswith("//"):
-            out.append(clean)
-    return out
-
-
 def load_addons_overrides(repo_root: Path) -> dict[str, dict]:
     """Load optional .enact/addons-overrides.json (or addons-overrides.json) ComponentOverride entries."""
     for rel in (Path(".enact") / "addons-overrides.json", Path("addons-overrides.json")):
@@ -530,60 +521,6 @@ def apply_addons_overrides(repo_root: Path, manifests: dict) -> None:
             m["template"] = ov["template"]
 
 
-def load_addons_from_cue(cue_path: Path, apply_overrides: bool = True) -> dict:
-    manifests = {}
-    if not cue_path.is_file():
-        return manifests
-    with open(cue_path, encoding="utf-8") as f:
-        content = f.read()
-    addons_match = re.search(r"_addons:\s*\{(.*)\n\}", content, re.DOTALL)
-    body = addons_match.group(1) if addons_match else content
-    for name, block in extract_component_blocks(body).items():
-        dir_m = re.search(r'dir:\s*"([^"]+)"', block)
-        if not dir_m:
-            continue
-        dir_path = dir_m.group(1)
-        deps_m = re.search(r"depends:\s*\[(.*?)\]", block, re.DOTALL)
-        deps = _parse_cue_string_list(deps_m.group(1)) if deps_m else []
-        tdeps_m = re.search(r"test_depends:\s*\[(.*?)\]", block, re.DOTALL)
-        test_deps = _parse_cue_string_list(tdeps_m.group(1)) if tdeps_m else []
-        imp_m = re.search(r"imports:\s*\[(.*?)\]", block, re.DOTALL)
-        imports = _parse_cue_string_list(imp_m.group(1)) if imp_m else []
-        ti_m = re.search(r"test_install:\s*\[(.*?)\]", block, re.DOTALL)
-        test_install = _parse_cue_string_list(ti_m.group(1)) if ti_m else []
-        extra_sparse_m = re.search(r"extra_sparse_paths:\s*\[(.*?)\]", block, re.DOTALL)
-        extra_sparse = _parse_cue_string_list(extra_sparse_m.group(1)) if extra_sparse_m else []
-        test_tags_m = re.search(r"test_tags:\s*\[(.*?)\]", block, re.DOTALL)
-        test_tags = _parse_cue_string_list(test_tags_m.group(1)) if test_tags_m else []
-        ht_m = re.search(r"has_tests:\s*(true|false)", block)
-        has_tests = ht_m.group(1) == "true" if ht_m else False
-        auto_install: bool | list[str] = False
-        auto_m = re.search(r"auto_install:\s*(true|\[.*?\])", block, re.DOTALL)
-        if auto_m:
-            raw_auto = auto_m.group(1).strip()
-            auto_install = True if raw_auto == "true" else _parse_cue_string_list(raw_auto.strip("[]"))
-        entry = {
-            "name": name,
-            "dir": dir_path,
-            "depends": deps,
-            "test_deps": test_deps,
-            "test_depends": test_deps,
-            "test_install": test_install,
-            "imports": imports,
-            "has_tests": has_tests,
-            "auto_install": auto_install,
-        }
-        if extra_sparse:
-            entry["extra_sparse_paths"] = extra_sparse
-        if test_tags:
-            entry["test_tags"] = test_tags
-        manifests[name] = entry
-    if apply_overrides:
-        repo_root = cue_path.parent.parent if cue_path.parent.name == ".enact" else cue_path.parent
-        apply_addons_overrides(repo_root, manifests)
-    return manifests
-
-
 def parse_single_manifest(m_path: str, repo_root: Path):
     p = Path(m_path)
     addon_name = p.parent.name
@@ -681,12 +618,6 @@ def index_all_manifests(repo_root: Path) -> dict:
                     if name == "__error__":
                         raise SystemExit(meta["msg"])
                     manifests[name] = meta
-
-    # In a sparse checkout, disk manifests may be partial; fall back to .enact/addons.cue for unpopulated addons
-    cue_manifests = load_addons_from_cue(repo_root / ".enact" / "addons.cue", apply_overrides=False)
-    for k, v in cue_manifests.items():
-        if k not in manifests:
-            manifests[k] = v
 
     apply_addons_overrides(repo_root, manifests)
     return manifests
@@ -811,159 +742,6 @@ def extract_js_imports(file_path: str | Path) -> set:
     except Exception:
         pass
     return addons
-
-
-def find_addon_dependencies(repo_root: Path, addon_dir: Path, manifests: dict) -> set:
-    """Find direct dependencies from tests, JS, and manifest."""
-    deps = set()
-    addon_name = addon_dir.name
-    if addon_name in manifests:
-        deps.update(manifests[addon_name].get("depends", []))
-        deps.update(manifests[addon_name].get("test_depends", []))
-        deps.update(manifests[addon_name].get("test_install", []))
-        deps.update(manifests[addon_name].get("imports", []))
-
-    # 1. Scan tests
-    tests_dir = addon_dir / "tests"
-    if tests_dir.is_dir():
-        for py in _walk_files_str(str(tests_dir), ".py"):
-            deps.update(extract_python_imports(Path(py)))
-
-    # 2. Scan JS assets (tours, widgets, bundles)
-    static_dir = addon_dir / "static"
-    if static_dir.is_dir():
-        for js in _walk_files_str(str(static_dir), ".js"):
-            js_deps = extract_js_imports(js)
-            for d in js_deps:
-                if d in manifests:
-                    deps.add(d)
-
-    return deps
-
-
-def resolve_component_sparse(
-    repo_root: Path,
-    comp_root: str,
-    manifests: dict,
-    include_l10n: bool = False,
-) -> list:
-    """Compute the transitive closure of needed directories for a component."""
-    comp_clean = comp_root.strip("/")
-    root_path = repo_root / comp_clean
-    direct_deps = find_addon_dependencies(repo_root, root_path, manifests)
-
-    closure = set(direct_deps)
-    queue = list(direct_deps)
-    visited = set()
-
-    while queue:
-        addon = queue.pop(0)
-        if addon in visited:
-            continue
-        visited.add(addon)
-
-        if addon in manifests:
-            all_deps = (
-                set(manifests[addon].get("depends", []))
-                | set(manifests[addon].get("test_depends", []))
-                | set(manifests[addon].get("imports", []))
-            )
-            for dep in all_deps:
-                if (
-                    not include_l10n
-                    and dep.startswith("l10n_")
-                    and dep not in manifests[addon].get("depends", [])
-                    and dep not in manifests[addon].get("imports", [])
-                    and not dep.endswith("_tests")
-                    and not addon.startswith("l10n_")
-                ):
-                    continue
-                if dep not in closure:
-                    closure.add(dep)
-                    queue.append(dep)
-
-    # Convert to directory paths, excluding component root itself
-    dirs = {
-        manifests[a]["dir"]
-        for a in closure
-        if a in manifests and manifests[a]["dir"] != comp_clean
-    }
-    root_addon = root_path.name
-    for a in closure | ({root_addon} if root_addon in manifests else set()):
-        if a in manifests:
-            for extra in manifests[a].get("extra_sparse_paths", []):
-                clean_extra = extra.strip("/")
-                if clean_extra and clean_extra != comp_clean:
-                    dirs.add(clean_extra)
-    return sorted(dirs)
-
-
-def get_global_pipeline_sparse(cue_content: str) -> set:
-    global_sparse = set()
-    m_global = re.search(r"pipeline:\s*\{.*?sparseCheckout:\s*\[(.*?)\]", cue_content, re.DOTALL)
-    if m_global:
-        for line in m_global.group(1).splitlines():
-            clean = line.strip().strip('"').strip(",").strip('"').strip()
-            if clean:
-                global_sparse.add(clean)
-    return global_sparse
-
-
-def is_path_covered(path: str, available_paths: set) -> bool:
-    """Check if path is directly in available_paths or covered by a parent directory."""
-    if path in available_paths:
-        return True
-    parts = path.split("/")
-    for i in range(1, len(parts)):
-        parent = "/".join(parts[:i])
-        if parent in available_paths:
-            return True
-    return False
-
-
-def extract_component_blocks(cue_content: str) -> dict:
-    blocks = {}
-    pattern = re.compile(r'^\s*"([a-zA-Z0-9_-]+)":\s*\{', re.MULTILINE)
-    for m in pattern.finditer(cue_content):
-        name = m.group(1)
-        start = m.end()
-        depth = 1
-        i = start
-        while i < len(cue_content) and depth > 0:
-            if cue_content[i] == "{":
-                depth += 1
-            elif cue_content[i] == "}":
-                depth -= 1
-            i += 1
-        blocks[name] = cue_content[start : i - 1]
-    return blocks
-
-
-def get_component_sparse_map(cue_content: str) -> dict:
-    comp_map = {}
-    blocks = extract_component_blocks(cue_content)
-    for name, block in blocks.items():
-        sparse_dirs = set()
-        c_sparse_m = re.search(r"sparseCheckout:\s*\[(.*?)\]", block, re.DOTALL)
-        if c_sparse_m:
-            for line in c_sparse_m.group(1).splitlines():
-                clean = line.strip().strip('"').strip(",").strip('"').strip()
-                if clean:
-                    sparse_dirs.add(clean)
-
-        deps = []
-        dep_m = re.search(r"dependsOnComponents:\s*\[(.*?)\]", block, re.DOTALL)
-        if dep_m:
-            for line in dep_m.group(1).splitlines():
-                clean = line.strip().strip('"').strip(",").strip('"').strip()
-                if clean:
-                    deps.append(clean)
-
-        comp_map[name] = {
-            "sparse": sparse_dirs,
-            "depends": deps,
-        }
-    return comp_map
 
 
 def manifest_depends(name: str, depends: list, manifests: dict) -> list:
@@ -1242,19 +1020,29 @@ def sync_addons_cue(repo_root: Path, manifests: dict):
     print(f"✅ Generated {addons_cue_path} ({len(manifests)} addons)")
 
 
+def ensure_full_checkout(repo_root: Path) -> None:
+    """Fail closed when invoked inside a sparse checkout so partial addon trees cannot
+    overwrite `.enact/addons.cue` or report false drift."""
+    import subprocess
+
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "config", "--bool", "--get", "core.sparseCheckout"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode == 0 and proc.stdout.strip().lower() == "true":
+        print(
+            f"❌ Refusing to run --check/--sync in sparse checkout {repo_root}: "
+            "run against a full checkout so .enact/addons.cue cannot be truncated to partial metadata.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Resolve and verify Odoo sparse checkout dependencies.",
-    )
-    parser.add_argument(
-        "--component",
-        action="append",
-        help="Component root directory (e.g. addons/account, addons/sale)",
-    )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Analyze all major components defined in repository",
+        description="Synchronize or verify .enact/addons.cue against Odoo addon manifests.",
     )
     parser.add_argument(
         "--check",
@@ -1273,13 +1061,13 @@ def main():
     )
     args = parser.parse_args()
 
-    repo_root = Path(args.repo_root).resolve()
-    cue_file = repo_root / ".enact" / "addons.cue"
+    if not (args.check or args.sync):
+        print("Specify --check or --sync")
+        sys.exit(1)
 
-    if args.check or args.sync or not cue_file.is_file():
-        manifests = index_all_manifests(repo_root)
-    else:
-        manifests = load_addons_from_cue(cue_file)
+    repo_root = Path(args.repo_root).resolve()
+    ensure_full_checkout(repo_root)
+    manifests = index_all_manifests(repo_root)
 
     if args.check:
         print(f"🔍 Validating .enact/addons.cue against {len(manifests)} manifests...")
@@ -1290,32 +1078,6 @@ def main():
         print("🔄 Synchronizing .enact/addons.cue...")
         sync_addons_cue(repo_root, manifests)
         sys.exit(0)
-
-    components_to_check = []
-    if args.component:
-        components_to_check = args.component
-    elif args.all:
-        components_to_check = [
-            "odoo/addons/base",
-            "addons/web",
-            "addons/mail",
-            "addons/account",
-            "addons/sale",
-            "addons/stock",
-        ]
-    else:
-        print("Specify --component <path>, --all, --check, or --sync")
-        sys.exit(1)
-
-    print(f"📦 Indexed {len(manifests)} Odoo manifests across repository.")
-    print("=" * 60)
-
-    for comp in components_to_check:
-        closure = resolve_component_sparse(repo_root, comp, manifests)
-        print(f"\n🔹 Component: {comp}")
-        print(f"   Transitive dependency directories ({len(closure)} total):")
-        for d in closure:
-            print(f"     - {d}")
 
 
 if __name__ == "__main__":

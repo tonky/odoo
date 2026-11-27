@@ -44,4 +44,13 @@ export LC_ALL=en_US.UTF-8
 #   $TMPDIR shifts the index and wipes PDF headers and footers (TestReportsRendering.test_layout).
 export TMPDIR=/tmp
 # Every addon's manifest odoo reads, in a sparse checkout (odoo-manifests.sh).
-bash "$(dirname "${BASH_SOURCE[0]}")/odoo-manifests.sh"
+_odoo_repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [ "${_ODOO_MANIFESTS_DONE:-}" != "${_odoo_repo_root}" ]; then
+    if bash "$(dirname "${BASH_SOURCE[0]}")/odoo-manifests.sh"; then
+        export _ODOO_MANIFESTS_DONE="${_odoo_repo_root}"
+    else
+        unset _odoo_repo_root
+        return 1
+    fi
+fi
+unset _odoo_repo_root

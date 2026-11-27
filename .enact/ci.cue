@@ -8,19 +8,17 @@ _stages: [
 ]
 
 pipeline: {
-	analysis: {
-		dependencies: {
-			manifests:       [{file: "__manifest__.py", keys: ["depends", "auto_install"]}]
-			import_prefixes: ["odoo.addons."]
-			asset_prefixes:  ["@"]
-		}
-		durations: [".enact/durations/*.json"]
-	}
 	caches: "templates": {
-		name:    "Postgres template dumps"
-		paths:   [".enact/state/templates"]
-		version: "1"
+		name:             "Postgres template dumps"
+		arch_independent: true
+		paths:            [".enact/state/templates"]
+		version:          "1"
 		used_by: jobs: ["test", "pylint"]
+	}
+	toolchain: python: {
+		package_manager: "uv"
+		install:         "uv sync --frozen --exact --quiet"
+		outputs:         [".venv/pyvenv.cfg"]
 	}
 	ci: {
 		soft_placement: {fallback_seconds: 15}
@@ -41,6 +39,7 @@ pipeline: {
 			branch:     "perf/ci-showcase"
 		}
 		allow_broad: branch_prefixes: ["mirror-broad/"]
+		budget: {enforce: false, untraced_tests: 100, wall_minutes: 30}
 		diagnostic_paths: ["${{ runner.temp }}/odoo_tests/**/*.png", "${{ runner.temp }}/odoo_tests/*/chrome_logs/*"]
 		// Runner pools calibrated from measured Grafana/PostHog/n8n/Odoo runs (agentic/KNOWLEDGE.md tonky-ci).
 		workers: {
@@ -121,7 +120,12 @@ pipeline: {
 			layout:      "staged"
 			services:    "on_demand"
 			concurrency: {scope: "branch", cancel_in_progress: true}
-			stages:      _stages
+			triggers: {
+				pull_request: {branches: ["master", "19.0", "saas-19.4", "perf/ci-showcase"], paths: []}
+				push: {branches: ["master", "19.0", "saas-19.4", "perf/ci-showcase"], paths: ["**/*"]}
+				schedule: []
+			}
+			stages: _stages
 		}
 		local: {layout: "staged", services: "on_demand", stages: _stages}
 	}

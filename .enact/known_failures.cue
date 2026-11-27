@@ -1,38 +1,41 @@
 package replay
 
 // Tests failing upstream at the pinned revision, excluded by `-/<addon>:<Class>[.<method>]`.
+// Entries with `os: "darwin"` are applied only on macOS (via `ODOO_DARWIN_EXCLUDE_TAGS` in
+// `helpers/odoo-runner.sh`) so Linux CI continues executing them.
 #KnownFailure: {
 	test:   string & =~"^[A-Za-z_][A-Za-z0-9_]*(\\.test[A-Za-z0-9_]*)?$"
 	reason: string & =~"\\S"
+	os:     *"all" | "darwin"
 }
 
 _addons: [string]: known_failures: *[] | [...#KnownFailure]
 
 _addons: {
 	account: known_failures: [
-		{test: "TestAccountEarlyPaymentDiscount.test_invoice_report_without_invoice_date", reason: "renders the invoice PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (UserError; qtwebkit is Linux-only in nixpkgs), where odoo's other report tests skip"},
+		{test: "TestAccountEarlyPaymentDiscount.test_invoice_report_without_invoice_date", os: "darwin", reason: "renders the invoice PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (UserError; qtwebkit is Linux-only in nixpkgs), where odoo's other report tests skip"},
 	]
 	account_edi_ubl_cii: {
 		known_failures: [
 			{test: "CiiExportFacturXFR.test_invoice_deferred_dates", reason: "writes deferred_start_date and deferred_end_date on account.move.line, which only enterprise's account_accountant defines (ValueError)"},
-			{test: "TestUblImportBis3InvoiceBEAutoGeneratePDF.test_import_invoice_auto_generate_pdf", reason: "renders the invoice PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (UserError; qtwebkit is Linux-only in nixpkgs)"},
+			{test: "TestUblImportBis3InvoiceBEAutoGeneratePDF.test_import_invoice_auto_generate_pdf", reason: "renders the invoice PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (UserError; qtwebkit is Linux-only in nixpkgs); kept global until enact supports platform-scoped not_run"},
 		]
 		not_run: [{tests: ["addons/account_edi_ubl_cii/tests/test_ubl_import_bis3_invoice_be_auto_generate_pdf.py"], reason: "its only test is a known upstream failure on darwin (known_failures.cue), tagged out"}]
 	}
 	base: {
 		known_failures: [
 			{test: "TestCommand.test_shell", reason: "spawns odoo-bin shell on an os.openpty() fd whose child side closes before the interactive banner flushes under non-interactive test runner"},
-			{test: "TestConfigManager.test_02_config_file", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
-			{test: "TestConfigManager.test_03_save_default_options", reason: "compares saved config against save_posix.conf (~/.local/share/Odoo) while macOS platformdirs uses ~/Library/Application Support/Odoo"},
-			{test: "TestConfigManager.test_04_odoo16_config_file", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
-			{test: "TestConfigManager.test_06_cli", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
-			{test: "TestConfigManager.test_07_environ", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
-			{test: "TestConfigManager.test_14_addons_path_glob", reason: "compares unnormalized tempfile.TemporaryDirectory() paths (/tmp) against _normalize()'s realpath (/private/tmp)"},
-			{test: "TestConfigManager.test_15_persist_bin_path", reason: "asserts bin_path = /tmp after _normalize() resolves /tmp to /private/tmp on macOS"},
-			{test: "TestIrMailServerSMTPD", reason: "setUpClass calls getaddrinfo(addr, port, family) with type=0, which returns SOCK_DGRAM first on macOS and fails ssl.wrap_socket / SMTP connection setup"},
-			{test: "TestReports.test_report_reload_from_attachment", reason: "renders the report PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (UserError; qtwebkit is Linux-only in nixpkgs)"},
-			{test: "TestReportsRendering", reason: "renders PDFs and builds wkhtmltopdf DPI/zoom arguments against wkhtmltopdf (Linux-only in nixpkgs)"},
-			{test: "TestAggregatePdfReports", reason: "renders the report PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (qtwebkit is Linux-only in nixpkgs)"},
+			{test: "TestConfigManager.test_02_config_file", os: "darwin", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
+			{test: "TestConfigManager.test_03_save_default_options", os: "darwin", reason: "compares saved config against save_posix.conf (~/.local/share/Odoo) while macOS platformdirs uses ~/Library/Application Support/Odoo"},
+			{test: "TestConfigManager.test_04_odoo16_config_file", os: "darwin", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
+			{test: "TestConfigManager.test_06_cli", os: "darwin", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
+			{test: "TestConfigManager.test_07_environ", os: "darwin", reason: "hardcodes /tmp paths in expected config dict while macOS realpath resolves /tmp to /private/tmp"},
+			{test: "TestConfigManager.test_14_addons_path_glob", os: "darwin", reason: "compares unnormalized tempfile.TemporaryDirectory() paths (/tmp) against _normalize()'s realpath (/private/tmp)"},
+			{test: "TestConfigManager.test_15_persist_bin_path", os: "darwin", reason: "asserts bin_path = /tmp after _normalize() resolves /tmp to /private/tmp on macOS"},
+			{test: "TestIrMailServerSMTPD", reason: "setUpClass calls getaddrinfo(addr, port, family) with type=0, which returns SOCK_DGRAM first on macOS and fails ssl.wrap_socket / SMTP connection setup; kept global until enact supports platform-scoped not_run"},
+			{test: "TestReports.test_report_reload_from_attachment", os: "darwin", reason: "renders the report PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (UserError; qtwebkit is Linux-only in nixpkgs)"},
+			{test: "TestReportsRendering", os: "darwin", reason: "renders PDFs and builds wkhtmltopdf DPI/zoom arguments against wkhtmltopdf (Linux-only in nixpkgs)"},
+			{test: "TestAggregatePdfReports", os: "darwin", reason: "renders the report PDF with force_report_rendering: on darwin the env has no wkhtmltopdf (qtwebkit is Linux-only in nixpkgs)"},
 		]
 		known_not_run: [{tests: ["odoo/addons/base/tests/test_ir_mail_server_smtpd.py"], reason: "its only class is a known upstream failure on darwin (known_failures.cue), tagged out"}]
 	}
@@ -59,8 +62,8 @@ _addons: {
 		{test: "TestWorkEntryLeave.test_leave_change_working_schedule", reason: "a one-day leave on a 20h calendar leaves 2 work entries on its day, not 1"},
 	]
 	l10n_ch: known_failures: [
-		{test: "QRPrintTest.test_action_single_send_and_print_and_info_message", reason: "renders the invoice PDF with allow_pdf_render(): on darwin the env has no wkhtmltopdf (qtwebkit is Linux-only in nixpkgs)"},
-		{test: "QRPrintTest.test_action_batch_send_and_print_and_info_message", reason: "renders the invoice PDF with allow_pdf_render(): on darwin the env has no wkhtmltopdf (qtwebkit is Linux-only in nixpkgs)"},
+		{test: "QRPrintTest.test_action_single_send_and_print_and_info_message", os: "darwin", reason: "renders the invoice PDF with allow_pdf_render(): on darwin the env has no wkhtmltopdf (qtwebkit is Linux-only in nixpkgs)"},
+		{test: "QRPrintTest.test_action_batch_send_and_print_and_info_message", os: "darwin", reason: "renders the invoice PDF with allow_pdf_render(): on darwin the env has no wkhtmltopdf (qtwebkit is Linux-only in nixpkgs)"},
 	]
 	l10n_ch_pos: {
 		known_failures: [{test: "TestUi.test_l10n_ch_pos_pay_later_invoice_has_bank_partner", reason: "writes res.partner's contact_address_complete, which no addon at the pin defines (KeyError)"}]
