@@ -156,7 +156,12 @@ pipeline: schema.#Pipeline & {
 					let install_addons = strings.Join(list.Concat([[addon], meta.test_install]), ",")
 					jobs: test: {
 						fixture: shardFixture
-						tasks: [{command: string | *"\(max_failed)bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i \(install_addons) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}\(excluded)"}]
+						tasks: [{
+							command: string | *"\(max_failed)bash $(git rev-parse --show-toplevel)/helpers/odoo-shard.sh -i \(install_addons) -u \(addon) --test-enable --stop-after-init --test-tags {targets_tags}\(excluded)"
+							if addon == "point_of_sale" {
+								timeout: "25m"
+							}
+						}]
 					}
 				}
 			}
@@ -207,6 +212,9 @@ pipeline: schema.#Pipeline & {
 			title:       "Odoo Inventory & Warehouse Logistics"
 			domain:      "logistics"
 			tags:        ["stock", "inventory"]
+		}
+		"point_of_sale": {
+			resources: {cpus: 2.0, memory_mb: 4096}
 		}
 		"test_lint": {
 			target_scope: tests: [

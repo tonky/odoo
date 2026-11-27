@@ -89,6 +89,9 @@ _addons: {
 		{test: "TestMailPublicPage.test_mail_group_public_page_as_portal", reason: "tour discuss_channel_public_tour.js times out when website is installed in the template DB, as above"},
 		{test: "TestMailPublicPage.test_sidebar_in_public_page", reason: "tour sidebar_in_public_page_tour times out when website is installed in the template DB, as above"},
 	]
+	point_of_sale: known_failures: [
+		{test: "MobileTestUi.test_combo_price_unchanged_with_lot_tracked_product", reason: "pre-existing upstream failure on 19.0 (reproduced 3/3 on base dd153b3cb4 and bc0143cc36 at 1c and 2c): step 13/23 mobile viewport lot autocomplete dropdown never mounts; desktop TestUi still runs"},
+	]
 	pos_restaurant: known_failures: [
 		{test: "TestFrontend.test_01_pos_restaurant", reason: "tour pos_restaurant_sync, step 40: table 5 never shows on the floor map"},
 	]
